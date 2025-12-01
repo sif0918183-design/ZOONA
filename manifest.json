@@ -65,7 +65,7 @@
       "short_name": "الرئيسية",
       "description": "العودة للصفحة الرئيسية",
       "url": "https://www.zoonasd.com",
-      "icons": [{ "src": "icon/icon-96x96.png", "sizes": "96x96" }]
+      "icons": [{ "src": "icon/icon-512x512.png", "sizes": "512x512" }]
     }
   ]
 }
