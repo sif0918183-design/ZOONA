@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- متطلبات PWA -->
+    <meta name="theme-color" content="#D32F2F">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- متطلبات Google Play -->
+    <meta name="description" content="متجر ZOONA الإلكتروني - التسوق أونلاين في السودان">
+    <meta name="keywords" content="zoona, متجر, تسوق, سوداني, شراء, منتجات, سودان">
+    <meta name="author" content="ZOONA">
+    
+    <title>ZOONA - المتجر السوداني</title>
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- الأيقونات -->
+    <link rel="icon" type="image/png" href="icon/icon-72x72.png">
+    <link rel="apple-touch-icon" href="icon/icon-152x152.png">
+    
+    <!-- خط Tajawal -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Tajawal', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #FFFFFF;
+            position: fixed;
+        }
+        
+        /* شاشة التحميل - تصميم أحمر */
+        #splash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s;
+        }
+        
+        .splash-logo {
+            width: 150px;
+            height: 150px;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+        }
+        
+        .splash-text {
+            color: white;
+            font-size: 20px;
+            font-weight: 700;
+            margin-top: 20px;
+            letter-spacing: 1px;
+            font-family: 'Tajawal', sans-serif;
+        }
+        
+        .loader {
+            width: 60px;
+            height: 4px;
+            background: rgba(255,255,255,0.3);
+            margin-top: 30px;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .loader::after {
+            content: '';
+            display: block;
+            width: 50%;
+            height: 100%;
+            background: white;
+            border-radius: 2px;
+            animation: loading 1.5s infinite ease-in-out;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes loading {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(200%); }
+        }
+        
+        /* حاوية الموقع */
+        #webview-container {
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+        
+        #webview {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #FFFFFF;
+        }
+        
+        /* شريط الحالة - أحمر */
+        .status-bar {
+            height: env(safe-area-inset-top, 0px);
+            background: #D32F2F;
+            width: 100%;
+        }
+        
+        /* زر العودة - أحمر */
+        #back-button {
+            position: fixed;
+            bottom: 25px;
+            left: 25px;
+            background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);
+            color: white;
+            width: 56px;
+            height: 56px;
+            border-radius: 28px;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 6px 20px rgba(211, 47, 47, 0.4);
+            z-index: 1000;
+            border: none;
+            cursor: pointer;
+            font-size: 22px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            font-family: 'Tajawal', sans-serif;
+        }
+        
+        #back-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(211, 47, 47, 0.5);
+        }
+        
+        #back-button:active {
+            transform: scale(0.95);
+        }
+        
+        /* إشعارات - تصميم أحمر */
+        #toast {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #D32F2F;
+            color: white;
+            padding: 16px 32px;
+            border-radius: 28px;
+            display: none;
+            z-index: 1001;
+            box-shadow: 0 8px 25px rgba(211, 47, 47, 0.3);
+            font-weight: 600;
+            max-width: 85%;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            font-family: 'Tajawal', sans-serif;
+            font-size: 15px;
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+        
+        /* حالات الاتصال - أحمر داكن */
+        .offline-message {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: #B71C1C;
+            color: white;
+            text-align: center;
+            padding: 16px;
+            display: none;
+            z-index: 1002;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(183, 28, 28, 0.3);
+            font-family: 'Tajawal', sans-serif;
+            font-size: 15px;
+        }
+        
+        /* زر التحديث - أحمر */
+        #refresh-button {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);
+            color: white;
+            width: 56px;
+            height: 56px;
+            border-radius: 28px;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 6px 20px rgba(211, 47, 47, 0.4);
+            z-index: 1000;
+            border: none;
+            cursor: pointer;
+            font-size: 22px;
+            transition: all 0.3s ease;
+            font-family: 'Tajawal', sans-serif;
+        }
+        
+        #refresh-button:hover {
+            transform: rotate(30deg);
+        }
+        
+        /* مؤشر السحب للتحديث */
+        .pull-indicator {
+            position: fixed;
+            top: -60px;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background: linear-gradient(to bottom, #D32F2F, #B71C1C);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 999;
+            transition: top 0.3s;
+            font-family: 'Tajawal', sans-serif;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        
+        .pull-indicator.show {
+            top: 0;
+        }
+        
+        /* شبكة خلفية جمالية */
+        .background-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 25% 25%, rgba(211, 47, 47, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(183, 28, 28, 0.03) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        /* رسالة الترحيب الخاصة */
+        .welcome-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            z-index: 1003;
+            box-shadow: 0 6px 20px rgba(211, 47, 47, 0.3);
+            font-family: 'Tajawal', sans-serif;
+            font-weight: 700;
+            font-size: 15px;
+            display: none;
+            animation: fadeInDown 0.5s ease-out;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body id="zoona-app" data-app-type="webview" data-store="sudan">
+    <!-- نمط خلفية -->
+    <div class="background-pattern"></div>
+    
+    <!-- شريط الحالة -->
+    <div class="status-bar"></div>
+    
+    <!-- رسالة الترحيب -->
+    <div class="welcome-message" id="welcome-message">
+        🎉 أهلاً بك في متجر ZOONA السوداني
+    </div>
+    
+    <!-- مؤشر السحب -->
+    <div class="pull-indicator" id="pull-indicator">
+        🔽 حرر للتحديث
+    </div>
+    
+    <!-- شاشة التحميل -->
+    <div id="splash">
+        <img src="assets/splash-logo.png" alt="ZOONA Logo" class="splash-logo">
+        <div class="splash-text">ZOONA المتجر السوداني</div>
+        <div class="loader"></div>
+    </div>
+    
+    <!-- رسالة عدم الاتصال -->
+    <div class="offline-message" id="offline-message">
+        ⚠️ أنت غير متصل بالإنترنت. جاري استخدام النسخة المخزنة.
+    </div>
+    
+    <!-- حاوية الموقع -->
+    <div id="webview-container">
+        <iframe id="webview" 
+                allow="geolocation; camera; microphone; autoplay; clipboard-write; encrypted-media"
+                allowfullscreen
+                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-downloads"
+                referrerpolicy="strict-origin-when-cross-origin"
+                title="متجر ZOONA السوداني"></iframe>
+    </div>
+    
+    <!-- أزرار التحكم -->
+    <button id="back-button" aria-label="رجوع">←</button>
+    <button id="refresh-button" aria-label="تحديث">↻</button>
+    
+    <!-- إشعارات -->
+    <div id="toast"></div>
+    
+    <script>
+        // المتغيرات العامة
+        const siteURL = "https://www.zoonasd.com";
+        const appName = "ZOONA - المتجر السوداني";
+        const webview = document.getElementById("webview");
+        const splash = document.getElementById("splash");
+        const webviewContainer = document.getElementById('webview-container');
+        const backButton = document.getElementById('back-button');
+        const refreshButton = document.getElementById('refresh-button');
+        const toast = document.getElementById('toast');
+        const offlineMessage = document.getElementById('offline-message');
+        const welcomeMessage = document.getElementById('welcome-message');
+        const pullIndicator = document.getElementById('pull-indicator');
+        
+        // تعيين عنوان التطبيق
+        document.title = appName;
+        
+        // متغيرات السحب للتحديث
+        let startY = 0;
+        let currentY = 0;
+        let isPulling = false;
+        
+        // تهيئة Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(registration => {
+                        console.log('ServiceWorker مسجل بنجاح لتطبيق ZOONA');
+                    })
+                    .catch(err => {
+                        console.error('فشل تسجيل ServiceWorker:', err);
+                    });
+            });
+        }
+        
+        // دالة لإظهار الإشعارات
+        function showToast(message, duration = 3000) {
+            toast.textContent = message;
+            toast.style.display = 'block';
+            
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, duration);
+        }
+        
+        // دالة لإظهار رسالة الترحيب
+        function showWelcomeMessage() {
+            // التحقق إذا تم عرض رسالة الترحيب اليوم
+            const today = new Date().toDateString();
+            const lastWelcomeDate = localStorage.getItem('zoona_last_welcome_date');
+            
+            if (lastWelcomeDate !== today) {
+                welcomeMessage.style.display = 'block';
+                localStorage.setItem('zoona_last_welcome_date', today);
+                
+                // إخفاء الرسالة بعد 5 ثواني
+                setTimeout(() => {
+                    welcomeMessage.style.display = 'none';
+                }, 5000);
+                
+                // إظهار إشعار قصير أيضاً
+                showToast('مرحباً بك في أكبر المتاجر السودانية 🛍️', 3000);
+            }
+        }
+        
+        // دالة لإظهار رسالة عدم الاتصال
+        function showOfflineMessage() {
+            offlineMessage.style.display = 'block';
+            showToast('تم تفعيل وضع العمل دون اتصال', 3000);
+            
+            // إخفاء الرسالة بعد 5 ثواني
+            setTimeout(() => {
+                offlineMessage.style.display = 'none';
+            }, 5000);
+        }
+        
+        // التحقق من الاتصال بالإنترنت
+        function updateOnlineStatus() {
+            if (navigator.onLine) {
+                // إخفاء رسالة عدم الاتصال إذا كانت ظاهرة
+                offlineMessage.style.display = 'none';
+                
+                if (!isPulling) {
+                    pullIndicator.classList.remove('show');
+                }
+            } else {
+                // إظهار رسالة عدم الاتصال
+                showOfflineMessage();
+            }
+        }
+        
+        // مستمعات حالة الاتصال
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        
+        // إدارة سحب الصفحة للتحديث
+        document.addEventListener('touchstart', (e) => {
+            if (window.scrollY === 0 && !isPulling) {
+                startY = e.touches[0].clientY;
+                isPulling = true;
+            }
+        });
+        
+        document.addEventListener('touchmove', (e) => {
+            if (!isPulling) return;
+            
+            currentY = e.touches[0].clientY;
+            const pullDistance = currentY - startY;
+            
+            if (pullDistance > 0) {
+                pullIndicator.style.top = (Math.min(pullDistance, 60) - 60) + 'px';
+                
+                if (pullDistance > 100) {
+                    pullIndicator.textContent = '🔽 حرر للتحديث';
+                    pullIndicator.classList.add('show');
+                } else {
+                    pullIndicator.textContent = '🔽 اسحب للتحديث';
+                    pullIndicator.classList.remove('show');
+                }
+            }
+        });
+        
+        document.addEventListener('touchend', () => {
+            if (!isPulling) return;
+            
+            isPulling = false;
+            pullIndicator.style.top = '-60px';
+            
+            if (currentY - startY > 100) {
+                pullIndicator.classList.remove('show');
+                showToast('جاري تحديث الصفحة...', 1500);
+                
+                setTimeout(() => {
+                    webview.contentWindow.location.reload();
+                }, 300);
+            }
+        });
+        
+        // تهيئة التطبيق
+        document.addEventListener('DOMContentLoaded', () => {
+            updateOnlineStatus();
+            
+            // محاكاة وقت تحميل الشاشة
+            setTimeout(() => {
+                loadWebview();
+            }, 2000);
+            
+            // زر العودة
+            backButton.addEventListener('click', () => {
+                if (webview.contentWindow && webview.contentWindow.history.length > 1) {
+                    webview.contentWindow.history.back();
+                    showToast('جاري الرجوع للصفحة السابقة', 1500);
+                }
+            });
+            
+            // زر التحديث
+            refreshButton.addEventListener('click', () => {
+                if (webview.contentWindow) {
+                    showToast('جاري تحديث الصفحة...', 1500);
+                    webview.contentWindow.location.reload();
+                }
+            });
+            
+            // تحديث ظهور أزرار التحكم
+            setInterval(() => {
+                try {
+                    // زر العودة
+                    if (webview.contentWindow && webview.contentWindow.history.length > 1) {
+                        backButton.style.display = 'flex';
+                    } else {
+                        backButton.style.display = 'none';
+                    }
+                    
+                    // زر التحديث
+                    if (webview.contentWindow) {
+                        refreshButton.style.display = 'flex';
+                    }
+                } catch (e) {
+                    backButton.style.display = 'none';
+                    refreshButton.style.display = 'none';
+                }
+            }, 1000);
+        });
+        
+        // تحميل الموقع
+        function loadWebview() {
+            webview.src = siteURL;
+            
+            webview.onload = () => {
+                // إخفاء شاشة التحميل
+                splash.style.opacity = '0';
+                setTimeout(() => {
+                    splash.style.display = 'none';
+                    webviewContainer.style.display = 'block';
+                }, 500);
+                
+                // تحديث عنوان الصفحة
+                try {
+                    const pageTitle = webview.contentWindow.document.title;
+                    if (pageTitle && pageTitle !== "" && pageTitle !== "ZOONA") {
+                        document.title = `${pageTitle} | ${appName}`;
+                    }
+                } catch (e) {
+                    // لا شيء
+                }
+                
+                // إظهار رسالة الترحيب بعد تأخير بسيط
+                setTimeout(() => {
+                    showWelcomeMessage();
+                }, 1000);
+                
+                // إرسال رسالة تفيد بأن التطبيق جاهز
+                try {
+                    webview.contentWindow.postMessage({
+                        type: 'app_ready',
+                        app_name: 'ZOONA Store',
+                        country: 'Sudan',
+                        features: {
+                            storage: true,
+                            geolocation: true,
+                            download: true,
+                            version: '1.0.0',
+                            currency: 'SDG'
+                        }
+                    }, '*');
+                } catch (e) {
+                    console.log('لا يمكن إرسال الرسالة للإطار');
+                }
+            };
+            
+            webview.onerror = () => {
+                // عرض رسالة خطأ مباشرة في شاشة التحميل
+                splash.innerHTML = `
+                    <div style="text-align: center; color: white; padding: 20px; font-family: 'Tajawal', sans-serif;">
+                        <h2 style="margin-bottom: 20px; font-weight: 700;">⚠️ حدث خطأ في التحميل</h2>
+                        <p style="margin-bottom: 30px; font-size: 16px;">يرجى التحقق من اتصال الإنترنت</p>
+                        <button onclick="location.reload()" style="
+                            margin-top: 20px;
+                            padding: 12px 40px;
+                            background: white;
+                            color: #D32F2F;
+                            border: none;
+                            border-radius: 25px;
+                            font-size: 16px;
+                            cursor: pointer;
+                            font-weight: bold;
+                            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                            font-family: 'Tajawal', sans-serif;
+                            transition: all 0.3s;
+                        " onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 20px rgba(0,0,0,0.3)';"
+                        onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.2)';">
+                            إعادة المحاولة
+                        </button>
+                    </div>
+                `;
+                showToast('فشل تحميل الموقع، يرجى المحاولة مرة أخرى', 4000);
+            };
+        }
+        
+        // ------------ نظام الرسائل بين التطبيق والموقع ------------
+        window.addEventListener("message", function(event) {
+            // طلب الموقع الجغرافي
+            if (event.data === "request_location") {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        webview.contentWindow.postMessage({
+                            status: "success",
+                            latitude: pos.coords.latitude,
+                            longitude: pos.coords.longitude,
+                            accuracy: pos.coords.accuracy,
+                            timestamp: pos.timestamp
+                        }, "*");
+                    },
+                    (err) => {
+                        webview.contentWindow.postMessage({
+                            status: "error",
+                            message: err.message,
+                            code: err.code
+                        }, "*");
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 15000,
+                        maximumAge: 0
+                    }
+                );
+            }
+            
+            // تنزيل الملفات
+            else if (event.data.type === "download_file") {
+                const { url, filename, type } = event.data;
+                downloadFile(url, filename, type);
+            }
+            
+            // حفظ البيانات
+            else if (event.data.type === "save_data") {
+                const { key, value } = event.data;
+                localStorage.setItem(`zoona_${key}`, JSON.stringify(value));
+                webview.contentWindow.postMessage({
+                    type: "data_saved",
+                    key: key,
+                    success: true
+                }, "*");
+                showToast('تم حفظ البيانات بنجاح ✓', 2000);
+            }
+            
+            // جلب البيانات
+            else if (event.data.type === "get_data") {
+                const { key } = event.data;
+                const value = localStorage.getItem(`zoona_${key}`);
+                webview.contentWindow.postMessage({
+                    type: "data_retrieved",
+                    key: key,
+                    value: value ? JSON.parse(value) : null,
+                    success: true
+                }, "*");
+            }
+            
+            // مسح البيانات
+            else if (event.data.type === "clear_data") {
+                const { key } = event.data;
+                if (key === 'all') {
+                    localStorage.clear();
+                    showToast('تم مسح جميع البيانات', 2000);
+                } else {
+                    localStorage.removeItem(`zoona_${key}`);
+                    showToast('تم مسح البيانات', 2000);
+                }
+            }
+        });
+        
+        // دالة تنزيل الملفات
+        function downloadFile(url, filename, type = 'image') {
+            showToast(`جاري تنزيل ${filename}... ⏳`, 3000);
+            
+            // إضافة طابع زمني للاسم لمنع التكرار
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+            const finalFilename = `${filename.replace(/\.[^/.]+$/, "")}_${timestamp}${filename.match(/\.[^/.]+$/)?.[0] || ''}`;
+            
+            fetch(url, {
+                mode: 'cors',
+                credentials: 'include'
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('فشل تحميل الملف');
+                return response.blob();
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = finalFilename;
+                
+                // إضافة سمة التحميل للمتصفح
+                a.setAttribute('download', finalFilename);
+                
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+                
+                showToast(`تم تنزيل ${filename} بنجاح ✅`, 3000);
+                
+                // إرسال تأكيد للموقع
+                webview.contentWindow.postMessage({
+                    type: "download_complete",
+                    filename: finalFilename,
+                    originalName: filename,
+                    success: true,
+                    timestamp: new Date().toISOString()
+                }, "*");
+                
+                // حفظ سجل التنزيلات
+                const downloads = JSON.parse(localStorage.getItem('zoona_downloads') || '[]');
+                downloads.unshift({
+                    filename: finalFilename,
+                    originalName: filename,
+                    type: type,
+                    date: new Date().toISOString(),
+                    url: url
+                });
+                localStorage.setItem('zoona_downloads', JSON.stringify(downloads.slice(0, 50)));
+            })
+            .catch(err => {
+                console.error('خطأ في التنزيل:', err);
+                showToast('فشل التنزيل، يرجى المحاولة مرة أخرى', 3000);
+                
+                webview.contentWindow.postMessage({
+                    type: "download_complete",
+                    filename: filename,
+                    success: false,
+                    error: err.message
+                }, "*");
+            });
+        }
+        
+        // منع الإجراءات الافتراضية
+        document.addEventListener('contextmenu', e => {
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+            }
+        });
+        
+        // دعم التثبيت كـ PWA (دون إشعارات)
+        let deferredPrompt;
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // لا تظهر أي إشعارات للتثبيت
+        });
+        
+        // إدارة الذاكرة
+        window.addEventListener('load', () => {
+            // تنظيف الذاكرة القديمة
+            const now = new Date().getTime();
+            const cacheData = JSON.parse(localStorage.getItem('zoona_cache_meta') || '{}');
+            
+            for (const key in cacheData) {
+                if (now - cacheData[key].timestamp > 7 * 24 * 60 * 60 * 1000) { // 7 أيام
+                    localStorage.removeItem(key);
+                    delete cacheData[key];
+                }
+            }
+            
+            localStorage.setItem('zoona_cache_meta', JSON.stringify(cacheData));
+        });
+        
+        // تحسين الأداء
+        let isScrolling;
+        window.addEventListener('scroll', () => {
+            window.clearTimeout(isScrolling);
+            
+            isScrolling = setTimeout(() => {
+                backButton.style.opacity = '0.7';
+                refreshButton.style.opacity = '0.7';
+                
+                setTimeout(() => {
+                    backButton.style.opacity = '1';
+                    refreshButton.style.opacity = '1';
+                }, 100);
+            }, 66);
+        }, false);
+        
+        // تحديث تاريخ أول استخدام
+        if (!localStorage.getItem('zoona_first_use')) {
+            localStorage.setItem('zoona_first_use', new Date().toISOString());
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+{
+  "name": "ZOONA",
+  "short_name": "ZOONA",
+  "description": "متجر ZOONA الإلكتروني - التسوق أونلاين في السودان",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#D32F2F",
+  "orientation": "any",
+  "scope": "/",
+  "categories": ["shopping", "ecommerce"],
+  "icons": [
+    {
+      "src": "icon/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png"
+    },
+    {
+      "src": "icon/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "icon/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "icon/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src": "icon/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png"
+    },
+    {
+      "src": "icon/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "https://via.placeholder.com/1080x1920/FFFFFF/D32F2F?text=ZOONA+المتجر+السوداني",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "prefer_related_applications": false,
+  "permissions": ["geolocation"],
+  "display_override": ["standalone"],
+  "shortcuts": [
+    {
+      "name": "الرئيسية",
+      "short_name": "الرئيسية",
+      "description": "العودة للصفحة الرئيسية",
+      "url": "https://www.zoonasd.com",
+      "icons": [{ "src": "icon/icon-96x96.png", "sizes": "96x96" }]
+    }
+  ]
+}
