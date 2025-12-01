@@ -15,6 +15,15 @@
     <meta name="keywords" content="zoona, متجر, تسوق, سوداني, شراء, منتجات, سودان">
     <meta name="author" content="ZOONA">
     
+    <!-- إعدادات إضافية لإخفاء العنوان -->
+    <meta name="apple-mobile-web-app-title" content="ZOONA">
+    <meta name="application-name" content="ZOONA">
+    <meta name="msapplication-navbutton-color" content="#D32F2F">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#D32F2F">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="robots" content="noindex, nofollow">
+    
     <title>ZOONA - المتجر السوداني</title>
     
     <!-- Manifest -->
@@ -42,6 +51,56 @@
             font-family: 'Tajawal', -apple-system, BlinkMacSystemFont, sans-serif;
             background: #FFFFFF;
             position: fixed;
+        }
+        
+        /* شريط التطبيق المخصص - يخفي شريط العناوين */
+        .app-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-shadow: 0 4px 12px rgba(183, 28, 28, 0.3);
+            padding-top: env(safe-area-inset-top, 0px);
+        }
+        
+        .app-title {
+            color: white;
+            font-size: 18px;
+            font-weight: 700;
+            font-family: 'Tajawal', sans-serif;
+        }
+        
+        .app-controls {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .app-icon-btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            font-family: 'Tajawal', sans-serif;
+        }
+        
+        .app-icon-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: scale(1.05);
         }
         
         /* شاشة التحميل - تصميم أحمر */
@@ -110,7 +169,8 @@
         /* حاوية الموقع */
         #webview-container {
             width: 100%;
-            height: 100%;
+            height: calc(100% - 60px);
+            margin-top: 60px;
             display: none;
         }
         
@@ -119,6 +179,9 @@
             height: 100%;
             border: none;
             background: #FFFFFF;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
         
         /* شريط الحالة - أحمر */
@@ -197,7 +260,7 @@
         /* حالات الاتصال - أحمر داكن */
         .offline-message {
             position: fixed;
-            top: 0;
+            top: 60px;
             left: 0;
             width: 100%;
             background: #B71C1C;
@@ -258,7 +321,7 @@
         }
         
         .pull-indicator.show {
-            top: 0;
+            top: 60px;
         }
         
         /* شبكة خلفية جمالية */
@@ -278,7 +341,7 @@
         /* رسالة الترحيب الخاصة */
         .welcome-message {
             position: fixed;
-            top: 20px;
+            top: 70px;
             right: 20px;
             background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);
             color: white;
@@ -304,6 +367,25 @@
                 transform: translateY(0);
             }
         }
+        
+        /* زر الشاشة الكاملة */
+        #fullscreen-btn {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(211, 47, 47, 0.8);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            z-index: 9999;
+            cursor: pointer;
+            font-size: 18px;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
     </style>
 </head>
 <body id="zoona-app" data-app-type="webview" data-store="sudan">
@@ -312,6 +394,15 @@
     
     <!-- شريط الحالة -->
     <div class="status-bar"></div>
+    
+    <!-- شريط التطبيق المخصص -->
+    <div class="app-header" id="app-header">
+        <div class="app-title">ZOONA - المتجر السوداني</div>
+        <div class="app-controls">
+            <button class="app-icon-btn" id="header-refresh" aria-label="تحديث">↻</button>
+            <button class="app-icon-btn" id="header-home" aria-label="الرئيسية">🏠</button>
+        </div>
+    </div>
     
     <!-- رسالة الترحيب -->
     <div class="welcome-message" id="welcome-message">
@@ -348,6 +439,7 @@
     <!-- أزرار التحكم -->
     <button id="back-button" aria-label="رجوع">←</button>
     <button id="refresh-button" aria-label="تحديث">↻</button>
+    <button id="fullscreen-btn" aria-label="شاشة كاملة">⛶</button>
     
     <!-- إشعارات -->
     <div id="toast"></div>
@@ -365,6 +457,10 @@
         const offlineMessage = document.getElementById('offline-message');
         const welcomeMessage = document.getElementById('welcome-message');
         const pullIndicator = document.getElementById('pull-indicator');
+        const appHeader = document.getElementById('app-header');
+        const headerRefresh = document.getElementById('header-refresh');
+        const headerHome = document.getElementById('header-home');
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
         
         // تعيين عنوان التطبيق
         document.title = appName;
@@ -374,20 +470,106 @@
         let currentY = 0;
         let isPulling = false;
         
-        // تهيئة Service Worker
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js')
-                    .then(registration => {
-                        console.log('ServiceWorker مسجل بنجاح لتطبيق ZOONA');
-                    })
-                    .catch(err => {
-                        console.error('فشل تسجيل ServiceWorker:', err);
-                    });
-            });
+        // ========== دالة الشاشة الكاملة ==========
+        function enterFullscreen() {
+            const elem = document.documentElement;
+            
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.mozRequestFullScreen) { // Firefox
+                elem.mozRequestFullScreen();
+            } else if (elem.webkitRequestFullscreen) { // Chrome, Safari
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) { // IE/Edge
+                elem.msRequestFullscreen();
+            }
+            
+            // إخفاء شريط التنقل عند التمرير (للهواتف)
+            if ('standalone' in navigator || window.matchMedia('(display-mode: standalone)').matches) {
+                window.scrollTo(0, 1);
+            }
+            
+            showToast('تم تفعيل وضع الشاشة الكاملة ✅', 2000);
         }
         
-        // دالة لإظهار الإشعارات
+        function exitFullscreen() {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+        }
+        
+        // ========== دالة لإخفاء واجهة المتصفح ==========
+        function hideBrowserUI() {
+            // 1. إخفاء شريط العناوين
+            if (window.location.hash !== '#hidden') {
+                window.location.hash = '#hidden';
+                setTimeout(() => {
+                    window.scrollTo(0, 1);
+                }, 0);
+            }
+            
+            // 2. منع التمرير للإظهار
+            let lastScrollY = window.scrollY;
+            window.addEventListener('scroll', () => {
+                if (window.scrollY < 50) {
+                    window.scrollTo(0, 50);
+                }
+                lastScrollY = window.scrollY;
+            });
+            
+            // 3. إخفاء عناصر المتصفح
+            const style = document.createElement('style');
+            style.textContent = `
+                ::-webkit-scrollbar { display: none !important; }
+                iframe { -webkit-overflow-scrolling: touch !important; }
+                body { -webkit-touch-callout: none !important; }
+            `;
+            document.head.appendChild(style);
+            
+            // 4. إعدادات iOS خاصة
+            if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                const viewport = document.querySelector("meta[name=viewport]");
+                if (viewport) {
+                    viewport.content = viewport.content + ', viewport-fit=cover';
+                }
+                
+                // إضافة padding safe area
+                document.documentElement.style.paddingTop = 'env(safe-area-inset-top)';
+                document.documentElement.style.paddingBottom = 'env(safe-area-inset-bottom)';
+            }
+        }
+        
+        // ========== دالة تحديث ارتفاع webview ==========
+        function updateWebviewHeight() {
+            const headerHeight = appHeader.offsetHeight;
+            webviewContainer.style.marginTop = headerHeight + 'px';
+            webviewContainer.style.height = `calc(100% - ${headerHeight}px)`;
+            offlineMessage.style.top = headerHeight + 'px';
+        }
+        
+        // ========== دالة التحديث ==========
+        function refreshWebview() {
+            if (webview.contentWindow) {
+                showToast('جاري تحديث الصفحة...', 1500);
+                webview.contentWindow.location.reload();
+            }
+        }
+        
+        // ========== دالة العودة للصفحة الرئيسية ==========
+        function goHome() {
+            if (webview.contentWindow) {
+                showToast('جاري العودة للصفحة الرئيسية...', 1500);
+                webview.contentWindow.location.href = siteURL;
+            }
+        }
+        
+        // ========== دالة لإظهار الإشعارات ==========
         function showToast(message, duration = 3000) {
             toast.textContent = message;
             toast.style.display = 'block';
@@ -397,7 +579,7 @@
             }, duration);
         }
         
-        // دالة لإظهار رسالة الترحيب
+        // ========== دالة لإظهار رسالة الترحيب ==========
         function showWelcomeMessage() {
             // التحقق إذا تم عرض رسالة الترحيب اليوم
             const today = new Date().toDateString();
@@ -417,7 +599,7 @@
             }
         }
         
-        // دالة لإظهار رسالة عدم الاتصال
+        // ========== دالة لإظهار رسالة عدم الاتصال ==========
         function showOfflineMessage() {
             offlineMessage.style.display = 'block';
             showToast('تم تفعيل وضع العمل دون اتصال', 3000);
@@ -428,7 +610,7 @@
             }, 5000);
         }
         
-        // التحقق من الاتصال بالإنترنت
+        // ========== التحقق من الاتصال بالإنترنت ==========
         function updateOnlineStatus() {
             if (navigator.onLine) {
                 // إخفاء رسالة عدم الاتصال إذا كانت ظاهرة
@@ -443,11 +625,11 @@
             }
         }
         
-        // مستمعات حالة الاتصال
+        // ========== مستمعات حالة الاتصال ==========
         window.addEventListener('online', updateOnlineStatus);
         window.addEventListener('offline', updateOnlineStatus);
         
-        // إدارة سحب الصفحة للتحديث
+        // ========== إدارة سحب الصفحة للتحديث ==========
         document.addEventListener('touchstart', (e) => {
             if (window.scrollY === 0 && !isPulling) {
                 startY = e.touches[0].clientY;
@@ -490,14 +672,27 @@
             }
         });
         
-        // تهيئة التطبيق
+        // ========== تهيئة التطبيق ==========
         document.addEventListener('DOMContentLoaded', () => {
             updateOnlineStatus();
+            
+            // تحديث أبعاد webview
+            updateWebviewHeight();
+            
+            // تفعيل الشاشة الكاملة بعد تأخير
+            setTimeout(() => {
+                enterFullscreen();
+                hideBrowserUI();
+            }, 800);
             
             // محاكاة وقت تحميل الشاشة
             setTimeout(() => {
                 loadWebview();
             }, 2000);
+            
+            // إعداد أزرار شريط التطبيق
+            headerRefresh.addEventListener('click', refreshWebview);
+            headerHome.addEventListener('click', goHome);
             
             // زر العودة
             backButton.addEventListener('click', () => {
@@ -508,12 +703,10 @@
             });
             
             // زر التحديث
-            refreshButton.addEventListener('click', () => {
-                if (webview.contentWindow) {
-                    showToast('جاري تحديث الصفحة...', 1500);
-                    webview.contentWindow.location.reload();
-                }
-            });
+            refreshButton.addEventListener('click', refreshWebview);
+            
+            // زر الشاشة الكاملة
+            fullscreenBtn.addEventListener('click', enterFullscreen);
             
             // تحديث ظهور أزرار التحكم
             setInterval(() => {
@@ -536,9 +729,11 @@
             }, 1000);
         });
         
-        // تحميل الموقع
+        // ========== تحميل الموقع ==========
         function loadWebview() {
-            webview.src = siteURL;
+            // إضافة random parameter لمنع التخزين المؤقت
+            const randomParam = `?timestamp=${Date.now()}&app=zoona&ref=app`;
+            webview.src = siteURL + randomParam;
             
             webview.onload = () => {
                 // إخفاء شاشة التحميل
@@ -553,6 +748,7 @@
                     const pageTitle = webview.contentWindow.document.title;
                     if (pageTitle && pageTitle !== "" && pageTitle !== "ZOONA") {
                         document.title = `${pageTitle} | ${appName}`;
+                        appHeader.querySelector('.app-title').textContent = pageTitle;
                     }
                 } catch (e) {
                     // لا شيء
@@ -611,7 +807,53 @@
             };
         }
         
-        // ------------ نظام الرسائل بين التطبيق والموقع ------------
+        // ========== إدارة الشاشة الكاملة ==========
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement) {
+                fullscreenBtn.style.display = 'flex';
+            } else {
+                fullscreenBtn.style.display = 'none';
+            }
+        });
+        
+        document.addEventListener('mozfullscreenchange', () => {
+            if (!document.mozFullScreenElement) {
+                fullscreenBtn.style.display = 'flex';
+            } else {
+                fullscreenBtn.style.display = 'none';
+            }
+        });
+        
+        document.addEventListener('webkitfullscreenchange', () => {
+            if (!document.webkitFullscreenElement) {
+                fullscreenBtn.style.display = 'flex';
+            } else {
+                fullscreenBtn.style.display = 'none';
+            }
+        });
+        
+        document.addEventListener('msfullscreenchange', () => {
+            if (!document.msFullscreenElement) {
+                fullscreenBtn.style.display = 'flex';
+            } else {
+                fullscreenBtn.style.display = 'none';
+            }
+        });
+        
+        // ========== تهيئة Service Worker ==========
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(registration => {
+                        console.log('ServiceWorker مسجل بنجاح لتطبيق ZOONA');
+                    })
+                    .catch(err => {
+                        console.error('فشل تسجيل ServiceWorker:', err);
+                    });
+            });
+        }
+        
+        // ========== نظام الرسائل بين التطبيق والموقع ==========
         window.addEventListener("message", function(event) {
             // طلب الموقع الجغرافي
             if (event.data === "request_location") {
@@ -683,7 +925,7 @@
             }
         });
         
-        // دالة تنزيل الملفات
+        // ========== دالة تنزيل الملفات ==========
         function downloadFile(url, filename, type = 'image') {
             showToast(`جاري تنزيل ${filename}... ⏳`, 3000);
             
@@ -749,23 +991,22 @@
             });
         }
         
-        // منع الإجراءات الافتراضية
+        // ========== منع الإجراءات الافتراضية ==========
         document.addEventListener('contextmenu', e => {
             if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
                 e.preventDefault();
             }
         });
         
-        // دعم التثبيت كـ PWA (دون إشعارات)
+        // ========== دعم التثبيت كـ PWA ==========
         let deferredPrompt;
         
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            // لا تظهر أي إشعارات للتثبيت
         });
         
-        // إدارة الذاكرة
+        // ========== إدارة الذاكرة ==========
         window.addEventListener('load', () => {
             // تنظيف الذاكرة القديمة
             const now = new Date().getTime();
@@ -781,7 +1022,7 @@
             localStorage.setItem('zoona_cache_meta', JSON.stringify(cacheData));
         });
         
-        // تحسين الأداء
+        // ========== تحسين الأداء ==========
         let isScrolling;
         window.addEventListener('scroll', () => {
             window.clearTimeout(isScrolling);
@@ -797,10 +1038,14 @@
             }, 66);
         }, false);
         
-        // تحديث تاريخ أول استخدام
+        // ========== تحديث تاريخ أول استخدام ==========
         if (!localStorage.getItem('zoona_first_use')) {
             localStorage.setItem('zoona_first_use', new Date().toISOString());
         }
+        
+        // ========== إعادة تطبيق إخفاء واجهة المتصفح عند تغيير الحجم ==========
+        window.addEventListener('resize', hideBrowserUI);
+        window.addEventListener('orientationchange', hideBrowserUI);
     </script>
 </body>
 </html>
