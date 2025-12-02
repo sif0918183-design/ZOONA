@@ -7,7 +7,7 @@ const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/assets/splash-logo.png', // تأكد من صحة هذا المسار على استضافتك
+  '/assets/splash-logo.png',
   'https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap'
 ];
 
@@ -43,6 +43,7 @@ self.addEventListener('activate', event => {
           })
         );
       }),
+      // يضمن أن يصبح عامل الخدمة فعالاً على الفور
       self.clients.claim()
     ])
   );
@@ -54,29 +55,26 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   
-  // تجاهل طلبات غير GET
   if (event.request.method !== 'GET') return;
   
   event.respondWith(
     (async () => {
-      // محاولة استرجاع من الذاكرة المؤقتة أولاً
       const cachedResponse = await getFromCache(event.request);
       if (cachedResponse) {
         return cachedResponse;
       }
       
-      // محاولة الاسترجاع من الشبكة
       try {
         const networkResponse = await fetch(event.request);
         
-        // تخزين الصور فقط في الذاكرة (باستخدام الدالة المساعدة)
+        // تخزين الصور في كاش الصور
         if (networkResponse.ok && url.pathname.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) {
           await addToCache(event.request, networkResponse.clone());
         }
         
         return networkResponse;
       } catch (error) {
-        // إذا فشل الاتصال، عرض نسخة مخزنة أو رسالة خطأ
+        // في حالة عدم الاتصال، عرض الصفحة الرئيسية المخزنة
         if (event.request.headers.get('accept').includes('text/html')) {
           return caches.match('/index.html');
         }
@@ -93,50 +91,44 @@ self.addEventListener('fetch', event => {
 // 4. معالجة الإشعارات اللحظية (Push Notifications)
 // ----------------------------------------------------
 
-// أ. حدث استقبال الإشعار (يتم تشغيله عند وصول رسالة من الخادم)
+// أ. حدث استقبال الإشعار (مهم جداً!)
 self.addEventListener('push', event => {
   console.log('[Service Worker] Push Received.');
 
-  // تحليل البيانات المرسلة من الخادم
   const data = event.data ? event.data.json() : { title: 'إشعار جديد', body: 'تنبيه من متجر ZOONA', url: '/' };
   
   const title = data.title;
   const options = {
     body: data.body,
     icon: '/icon/icon-192x192.png', // تأكد من صحة مسار الأيقونة
-    // badge: '/icon/badge-icon.png', // أيقونة صغيرة (اختياري)
     data: {
-      url: data.url // الرابط الذي سيتم فتحه عند النقر
+      url: data.url 
     }
   };
 
-  // عرض الإشعار
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
-// ب. حدث النقر على الإشعار (يتم تشغيله عند النقر على الإشعار)
+// ب. حدث النقر على الإشعار
 self.addEventListener('notificationclick', event => {
   console.log('[Service Worker] Notification click Received.');
 
-  // إغلاق الإشعار أولاً
   event.notification.close();
 
-  // فتح نافذة المتصفح/التطبيق
   const targetUrl = event.notification.data.url || '/';
 
   event.waitUntil(
     clients.matchAll({ type: 'window' }).then(windowClients => {
       for (const client of windowClients) {
-        // إذا كانت النافذة مفتوحة بالفعل، ركز عليها وانتقل إلى الرابط
         if (client.url.includes(targetUrl) && 'focus' in client) {
           return client.focus();
         }
       }
-      // إذا لم تكن النافذة مفتوحة، افتح نافذة جديدة
       return clients.openWindow(targetUrl);
     })
   );
 });
+
 
 // ----------------------------------------------------
 // 5. وظائف مساعدة (Functions)
