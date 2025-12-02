@@ -7,9 +7,44 @@ const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
+  // تأكد من صحة المسارات:
   '/assets/splash-logo.png',
   'https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap'
 ];
+
+// ----------------------------------------------------
+// 5. وظائف مساعدة (Functions) - يجب تعريفها أولاً
+// ----------------------------------------------------
+
+async function getFromCache(request) {
+  const cacheNames = [CACHE_NAME, API_CACHE_NAME, IMAGE_CACHE_NAME];
+  for (const cacheName of cacheNames) {
+    const cache = await caches.open(cacheName);
+    const cached = await cache.match(request);
+    if (cached) return cached;
+  }
+  return null;
+}
+
+async function addToCache(request, response) {
+  const url = new URL(request.url);
+  let cacheName = IMAGE_CACHE_NAME; // افتراضياً كاش الصور
+  
+  // تحديد ما إذا كان طلباً لواجهة برمجة تطبيقات (API)
+  // يمكنك تغيير '/api/' إلى أي مسار API تستخدمه
+  if (url.pathname.startsWith('/api/')) {
+    cacheName = API_CACHE_NAME;
+  } 
+  // تحديد ما إذا كان طلباً لصورة
+  else if (url.pathname.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) {
+    cacheName = IMAGE_CACHE_NAME;
+  }
+  // التخزين في الكاش المحدد
+  if (cacheName) {
+    const cache = await caches.open(cacheName);
+    await cache.put(request, response);
+  }
+}
 
 // ----------------------------------------------------
 // 1. تثبيت Service Worker
@@ -43,7 +78,6 @@ self.addEventListener('activate', event => {
           })
         );
       }),
-      // يضمن أن يصبح عامل الخدمة فعالاً على الفور
       self.clients.claim()
     ])
   );
@@ -55,26 +89,36 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   
+  // تجاهل طلبات OneSignal إذا لم تكن تديرها بنفسك
+  if (url.hostname.includes('onesignal.com') || url.pathname.match(/OneSignalSDK/i)) {
+      return;
+  }
+
   if (event.request.method !== 'GET') return;
   
   event.respondWith(
     (async () => {
       const cachedResponse = await getFromCache(event.request);
       if (cachedResponse) {
+        // تحديث الكاش في الخلفية
+        event.waitUntil(fetch(event.request).then(response => {
+          if (response && response.ok) {
+             addToCache(event.request, response.clone());
+          }
+        }));
         return cachedResponse;
       }
       
       try {
         const networkResponse = await fetch(event.request);
         
-        // تخزين الصور في كاش الصور
-        if (networkResponse.ok && url.pathname.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) {
-          await addToCache(event.request, networkResponse.clone());
+        if (networkResponse.ok && networkResponse.type === 'basic') {
+          // تخزين الاستجابة في الكاش المناسب (صور، API، أو غيره)
+          addToCache(event.request, networkResponse.clone());
         }
         
         return networkResponse;
       } catch (error) {
-        // في حالة عدم الاتصال، عرض الصفحة الرئيسية المخزنة
         if (event.request.headers.get('accept').includes('text/html')) {
           return caches.match('/index.html');
         }
@@ -90,8 +134,10 @@ self.addEventListener('fetch', event => {
 // ----------------------------------------------------
 // 4. معالجة الإشعارات اللحظية (Push Notifications)
 // ----------------------------------------------------
+// * ملاحظة: بما أنك تستخدم OneSignal، فإن OneSignal SDK تتولى عادةً
+//   هذه الأحداث، لكن تركها هنا لا يضر طالما لا تتعارض.
 
-// أ. حدث استقبال الإشعار (مهم جداً!)
+// أ. حدث استقبال الإشعار
 self.addEventListener('push', event => {
   console.log('[Service Worker] Push Received.');
 
@@ -100,7 +146,7 @@ self.addEventListener('push', event => {
   const title = data.title;
   const options = {
     body: data.body,
-    icon: '/icon/icon-192x192.png', // تأكد من صحة مسار الأيقونة
+    icon: '/icon/icon-192x192.png', 
     data: {
       url: data.url 
     }
@@ -128,28 +174,3 @@ self.addEventListener('notificationclick', event => {
     })
   );
 });
-
-
-// ----------------------------------------------------
-// 5. وظائف مساعدة (Functions)
-// ----------------------------------------------------
-
-async function getFromCache(request) {
-  const cacheNames = [CACHE_NAME, IMAGE_CACHE_NAME];
-  for (const cacheName of cacheNames) {
-    const cache = await caches.open(cacheName);
-    const cached = await cache.match(request);
-    if (cached) return cached;
-  }
-  return null;
-}
-
-async function addToCache(request, response) {
-  const url = new URL(request.url);
-  let cacheName = IMAGE_CACHE_NAME;
-  
-  if (url.pathname.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) {
-    const cache = await caches.open(cacheName);
-    await cache.put(request, response);
-  }
-}
