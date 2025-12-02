@@ -1,7 +1,7 @@
 {
   "name": "ZOONA",
   "short_name": "ZOONA",
-  "description": "متجر ZOONA الإلكتروني - التسوق أونلاين في السودان",
+  "description": "متجر زونا الإلكتروني - التسوق أونلاين في السودان",
   "lang": "ar",
   "dir": "rtl",
   "start_url": "/",
@@ -23,7 +23,7 @@
   ],
   "screenshots": [
     {
-      "src": "https://via.placeholder.com/1080x1920/FFFFFF/D32F2F?text=ZOONA+المتجر+السوداني",
+      "src": "https://via.placeholder.com/1080x1920/FFFFFF/D32F2F?text=ZOONA+SD",
       "sizes": "1080x1920",
       "type": "image/png",
       "form_factor": "narrow"
