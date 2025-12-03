@@ -1,4 +1,14 @@
-const CACHE_NAME = 'zoona-store-cache-v1.0.0';
+// =================================================================
+// 🚨 1. دمج عامل الخدمة الخاص بـ OneSignal (يجب أن يكون في الأعلى)
+// هذا السطر يتولى معالجة الإشعارات اللحظية (Push Notifications)
+// =================================================================
+importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDKWorker.js');
+
+
+// =================================================================
+// 2. متغيرات التخزين المؤقت (PWA Caching Variables)
+// =================================================================
+Const CACHE_NAME = 'zoona-store-cache-v1.0.0';
 const API_CACHE_NAME = 'zoona-store-api-cache-v1.0.0';
 const IMAGE_CACHE_NAME = 'zoona-store-images-cache-v1.0.0';
 
@@ -13,7 +23,7 @@ const urlsToCache = [
 ];
 
 // ----------------------------------------------------
-// 5. وظائف مساعدة (Functions) - يجب تعريفها أولاً
+// 3. وظائف مساعدة (Functions)
 // ----------------------------------------------------
 
 async function getFromCache(request) {
@@ -28,26 +38,33 @@ async function getFromCache(request) {
 
 async function addToCache(request, response) {
   const url = new URL(request.url);
-  let cacheName = IMAGE_CACHE_NAME; // افتراضياً كاش الصور
+  let cacheName = CACHE_NAME; // الافتراضي هو الكاش الثابت
   
   // تحديد ما إذا كان طلباً لواجهة برمجة تطبيقات (API)
-  // يمكنك تغيير '/api/' إلى أي مسار API تستخدمه
   if (url.pathname.startsWith('/api/')) {
     cacheName = API_CACHE_NAME;
   } 
-  // تحديد ما إذا كان طلباً لصورة
+  // تحديد ما إذا كان طلباً لصور
   else if (url.pathname.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) {
     cacheName = IMAGE_CACHE_NAME;
   }
+  // تخزين ملفات خطوط Google الفعلية (من نطاق gstatic.com)
+  else if (url.origin === 'https://fonts.gstatic.com') {
+    cacheName = CACHE_NAME;
+  }
+
   // التخزين في الكاش المحدد
   if (cacheName) {
-    const cache = await caches.open(cacheName);
-    await cache.put(request, response);
+    // التحقق من صحة الاستجابة قبل التخزين (HTTP 200)
+    if (response.ok || url.origin === 'https://fonts.gstatic.com' || url.origin === 'https://fonts.googleapis.com') {
+        const cache = await caches.open(cacheName);
+        await cache.put(request, response.clone()); 
+    }
   }
 }
 
 // ----------------------------------------------------
-// 1. تثبيت Service Worker
+// 4. تثبيت Service Worker
 // ----------------------------------------------------
 self.addEventListener('install', event => {
   console.log('📱 تثبيت تطبيق ZOONA للتخزين المؤقت');
@@ -61,7 +78,7 @@ self.addEventListener('install', event => {
 });
 
 // ----------------------------------------------------
-// 2. تفعيل Service Worker وتنظيف الكاش القديم
+// 5. تفعيل Service Worker وتنظيف الكاش القديم
 // ----------------------------------------------------
 self.addEventListener('activate', event => {
   console.log('✅ تفعيل تخزين متجر ZOONA');
@@ -84,41 +101,60 @@ self.addEventListener('activate', event => {
 });
 
 // ----------------------------------------------------
-// 3. اعتراض الطلبات (Caching Strategy)
+// 6. اعتراض الطلبات (Caching Strategy)
 // ----------------------------------------------------
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   
-  // تجاهل طلبات OneSignal إذا لم تكن تديرها بنفسك
+  // لا تقم بمعالجة طلبات OneSignal هنا (تجنب التعارض)
   if (url.hostname.includes('onesignal.com') || url.pathname.match(/OneSignalSDK/i)) {
       return;
   }
-
+  
+  // معالجة طلبات خطوط Google (Cache First)
+  if (url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com') {
+    event.respondWith(caches.match(event.request)
+      .then(cachedResponse => {
+        // Cache First (الاستراتيجية الأفضل للخطوط)
+        if (cachedResponse) return cachedResponse;
+        
+        return fetch(event.request).then(response => {
+          if (response && response.ok) {
+            addToCache(event.request, response.clone());
+          }
+          return response;
+        });
+      })
+    );
+    return;
+  }
+  
+  // تجاهل طلبات غير GET
   if (event.request.method !== 'GET') return;
   
+  // إستراتيجية Stale-While-Revalidate الافتراضية لبقية الأصول
   event.respondWith(
     (async () => {
       const cachedResponse = await getFromCache(event.request);
+      
+      const fetchPromise = fetch(event.request).then(networkResponse => {
+        if (networkResponse.ok && networkResponse.type === 'basic') {
+          addToCache(event.request, networkResponse.clone());
+        }
+        return networkResponse;
+      }).catch(error => {
+        throw error;
+      });
+
       if (cachedResponse) {
-        // تحديث الكاش في الخلفية
-        event.waitUntil(fetch(event.request).then(response => {
-          if (response && response.ok) {
-             addToCache(event.request, response.clone());
-          }
-        }));
+        event.waitUntil(fetchPromise);
         return cachedResponse;
       }
       
       try {
-        const networkResponse = await fetch(event.request);
-        
-        if (networkResponse.ok && networkResponse.type === 'basic') {
-          // تخزين الاستجابة في الكاش المناسب (صور، API، أو غيره)
-          addToCache(event.request, networkResponse.clone());
-        }
-        
-        return networkResponse;
+        return await fetchPromise;
       } catch (error) {
+        // في حالة فشل الشبكة وعدم وجود كاش: Fallback
         if (event.request.headers.get('accept').includes('text/html')) {
           return caches.match('/index.html');
         }
@@ -132,45 +168,7 @@ self.addEventListener('fetch', event => {
 });
 
 // ----------------------------------------------------
-// 4. معالجة الإشعارات اللحظية (Push Notifications)
+// 7. ملاحظة حول الإشعارات اللحظية
 // ----------------------------------------------------
-// * ملاحظة: بما أنك تستخدم OneSignal، فإن OneSignal SDK تتولى عادةً
-//   هذه الأحداث، لكن تركها هنا لا يضر طالما لا تتعارض.
-
-// أ. حدث استقبال الإشعار
-self.addEventListener('push', event => {
-  console.log('[Service Worker] Push Received.');
-
-  const data = event.data ? event.data.json() : { title: 'إشعار جديد', body: 'تنبيه من متجر ZOONA', url: '/' };
-  
-  const title = data.title;
-  const options = {
-    body: data.body,
-    icon: '/icon/icon-192x192.png', 
-    data: {
-      url: data.url 
-    }
-  };
-
-  event.waitUntil(self.registration.showNotification(title, options));
-});
-
-// ب. حدث النقر على الإشعار
-self.addEventListener('notificationclick', event => {
-  console.log('[Service Worker] Notification click Received.');
-
-  event.notification.close();
-
-  const targetUrl = event.notification.data.url || '/';
-
-  event.waitUntil(
-    clients.matchAll({ type: 'window' }).then(windowClients => {
-      for (const client of windowClients) {
-        if (client.url.includes(targetUrl) && 'focus' in client) {
-          return client.focus();
-        }
-      }
-      return clients.openWindow(targetUrl);
-    })
-  );
-});
+// تمت إزالة أكواد معالجة أحداث 'push' و 'notificationclick' الخاصة بك
+// لأنها يتم التعامل معها الآن بواسطة ملف 'OneSignalSDKWorker.js' المستورد أعلاه.
