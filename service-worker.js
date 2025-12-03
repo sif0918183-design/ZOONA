@@ -1,10 +1,17 @@
 // =================================================================
-// 🚨 ملاحظة هامة: تم حذف سطر importScripts الخاص بـ OneSignal
-// ملف الخدمة هذا الآن سيعمل بشكل مستقل لمعالجة الإشعارات.
+// 🚨 1. الدمج الإجباري لعامل الخدمة الخاص بـ OneSignal
+// هذا السطر ضروري ليعمل ServiceWorkerPath في كود بلوجر.
 // =================================================================
+try {
+  importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDKWorker.js');
+} catch (e) {
+  // هذا يمنع تعطل عامل الخدمة في حالة فشل تحميل سكربت OneSignal
+  console.error("OneSignal Worker failed to load:", e);
+}
+
 
 // =================================================================
-// 1. متغيرات التخزين المؤقت (PWA Caching Variables)
+// 2. متغيرات التخزين المؤقت (PWA Caching Variables)
 // =================================================================
 const CACHE_NAME = 'zoona-store-cache-v1.0.0';
 const API_CACHE_NAME = 'zoona-store-api-cache-v1.0.0';
@@ -21,7 +28,7 @@ const urlsToCache = [
 ];
 
 // ----------------------------------------------------
-// 2. وظائف مساعدة (Functions)
+// 3. وظائف مساعدة (Functions)
 // ----------------------------------------------------
 
 async function getFromCache(request) {
@@ -62,7 +69,7 @@ async function addToCache(request, response) {
 }
 
 // ----------------------------------------------------
-// 3. تثبيت Service Worker
+// 4. تثبيت Service Worker
 // ----------------------------------------------------
 self.addEventListener('install', event => {
   console.log('📱 تثبيت تطبيق ZOONA للتخزين المؤقت');
@@ -76,7 +83,7 @@ self.addEventListener('install', event => {
 });
 
 // ----------------------------------------------------
-// 4. تفعيل Service Worker وتنظيف الكاش القديم
+// 5. تفعيل Service Worker وتنظيف الكاش القديم
 // ----------------------------------------------------
 self.addEventListener('activate', event => {
   console.log('✅ تفعيل تخزين متجر ZOONA');
@@ -99,7 +106,7 @@ self.addEventListener('activate', event => {
 });
 
 // ----------------------------------------------------
-// 5. اعتراض الطلبات (Caching Strategy)
+// 6. اعتراض الطلبات (Caching Strategy)
 // ----------------------------------------------------
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
@@ -166,46 +173,7 @@ self.addEventListener('fetch', event => {
 });
 
 // ----------------------------------------------------
-// 6. معالجة الإشعارات اللحظية (Push Notifications)
-// هذا القسم ضروري بعد إلغاء دمج OneSignal
+// 7. ملاحظة حول الإشعارات اللحظية
 // ----------------------------------------------------
-// أ. حدث استقبال الإشعار
-self.addEventListener('push', event => {
-  console.log('[Service Worker] Push Received.');
-
-  // يجب أن يعالج هذا الجزء بيانات OneSignal
-  const data = event.data ? event.data.json() : { title: 'إشعار جديد', body: 'تنبيه من متجر ZOONA', url: '/' };
-  
-  const title = data.title;
-  const options = {
-    body: data.body,
-    icon: '/icon/icon-192x192.png', 
-    data: {
-      url: data.url // يحفظ عنوان URL للنقر
-    }
-  };
-
-  event.waitUntil(self.registration.showNotification(title, options));
-});
-
-// ب. حدث النقر على الإشعار
-self.addEventListener('notificationclick', event => {
-  console.log('[Service Worker] Notification click Received.');
-
-  event.notification.close();
-
-  const targetUrl = event.notification.data.url || '/';
-
-  event.waitUntil(
-    clients.matchAll({ type: 'window' }).then(windowClients => {
-      for (const client of windowClients) {
-        // إذا كانت الصفحة مفتوحة، قم بتركيزها
-        if (client.url.includes(targetUrl) && 'focus' in client) {
-          return client.focus();
-        }
-      }
-      // إذا لم تكن مفتوحة، افتح نافذة جديدة
-      return clients.openWindow(targetUrl);
-    })
-  );
-});
+// تمت إزالة أكواد معالجة أحداث 'push' و 'notificationclick' الخاصة بك
+// لأنها يتم التعامل معها الآن بواسطة ملف 'OneSignalSDKWorker.js' المستورد أعلاه.
