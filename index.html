@@ -305,15 +305,31 @@
             }
         }
     </style>
-<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-<script>
-  window.OneSignalDeferred = window.OneSignalDeferred || [];
-  OneSignalDeferred.push(async function(OneSignal) {
-    await OneSignal.init({
-      appId: "019e0ae3-702c-4461-9a0a-9125f3f675cf",
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>  
+<script>  
+  window.OneSignalDeferred = window.OneSignalDeferred || [];  
+  OneSignalDeferred.push(async function(OneSignal) {  
+    await OneSignal.init({  
+      appId: "019e0ae3-702c-4461-9a0a-9125f3f675cf",  
+      // إذا كنت تستخدم واجهة مستخدم خاصة (Custom Prompts)، قم بتعطيلها هنا  
+      // autoResubscribe: true,  
     });
+    
+    // =======================================================
+    // 💡 الإضافة الهامة: عرض رسالة طلب الإذن للمستخدمين الجدد
+    // =======================================================
+    // تحقق أولاً من أن المستخدم لم يقم بالاشتراك بعد
+    const isPushEnabled = await OneSignal.isPushNotificationsEnabled();
+    const notificationPermission = await OneSignal.getNotificationPermission();
+    
+    if (!isPushEnabled && notificationPermission === 'default') {
+      // لعرض نافذة منزلقة (Slidedown Prompt) بدلاً من النافذة الأصلية المزعجة
+      OneSignal.Slidedown.promptPush(); 
+      // أو OneSignal.showNativePrompt() إذا كنت تفضل النافذة الافتراضية للمتصفح
+    }
+    
   });
-</script>
+</script> 
 </head>
 <body id="zoona-app" data-app-type="webview" data-store="sudan">
     <!-- نمط خلفية -->
