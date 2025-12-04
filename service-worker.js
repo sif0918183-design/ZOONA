@@ -3,7 +3,7 @@
 // هذا السطر ضروري ليعمل ServiceWorkerPath في كود بلوجر.
 // =================================================================
 try {
-  importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDKWorker.js');
+  importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js');
 } catch (e) {
   // هذا يمنع تعطل عامل الخدمة في حالة فشل تحميل سكربت OneSignal
   console.error("OneSignal Worker failed to load:", e);
