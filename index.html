@@ -307,22 +307,21 @@
     </style>
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 <script>
-  window.OneSignalDeferred = window.OneSignalDeferred || [];
-  OneSignalDeferred.push(async function(OneSignal) {
-    await OneSignal.init({
-      appId: "e542557c-fbed-4ca6-96fa-0b37e0d21490",
+window.OneSignalDeferred = window.OneSignalDeferred || [];
+OneSignalDeferred.push(async function(OneSignal) {
+  await OneSignal.init({
+    appId: "e542557c-fbed-4ca6-96fa-0b37e0d21490",
 
-      // 👇 مهم جداً في المواقع التي تستخدم PWA
-      serviceWorkerPath: "OneSignalSDKWorker.js",
-      serviceWorkerParam: { scope: "/" },
-      serviceWorkerUpdaterPath: "OneSignalSDKUpdaterWorker.js",
+    serviceWorkerPath: "/OneSignalSDKWorker.js",
+    serviceWorkerUpdaterPath: "/OneSignalSDKUpdaterWorker.js",
+    serviceWorkerParam: { scope: "/" },
 
-      // 👇 زر الاشتراك (اختياري لكن مهم)
-      notifyButton: {
-        enable: true,
-      },
-    });
+    notifyButton: { enable: true },
   });
+
+  // 👇 إجبار المستخدم على الإذن للإشعارات
+  OneSignal.showNativePrompt();
+});
 </script>
 </head>
 <body id="zoona-app" data-app-type="webview" data-store="sudan">
