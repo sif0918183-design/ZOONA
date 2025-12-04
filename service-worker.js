@@ -88,37 +88,37 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // استراتيجية SWR
+  // استراتيجية Stale-While-Revalidate
   event.respondWith(
     (async () => {
       const cached = await caches.match(event.request);
-      const fetchPromise = fetch(event.request)
-        .then(res => {
-          if (res.ok) {
-            const cloned = res.clone();
-            caches.open(CACHE_NAME).then(c => c.put(event.request, cloned));
-          }
-          return res;
-        })
-        .catch(() => null);
 
-      if (cached) {
-        event.waitUntil(fetchPromise);
-        return cached;
+      try {
+        const networkResponse = await fetch(event.request);
+        if (networkResponse && networkResponse.ok) {
+          const cloned = networkResponse.clone(); // clone مرة واحدة
+          const cache = await caches.open(CACHE_NAME);
+          cache.put(event.request, cloned);
+        }
+
+        // إذا يوجد كاش، أرسله فوراً وانتظر الشبكة في الخلفية
+        if (cached) {
+          event.waitUntil(Promise.resolve()); // background update (networkResponse موجود)
+          return cached;
+        }
+
+        return networkResponse;
+      } catch (err) {
+        // إذا فشلت الشبكة، استخدم الكاش أو fallback
+        if (cached) return cached;
+        if (event.request.headers.get('accept')?.includes('text/html')) {
+          return caches.match('/index.html');
+        }
+        return new Response('متجر ZOONA — غير متصل بالإنترنت', {
+          status: 503,
+          headers: {'Content-Type': 'text/plain; charset=utf-8'}
+        });
       }
-
-      const network = await fetchPromise;
-      if (network) return network;
-
-      // Fallback
-      if (event.request.headers.get('accept').includes('text/html')) {
-        return caches.match('/index.html');
-      }
-
-      return new Response('متجر ZOONA — غير متصل بالإنترنت', {
-        status: 503,
-        headers: {'Content-Type': 'text/plain; charset=utf-8'}
-      });
     })()
   );
 });
