@@ -305,6 +305,15 @@
             }
         }
     </style>
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "019e0ae3-702c-4461-9a0a-9125f3f675cf",
+    });
+  });
+</script>
 </head>
 <body id="zoona-app" data-app-type="webview" data-store="sudan">
     <!-- نمط خلفية -->
