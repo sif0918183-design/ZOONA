@@ -319,8 +319,8 @@ OneSignalDeferred.push(async function(OneSignal) {
     notifyButton: { enable: true },
   });
 
-  // 👇 إجبار المستخدم على الإذن للإشعارات
-  OneSignal.showNativePrompt();
+  // 👇 إجبار المستخدم على الإذن
+  OneSignal.registerForPushNotifications();
 });
 </script>
 </head>
