@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.vercel.zoona.twa",
+        "sha256_cert_fingerprints": ["D2:4C:C6:79:26:8A:50:32:B8:C1:BD:CD:68:40:7C:51:E0:82:28:E0:6D:3C:58:CA:08:3D:45:04:D3:20:1B:F5"]
+      }
+    }]
