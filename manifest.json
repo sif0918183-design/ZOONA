@@ -5,9 +5,9 @@
   "lang": "ar",
   "dir": "rtl",
 
-  "start_url": "/index.html",
+  "start_url": "/",
   "scope": "/",
-  "id": "/index.html",
+  "id": "/",
 
   "display": "standalone",
   "display_override": [
