@@ -6,7 +6,7 @@ const API_CACHE_NAME = 'zoona-store-api-cache-v1.0.0';
 const IMAGE_CACHE_NAME = 'zoona-store-images-cache-v1.0.0';
 
 // 🔴 مسار صفحة عدم الاتصال (Offline Fallback)
-const OFFLINE_FALLBACK_URL = 'https://www.zoonasd.com/p/offline.html';
+const OFFLINE_FALLBACK_URL = '/p/offline.html';
 
 // =================================================================
 // 1. دمج عامل خدمة OneSignal الصحيح (يجب أن يكون في الأعلى)
