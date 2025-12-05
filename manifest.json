@@ -7,7 +7,8 @@
   "start_url": "/",
   "scope": "/",
   "display": "fullscreen",
-  "display_override": ["fullscreen"],
+  // 🟢 تعديل لعرض التراكب وعناصر التحكم بالنافذة
+  "display_override": ["window-controls-overlay", "fullscreen", "minimal-ui"], 
   "background_color": "#D32F2F", 
   "theme_color": "#D32F2F",
   "orientation": "any",
@@ -26,7 +27,33 @@
     { "src": "icon/icon-512x512.png", "sizes": "512x512", "type": "image/png" }
   ],
 
-  // 🟢 ميزة Share Target: تم إضافتها لتمكين المشاركة من تطبيقات أخرى
+  // 🟢 ميزة File Handlers (تمت إضافتها بالمسار الجديد)
+  "file_handlers": [
+    {
+      "action": "/p/open-file.html", // المسار الذي أنشأته
+      "accept": {
+        "text/plain": [".txt"]
+      },
+      "icons": [
+        { "src": "icon/icon-512x512.png", "sizes": "512x512", "type": "image/png" }
+      ]
+    }
+  ],
+  
+  // 🟢 ميزة Launch Handler (تمت إضافتها)
+  "launch_handler": {
+    "client_mode": "navigate-existing" 
+  },
+  
+  // 🟢 ميزة Protocol Handlers (تمت إضافتها)
+  "protocol_handlers": [
+    {
+      "protocol": "web+zoona",
+      "url": "/?url=%s"
+    }
+  ],
+
+  // 🟢 ميزة Share Target (تمت إضافتها بالمسار الذي أنشأته سابقاً)
   "share_target": {
     "action": "/p/share-target.html", 
     "method": "POST",
@@ -38,19 +65,6 @@
     }
   },
   
-  // 🟢 ميزة File Handlers: تم إضافتها لمرور اختبار PWABuilder (لفتح ملفات .txt)
-  "file_handlers": [
-    {
-      "action": "/open-file/",
-      "accept": {
-        "text/plain": [".txt"]
-      },
-      "icons": [
-        { "src": "icon/icon-512x512.png", "sizes": "512x512", "type": "image/png" }
-      ]
-    }
-  ],
-
   "screenshots": [
     {
       "src": "https://via.placeholder.com/1080x1920/FFFFFF/D32F2F?text=ZOONA+SD",
