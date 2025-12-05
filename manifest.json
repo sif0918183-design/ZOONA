@@ -7,7 +7,7 @@
   "start_url": "/",
   "scope": "/",
   "display": "fullscreen",
-  "display_override": ["window-controls-overlay", "fullscreen", "minimal-ui"],
+  "display_override": ["fullscreen"],
   "background_color": "#D32F2F",
   "theme_color": "#D32F2F",
   "orientation": "any",
@@ -25,40 +25,6 @@
     { "src": "icon/icon-192x192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "icon/icon-512x512.png", "sizes": "512x512", "type": "image/png" }
   ],
-
-  "file_handlers": [
-    {
-      "action": "/p/open-file.html",
-      "accept": {
-        "text/plain": [".txt"]
-      },
-      "icons": [
-        { "src": "icon/icon-512x512.png", "sizes": "512x512", "type": "image/png" }
-      ]
-    }
-  ],
-  
-  "launch_handler": {
-    "client_mode": "navigate-existing"
-  },
-
-  "protocol_handlers": [
-    {
-      "protocol": "web+zoona",
-      "url": "/?url=%s"
-    }
-  ],
-
-  "share_target": {
-    "action": "/p/share-target.html",
-    "method": "POST",
-    "enctype": "multipart/form-data",
-    "params": {
-      "title": "name",
-      "text": "description",
-      "url": "link"
-    }
-  },
 
   "screenshots": [
     {
@@ -78,9 +44,7 @@
       "short_name": "الرئيسية",
       "description": "العودة للصفحة الرئيسية",
       "url": "/",
-      "icons": [
-        { "src": "icon/icon-512x512.png", "sizes": "512x512" }
-      ]
+      "icons": [{ "src": "icon/icon-512x512.png", "sizes": "512x512" }]
     }
   ]
 }
