@@ -4,11 +4,9 @@
   "description": "متجر زونا الإلكتروني - أفضل موقع للتسوق أونلاين في السودان",
   "lang": "ar",
   "dir": "rtl",
-
   "start_url": "/",
   "scope": "/",
-  "id": "/",
-
+  "id": "/index.html",
   "display": "fullscreen",
   "display_override": [
     "standalone",
@@ -17,11 +15,9 @@
     "window-controls-overlay",
     "tabbed"
   ],
-
   "theme_color": "#D32F2F",
   "background_color": "#FFFFFF",
   "orientation": "portrait",
-
   "icons": [
     {
       "src": "/icons/icon-72x72.png",
@@ -64,7 +60,6 @@
       "type": "image/png"
     }
   ],
-
   "shortcuts": [
     {
       "name": "العروض الجديدة",
@@ -89,28 +84,28 @@
       ]
     }
   ],
-
   "launch_handler": {
     "client_mode": "navigate-existing"
   },
-
   "protocol_handlers": [
     {
       "protocol": "web+zoona",
       "url": "/?url=%s"
     }
   ],
-
   "file_handlers": [
     {
       "action": "/p/open-file.html",
       "accept": {
-        "text/plain": [".txt"],
-        "application/json": [".json"]
+        "text/plain": [
+          ".txt"
+        ],
+        "application/json": [
+          ".json"
+        ]
       }
     }
   ],
-
   "share_target": {
     "action": "/p/share.html",
     "method": "POST",
@@ -121,12 +116,14 @@
       "files": [
         {
           "name": "sharedFile",
-          "accept": ["image/*", "text/plain"]
+          "accept": [
+            "image/*",
+            "text/plain"
+          ]
         }
       ]
     }
   },
-
   "edge_side_panel": {
     "preferred_width": 400
   }
