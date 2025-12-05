@@ -1,43 +1,91 @@
 {
   "name": "ZOONA",
   "short_name": "ZOONA",
-  "description": "متجر زونا الإلكتروني أفضل موقع للتسوق أونلاين في السودان",
+  "description": "متجر زونا الإلكتروني - أفضل موقع للتسوق أونلاين في السودان",
   "lang": "ar",
   "dir": "rtl",
+
   "start_url": "/",
   "scope": "/",
-  "display": "fullscreen",
-  "display_override": [
-    "window-controls-overlay",
-    "fullscreen",
-    "minimal-ui"
-  ],
-  "background_color": "#D32F2F",
-  "theme_color": "#D32F2F",
-  "orientation": "any",
-  "categories": ["shopping", "ecommerce"],
+  "id": "/",
 
-  "gcm_sender_id": "482941778795",
-  "gcm_sender_id_comment": "Do not change the GCM Sender ID",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui",
+    "window-controls-overlay",
+    "tabbed"
+  ],
+
+  "theme_color": "#D32F2F",
+  "background_color": "#FFFFFF",
+  "orientation": "portrait",
 
   "icons": [
-    { "src": "icon/icon-72x72.png", "sizes": "72x72", "type": "image/png" },
-    { "src": "icon/icon-96x96.png", "sizes": "96x96", "type": "image/png" },
-    { "src": "icon/icon-128x128.png", "sizes": "128x128", "type": "image/png" },
-    { "src": "icon/icon-144x144.png", "sizes": "144x144", "type": "image/png" },
-    { "src": "icon/icon-152x152.png", "sizes": "152x152", "type": "image/png" },
-    { "src": "icon/icon-192x192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icon/icon-512x512.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
   ],
 
-  "file_handlers": [
+  "shortcuts": [
     {
-      "action": "/p/open-file.html",
-      "accept": {
-        "text/plain": [".txt"]
-      },
+      "name": "العروض الجديدة",
+      "short_name": "العروض",
+      "url": "/search/label/العروض",
       "icons": [
-        { "src": "icon/icon-512x512.png", "sizes": "512x512", "type": "image/png" }
+        {
+          "src": "/icons/shortcut-offers.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "الأجهزة والموبايلات",
+      "short_name": "موبايلات",
+      "url": "/search/label/موبايلات",
+      "icons": [
+        {
+          "src": "/icons/shortcut-phones.png",
+          "sizes": "96x96"
+        }
       ]
     }
   ],
@@ -53,38 +101,33 @@
     }
   ],
 
+  "file_handlers": [
+    {
+      "action": "/p/open-file.html",
+      "accept": {
+        "text/plain": [".txt"],
+        "application/json": [".json"]
+      }
+    }
+  ],
+
   "share_target": {
-    "action": "/p/share-target.html",
+    "action": "/p/share.html",
     "method": "POST",
     "enctype": "multipart/form-data",
     "params": {
       "title": "name",
       "text": "description",
-      "url": "link"
+      "files": [
+        {
+          "name": "sharedFile",
+          "accept": ["image/*", "text/plain"]
+        }
+      ]
     }
   },
 
-  "screenshots": [
-    {
-      "src": "https://via.placeholder.com/1080x1920/FFFFFF/D32F2F?text=ZOONA+SD",
-      "sizes": "1080x1920",
-      "type": "image/png",
-      "form_factor": "narrow"
-    }
-  ],
-
-  "prefer_related_applications": false,
-  "permissions": ["geolocation"],
-
-  "shortcuts": [
-    {
-      "name": "الرئيسية",
-      "short_name": "الرئيسية",
-      "description": "العودة للصفحة الرئيسية",
-      "url": "/",
-      "icons": [
-        { "src": "icon/icon-512x512.png", "sizes": "512x512" }
-      ]
-    }
-  ]
+  "edge_side_panel": {
+    "preferred_width": 400
+  }
 }
