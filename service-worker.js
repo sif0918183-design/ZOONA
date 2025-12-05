@@ -9,7 +9,7 @@ const IMAGE_CACHE_NAME = 'zoona-store-images-cache-v1.0.0';
 const OFFLINE_FALLBACK_URL = 'https://www.zoonasd.com/p/offline.html';
 
 // =================================================================
-// 1. دمج عامل خدمة OneSignal الصحيح
+// 1. دمج عامل خدمة OneSignal الصحيح (يجب أن يكون في الأعلى)
 // =================================================================
 try {
   importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
@@ -25,8 +25,7 @@ const urlsToCache = [
   '/index.html',
   '/manifest.json',
   '/assets/splash-logo.png',
-  // تم إضافة رابط صفحة عدم الاتصال إلى قائمة التخزين المؤقت
-  OFFLINE_FALLBACK_URL, 
+  OFFLINE_FALLBACK_URL,
   'https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap'
 ];
 
@@ -71,7 +70,7 @@ function isOneSignalRequest(url) {
 }
 
 // =================================================================
-// 6. اعتراض الطلبات Fetch (دعم عدم الاتصال)
+// 6. اعتراض الطلبات Fetch (دعم Offline)
 // =================================================================
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
@@ -93,43 +92,37 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // استراتيجية Stale-While-Revalidate للمحتوى الأساسي
+  // استراتيجية Stale-While-Revalidate
   event.respondWith(
     (async () => {
       const cached = await caches.match(event.request);
 
       try {
         const networkResponse = await fetch(event.request);
+
         if (networkResponse && networkResponse.ok) {
           const cloned = networkResponse.clone();
-          const cache = await caches.open(CACHE_NAME);
-          cache.put(event.request, cloned);
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, cloned));
         }
 
-        if (cached) {
-          event.waitUntil(Promise.resolve()); 
-          return cached;
-        }
-
+        if (cached) return cached;
         return networkResponse;
 
       } catch (err) {
         if (cached) return cached;
-        
-        // 🔴 في حال فشل الشبكة لصفحات HTML، اعرض صفحة عدم الاتصال
+
         if (event.request.headers.get('accept')?.includes('text/html')) {
-          return caches.match(OFFLINE_FALLBACK_URL); 
+          return caches.match(OFFLINE_FALLBACK_URL);
         }
 
         return new Response('متجر ZOONA — غير متصل بالإنترنت', {
           status: 503,
-          headers: {'Content-Type': 'text/plain; charset=utf-8'}
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' }
         });
       }
     })()
   );
 });
-
 
 // =================================================================
 // 7. معالجة النقر على الإشعارات
@@ -150,7 +143,6 @@ self.addEventListener('notificationclick', event => {
           return;
         }
       }
-
       if (clients.openWindow) {
         return clients.openWindow(urlToOpen);
       }
@@ -159,7 +151,7 @@ self.addEventListener('notificationclick', event => {
 });
 
 // =================================================================
-// 8. تحديث Badge count عند وصول إشعار
+// 8. Badge Count عند وصول إشعار (تم إصلاح الخطأ هنا)
 // =================================================================
 self.addEventListener('push', event => {
   const data = event.data?.json() || {};
@@ -167,9 +159,10 @@ self.addEventListener('push', event => {
 
   event.waitUntil(
     (async () => {
-      if ('setAppBadge' in navigator) {
+      // ✔ الإصلاح: استخدام self بدلاً من navigator
+      if ('setAppBadge' in self) {
         try {
-          await navigator.setAppBadge(badgeCount);
+          await self.setAppBadge(badgeCount);
         } catch (err) {
           console.error('Badge error:', err);
         }
@@ -186,32 +179,29 @@ self.addEventListener('push', event => {
 });
 
 // =================================================================
-// 9. Background Sync (المزامنة في الخلفية - لمرة واحدة)
+// 9. Background Sync
 // =================================================================
 self.addEventListener('sync', event => {
-  console.log('[Service Worker] Background Sync Triggered:', event.tag);
   if (event.tag === 'sync-zoona-data') {
-    event.waitUntil(syncZoonaData()); 
+    event.waitUntil(syncZoonaData());
   }
 });
 
 function syncZoonaData() {
-    console.log("Attempting to sync pending data...");
-    return Promise.resolve();
+  console.log("Attempting to sync pending data...");
+  return Promise.resolve();
 }
 
 // =================================================================
-// 10. Periodic Background Sync (المزامنة الدورية في الخلفية) 🟢 تم الإضافة
+// 10. Periodic Background Sync
 // =================================================================
 self.addEventListener('periodicsync', event => {
-  console.log('[Service Worker] Periodic Sync Triggered:', event.tag);
-  
   if (event.tag === 'fetch-latest-products') {
-    event.waitUntil(fetchAndCacheLatestData()); 
+    event.waitUntil(fetchAndCacheLatestData());
   }
 });
 
 function fetchAndCacheLatestData() {
-    console.log("Attempting to fetch and cache latest product data...");
-    return Promise.resolve();
+  console.log("Fetching latest product data...");
+  return Promise.resolve();
 }
