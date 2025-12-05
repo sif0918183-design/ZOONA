@@ -1,7 +1,7 @@
 {
   "name": "ZOONA",
   "short_name": "ZOONA",
-  "description": "متجر زونا الإلكتروني - أفضل موقع للتسوق أونلاين في السودان",
+  "description": "متجر زونا الإلكتروني أفضل موقع للتسوق أونلاين في السودان",
   "lang": "ar",
   "dir": "rtl",
   "start_url": "/",
@@ -15,84 +15,81 @@
     "window-controls-overlay",
     "tabbed"
   ],
+  "background_color": "#D32F2F",
   "theme_color": "#D32F2F",
-  "background_color": "#FFFFFF",
   "orientation": "portrait",
+  "categories": ["shopping", "ecommerce"],
+  
+  "gcm_sender_id": "482941778795",
+  "gcm_sender_id_comment": "Do not change the GCM Sender ID",
+
   "icons": [
-    {
-      "src": "/icons/icon-72x72.png",
-      "sizes": "72x72",
-      "type": "image/png"
+    { 
+      "src": "icon/icon-192x192.png", 
+      "sizes": "192x192", 
+      "type": "image/png" 
     },
-    {
-      "src": "/icons/icon-96x96.png",
-      "sizes": "96x96",
-      "type": "image/png"
-    },
-    {
-      "src": "/icons/icon-128x128.png",
-      "sizes": "128x128",
-      "type": "image/png"
-    },
-    {
-      "src": "/icons/icon-144x144.png",
-      "sizes": "144x144",
-      "type": "image/png"
-    },
-    {
-      "src": "/icons/icon-152x152.png",
-      "sizes": "152x152",
-      "type": "image/png"
-    },
-    {
-      "src": "/icons/icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "/icons/icon-384x384.png",
-      "sizes": "384x384",
-      "type": "image/png"
-    },
-    {
-      "src": "/icons/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png"
+    { 
+      "src": "icon/icon-512x512.png", 
+      "sizes": "512x512", 
+      "type": "image/png" 
     }
   ],
+
+  "screenshots": [
+    {
+      "src": "https://via.placeholder.com/1080x1920/FFFFFF/D32F2F?text=ZOONA+SD",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+
+  "prefer_related_applications": false,
+  "permissions": ["geolocation"],
+
   "shortcuts": [
     {
-      "name": "العروض الجديدة",
-      "short_name": "العروض",
-      "url": "/search/label/العروض",
-      "icons": [
-        {
-          "src": "/icons/shortcut-offers.png",
-          "sizes": "96x96"
-        }
-      ]
+      "name": "الرئيسية",
+      "short_name": "الرئيسية",
+      "description": "العودة للصفحة الرئيسية",
+      "url": "/",
+      "icons": [{ 
+        "src": "icon/icon-192x192.png", 
+        "sizes": "192x192" 
+      }]
     },
     {
-      "name": "الأجهزة والموبايلات",
+      "name": "أجهزة إلكترونية",
+      "short_name": "إلكترونية",
+      "url": "/search/label/%D8%A3%D8%AC%D9%87%D8%B2%D8%A9%20%D8%A5%D9%84%D9%83%D8%AA%D8%B1%D9%88%D9%86%D9%8A%D8%A9?m=1",
+      "icons": [{ 
+        "src": "icon/shortcut-Electronics-192.png", 
+        "sizes": "192x192" 
+      }]
+    },
+    {
+      "name": "موبايلات",
       "short_name": "موبايلات",
-      "url": "/search/label/موبايلات",
-      "icons": [
-        {
-          "src": "/icons/shortcut-phones.png",
-          "sizes": "96x96"
-        }
-      ]
+      "url": "/search/label/%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84%D8%A7%D8%AA?m=1",
+      "icons": [{ 
+        "src": "icon/shortcut-phones-192.png", 
+        "sizes": "192x192" 
+      }]
     }
   ],
+  
   "launch_handler": {
     "client_mode": "navigate-existing"
   },
+  
   "protocol_handlers": [
     {
       "protocol": "web+zoona",
       "url": "/?url=%s"
     }
   ],
+  
   "file_handlers": [
     {
       "action": "/p/open-file.html",
@@ -106,8 +103,9 @@
       }
     }
   ],
+  
   "share_target": {
-    "action": "/p/share.html",
+    "action": "/p/share_target.html",
     "method": "POST",
     "enctype": "multipart/form-data",
     "params": {
@@ -124,6 +122,7 @@
       ]
     }
   },
+  
   "edge_side_panel": {
     "preferred_width": 400
   }
