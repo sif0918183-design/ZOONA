@@ -9,7 +9,7 @@ const IMAGE_CACHE_NAME = 'zoona-store-images-cache-v1.0.0';
 const OFFLINE_FALLBACK_URL = '/p/offline.html';
 
 // =================================================================
-// 1. دمج عامل خدمة OneSignal الصحيح (يجب أن يكون في الأعلى)
+// 1. دمج عامل خدمة OneSignal الصحيح (إذا كان مستخدمًا)
 // =================================================================
 try {
   importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
@@ -125,7 +125,7 @@ self.addEventListener('fetch', event => {
 });
 
 // =================================================================
-// 7. معالجة النقر على الإشعارات
+// 7. معالجة النقر على الإشعارات (SendPulse / PWA)
 // =================================================================
 self.addEventListener('notificationclick', event => {
   event.notification.close();
@@ -135,14 +135,14 @@ self.addEventListener('notificationclick', event => {
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
       for (const client of clientList) {
-        if ('focus' in client) {
+        // إذا توجد نافذة من تطبيق PWA، افتح الرابط فيها
+        if (client.url.startsWith(self.registration.scope) && 'focus' in client) {
           client.focus();
-          if (client.postMessage) {
-            client.postMessage({ action: 'navigate', url: urlToOpen });
-          }
+          client.navigate(urlToOpen);
           return;
         }
       }
+      // fallback: فتح نافذة جديدة ضمن نفس نطاق التطبيق
       if (clients.openWindow) {
         return clients.openWindow(urlToOpen);
       }
@@ -151,7 +151,7 @@ self.addEventListener('notificationclick', event => {
 });
 
 // =================================================================
-// 8. Badge Count عند وصول إشعار (تم إصلاح الخطأ هنا)
+// 8. Push Notifications + Badge
 // =================================================================
 self.addEventListener('push', event => {
   const data = event.data?.json() || {};
@@ -159,7 +159,7 @@ self.addEventListener('push', event => {
 
   event.waitUntil(
     (async () => {
-      // ✔ الإصلاح: استخدام self بدلاً من navigator
+      // تحديث الرقم على أيقونة التطبيق (Android)
       if ('setAppBadge' in self) {
         try {
           await self.setAppBadge(badgeCount);
@@ -168,6 +168,7 @@ self.addEventListener('push', event => {
         }
       }
 
+      // عرض الإشعار
       return self.registration.showNotification(data.title || 'ZOONA', {
         body: data.message || '',
         icon: '/assets/splash-logo.png',
