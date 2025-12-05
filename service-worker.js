@@ -1,5 +1,5 @@
 // =================================================================
-// 🚨 1. دمج عامل خدمة OneSignal الصحيح (SW Version)
+// 1. دمج عامل خدمة OneSignal الصحيح (SW Version)
 // =================================================================
 try {
   importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
@@ -51,7 +51,7 @@ self.addEventListener('activate', event => {
 });
 
 // =================================================================
-// 5. منع تعارض OneSignal (مهم جداً)
+// 5. منع تعارض OneSignal
 // =================================================================
 function isOneSignalRequest(url) {
   return (
@@ -68,10 +68,7 @@ function isOneSignalRequest(url) {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // تجاهل بالكامل طلبات OneSignal
   if (isOneSignalRequest(url)) return;
-
-  // تجاهل طلبات غير GET
   if (event.request.method !== 'GET') return;
 
   // خطوط Google — Cache First
@@ -96,20 +93,18 @@ self.addEventListener('fetch', event => {
       try {
         const networkResponse = await fetch(event.request);
         if (networkResponse && networkResponse.ok) {
-          const cloned = networkResponse.clone(); // clone مرة واحدة
+          const cloned = networkResponse.clone();
           const cache = await caches.open(CACHE_NAME);
           cache.put(event.request, cloned);
         }
 
-        // إذا يوجد كاش، أرسله فوراً وانتظر الشبكة في الخلفية
         if (cached) {
-          event.waitUntil(Promise.resolve()); // background update (networkResponse موجود)
+          event.waitUntil(Promise.resolve()); // background update
           return cached;
         }
 
         return networkResponse;
       } catch (err) {
-        // إذا فشلت الشبكة، استخدم الكاش أو fallback
         if (cached) return cached;
         if (event.request.headers.get('accept')?.includes('text/html')) {
           return caches.match('/index.html');
@@ -119,6 +114,64 @@ self.addEventListener('fetch', event => {
           headers: {'Content-Type': 'text/plain; charset=utf-8'}
         });
       }
+    })()
+  );
+});
+
+// =================================================================
+// 7. معالجة النقر على الإشعارات (فتح الروابط داخل PWA)
+// =================================================================
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+
+  const urlToOpen = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      for (const client of clientList) {
+        // إذا التطبيق مفتوح بالفعل → ركّز عليه وافتح الرابط داخله
+        if ('focus' in client) {
+          client.focus();
+          if (client.postMessage) {
+            client.postMessage({ action: 'navigate', url: urlToOpen });
+          }
+          return;
+        }
+      }
+
+      // إذا التطبيق غير مفتوح → افتح نافذة جديدة ضمن نطاق PWA
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});
+
+// =================================================================
+// 8. تحديث Badge count عند وصول إشعار
+// =================================================================
+self.addEventListener('push', event => {
+  const data = event.data?.json() || {};
+  const badgeCount = data.badge || 1;
+
+  // حاول تعيين badge (Chrome / Edge على Android)
+  event.waitUntil(
+    (async () => {
+      if ('setAppBadge' in navigator) {
+        try {
+          await navigator.setAppBadge(badgeCount);
+        } catch (err) {
+          console.error('Badge error:', err);
+        }
+      }
+
+      // عرض الإشعار
+      return self.registration.showNotification(data.title || 'ZOONA', {
+        body: data.message || '',
+        icon: '/assets/splash-logo.png',
+        badge: '/assets/splash-logo.png',
+        data: { url: data.url || '/' }
+      });
     })()
   );
 });
