@@ -1,25 +1,30 @@
 // =================================================================
-// الإعدادات والثوابت
+// ZOONA PWA + FCM Service Worker
+// =================================================================
+
+// 1️⃣ Firebase Messaging
+importScripts('https://www.gstatic.com/firebasejs/10.3.0/firebase-app.js');
+importScripts('https://www.gstatic.com/firebasejs/10.3.0/firebase-messaging.js');
+
+firebase.initializeApp({
+  apiKey: "AIzaSyBxQLDLqr4W3lApfYLPjSV5It7925a9Rr0",
+  authDomain: "double-carport-476915-j7.firebaseapp.com",
+  projectId: "double-carport-476915-j7",
+  storageBucket: "double-carport-476915-j7.firebasestorage.app",
+  messagingSenderId: "122641462099",
+  appId: "1:122641462099:web:345b777a88757d3ef7e7a6"
+});
+
+const messaging = firebase.messaging();
+
+// =================================================================
+// 2️⃣ PWA Caching
 // =================================================================
 const CACHE_NAME = 'zoona-store-cache-v1.0.0';
 const API_CACHE_NAME = 'zoona-store-api-cache-v1.0.0';
 const IMAGE_CACHE_NAME = 'zoona-store-images-cache-v1.0.0';
-
-// 🔴 مسار صفحة عدم الاتصال (Offline Fallback)
 const OFFLINE_FALLBACK_URL = '/p/offline.html';
 
-// =================================================================
-// 1. دمج عامل خدمة OneSignal الصحيح (إذا كان مستخدمًا)
-// =================================================================
-try {
-  importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
-} catch (e) {
-  console.error("OneSignal Worker failed to load:", e);
-}
-
-// =================================================================
-// 2. التخزين المؤقت (PWA Caching)
-// =================================================================
 const urlsToCache = [
   '/',
   '/index.html',
@@ -29,180 +34,103 @@ const urlsToCache = [
   'https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap'
 ];
 
-// =================================================================
-// 3. تثبيت Service Worker
-// =================================================================
+// 3️⃣ Install SW
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)));
   self.skipWaiting();
 });
 
-// =================================================================
-// 4. تفعيل Service Worker
-// =================================================================
+// 4️⃣ Activate SW
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (![CACHE_NAME, API_CACHE_NAME, IMAGE_CACHE_NAME].includes(cacheName)) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    caches.keys().then(keys => Promise.all(
+      keys.map(key => ![CACHE_NAME, API_CACHE_NAME, IMAGE_CACHE_NAME].includes(key) && caches.delete(key))
+    ))
   );
   self.clients.claim();
 });
 
 // =================================================================
-// 5. منع تعارض OneSignal
-// =================================================================
-function isOneSignalRequest(url) {
-  return (
-    url.hostname.includes('onesignal.com') ||
-    url.pathname.includes('OneSignalSDKWorker') ||
-    url.pathname.includes('OneSignalSDKUpdaterWorker') ||
-    url.pathname.includes('OneSignalSDK')
-  );
-}
-
-// =================================================================
-// 6. اعتراض الطلبات Fetch (دعم Offline)
+// 5️⃣ Fetch (Offline Support)
 // =================================================================
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
-
-  if (isOneSignalRequest(url)) return;
   if (event.request.method !== 'GET') return;
 
-  // خطوط Google — Cache First
-  if (url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com') {
+  // Google Fonts cache-first
+  if (url.origin.includes('fonts.googleapis.com') || url.origin.includes('fonts.gstatic.com')) {
     event.respondWith(
-      caches.match(event.request).then(cached => {
-        if (cached) return cached;
-        return fetch(event.request).then(res => {
-          if (res.ok) caches.open(CACHE_NAME).then(c => c.put(event.request, res.clone()));
-          return res;
-        });
-      })
+      caches.match(event.request).then(cached => cached || fetch(event.request).then(res => {
+        if (res.ok) caches.open(CACHE_NAME).then(c => c.put(event.request, res.clone()));
+        return res;
+      }))
     );
     return;
   }
 
-  // استراتيجية Stale-While-Revalidate
-  event.respondWith(
-    (async () => {
-      const cached = await caches.match(event.request);
-
-      try {
-        const networkResponse = await fetch(event.request);
-
-        if (networkResponse && networkResponse.ok) {
-          const cloned = networkResponse.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, cloned));
-        }
-
-        if (cached) return cached;
-        return networkResponse;
-
-      } catch (err) {
-        if (cached) return cached;
-
-        if (event.request.headers.get('accept')?.includes('text/html')) {
-          return caches.match(OFFLINE_FALLBACK_URL);
-        }
-
-        return new Response('متجر ZOONA — غير متصل بالإنترنت', {
-          status: 503,
-          headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-        });
+  // Stale-While-Revalidate
+  event.respondWith((async () => {
+    const cached = await caches.match(event.request);
+    try {
+      const networkResponse = await fetch(event.request);
+      if (networkResponse && networkResponse.ok) {
+        caches.open(CACHE_NAME).then(c => c.put(event.request, networkResponse.clone()));
       }
-    })()
-  );
+      return cached || networkResponse;
+    } catch {
+      if (cached) return cached;
+      if (event.request.headers.get('accept')?.includes('text/html')) return caches.match(OFFLINE_FALLBACK_URL);
+      return new Response('متجر ZOONA — غير متصل بالإنترنت', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' }});
+    }
+  })());
 });
 
 // =================================================================
-// 7. معالجة النقر على الإشعارات (SendPulse / PWA)
+// 6️⃣ Notification Click
 // =================================================================
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-
   const urlToOpen = event.notification.data?.url || '/';
-
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
       for (const client of clientList) {
-        // إذا توجد نافذة من تطبيق PWA، افتح الرابط فيها
         if (client.url.startsWith(self.registration.scope) && 'focus' in client) {
           client.focus();
           client.navigate(urlToOpen);
           return;
         }
       }
-      // fallback: فتح نافذة جديدة ضمن نفس نطاق التطبيق
-      if (clients.openWindow) {
-        return clients.openWindow(urlToOpen);
-      }
+      if (clients.openWindow) return clients.openWindow(urlToOpen);
     })
   );
 });
 
 // =================================================================
-// 8. Push Notifications + Badge
+// 7️⃣ FCM Push Notifications + Badge
 // =================================================================
-self.addEventListener('push', event => {
-  const data = event.data?.json() || {};
-  const badgeCount = data.badge || 1;
+messaging.onBackgroundMessage(payload => {
+  const title = payload.notification.title || 'ZOONA';
+  const options = {
+    body: payload.notification.body || '',
+    icon: '/assets/splash-logo.png',
+    badge: '/assets/splash-logo.png',
+    data: { url: payload.fcmOptions?.link || '/' }
+  };
 
-  event.waitUntil(
-    (async () => {
-      // تحديث الرقم على أيقونة التطبيق (Android)
-      if ('setAppBadge' in self) {
-        try {
-          await self.setAppBadge(badgeCount);
-        } catch (err) {
-          console.error('Badge error:', err);
-        }
-      }
+  // تحديث الرقم على أيقونة التطبيق (Badge)
+  if ('setAppBadge' in self) {
+    self.setAppBadge((payload.data?.badge) || 1).catch(console.error);
+  }
 
-      // عرض الإشعار
-      return self.registration.showNotification(data.title || 'ZOONA', {
-        body: data.message || '',
-        icon: '/assets/splash-logo.png',
-        badge: '/assets/splash-logo.png',
-        data: { url: data.url || '/' }
-      });
-    })()
-  );
+  self.registration.showNotification(title, options);
 });
 
 // =================================================================
-// 9. Background Sync
+// 8️⃣ Background / Periodic Sync (Optional)
 // =================================================================
 self.addEventListener('sync', event => {
-  if (event.tag === 'sync-zoona-data') {
-    event.waitUntil(syncZoonaData());
-  }
+  if (event.tag === 'sync-zoona-data') event.waitUntil(Promise.resolve());
 });
-
-function syncZoonaData() {
-  console.log("Attempting to sync pending data...");
-  return Promise.resolve();
-}
-
-// =================================================================
-// 10. Periodic Background Sync
-// =================================================================
 self.addEventListener('periodicsync', event => {
-  if (event.tag === 'fetch-latest-products') {
-    event.waitUntil(fetchAndCacheLatestData());
-  }
+  if (event.tag === 'fetch-latest-products') event.waitUntil(Promise.resolve());
 });
-
-function fetchAndCacheLatestData() {
-  console.log("Fetching latest product data...");
-  return Promise.resolve();
-}
