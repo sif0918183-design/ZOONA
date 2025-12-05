@@ -6,8 +6,8 @@
   "dir": "rtl",
   "start_url": "/",
   "scope": "/",
-  "id": "/index.html",
-  "display": "fullscreen",
+  "id": "/",
+  "display": "standalone",
   "display_override": [
     "standalone",
     "fullscreen",
