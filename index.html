@@ -821,14 +821,16 @@
   const messaging = getMessaging(app);
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js', { scope:'/' })
+    navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
       .then(registration => {
         console.log('Service Worker registered:', registration);
 
         Notification.requestPermission().then(permission => {
           if (permission === "granted") {
+            // 💡 التعديل هنا: تمرير كائن التسجيل (registration)
             getToken(messaging, { 
-              vapidKey: "BE2_9m83w2cu_fxhqV4eUowZQT7E8nm-FZZMWqN5DByd-Naykp52nWwA9uuW_L9x_3rPPsMNZzctsZD8j5YyaZw"
+              vapidKey: "BE2_9m83w2cu_fxhqV4eUowZQT7E8nm-FZZMWqN5DByd-Naykp52nWwA9uuW_L9x_3rPPsMNZzctsZD8j5YyaZw",
+              serviceWorkerRegistration: registration 
             })
             .then(token => {
               if (token) {
