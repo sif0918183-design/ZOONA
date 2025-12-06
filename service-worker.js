@@ -1,10 +1,10 @@
 // =================================================================
 // ZOONA PWA + FCM Service Worker
 // =================================================================
-
 // 1️⃣ Firebase Messaging
-importScripts('https://www.gstatic.com/firebasejs/10.3.0/firebase-app.js');
-importScripts('https://www.gstatic.com/firebasejs/10.3.0/firebase-messaging.js');
+// استخدام أحدث إصدار 12.6.0
+importScripts('https://www.gstatic.com/firebasejs/12.6.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/12.6.0/firebase-messaging-compat.js');
 
 firebase.initializeApp({
   apiKey: "AIzaSyBxQLDLqr4W3lApfYLPjSV5It7925a9Rr0",
