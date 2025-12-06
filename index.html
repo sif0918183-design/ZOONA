@@ -353,8 +353,16 @@
     <div id="toast"></div>
     
     <script>
+        // استخراج الرابط المطلوب من متغير url
+        const params = new URLSearchParams(window.location.search);
+        let siteURL = params.get("url");
+
+        // اذا لم يوجد رابط → نفتح الصفحة الرئيسية
+        if (!siteURL) {
+            siteURL = "https://www.zoonasd.com/";
+        }
+
         // المتغيرات العامة
-        const siteURL = "https://www.zoonasd.com";
         const appName = "ZOONA";
         const webview = document.getElementById("webview");
         const splash = document.getElementById("splash");
