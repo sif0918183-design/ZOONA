@@ -820,5 +820,58 @@ OneSignalDeferred.push(async function(OneSignal) {
             localStorage.setItem('zoona_first_use', new Date().toISOString());
         }
     </script>
+<!-- Firebase Messaging for PWA on Blogger -->
+<script type='module'>
+  import { initializeApp } from &quot;https://www.gstatic.com/firebasejs/10.3.0/firebase-app.js&quot;;
+  import { getMessaging, getToken } from &quot;https://www.gstatic.com/firebasejs/10.3.0/firebase-messaging.js&quot;;
+
+  const firebaseConfig = {
+    apiKey: &quot;AIzaSyBxQLDLqr4W3lApfYLPjSV5It7925a9Rr0&quot;,
+    authDomain: &quot;double-carport-476915-j7.firebaseapp.com&quot;,
+    projectId: &quot;double-carport-476915-j7&quot;,
+    storageBucket: &quot;double-carport-476915-j7.firebasestorage.app&quot;,
+    messagingSenderId: &quot;122641462099&quot;,
+    appId: &quot;1:122641462099:web:345b777a88757d3ef7e7a6&quot;
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const messaging = getMessaging(app);
+
+  if (&#39;serviceWorker&#39; in navigator) {
+    navigator.serviceWorker.register(&#39;/service-worker.js&#39;, { scope: &#39;/&#39; })
+      .then(registration =&gt; {
+        console.log(&#39;Service Worker registered:&#39;, registration);
+
+        Notification.requestPermission().then(permission =&gt; {
+          if (permission === &quot;granted&quot;) {
+            getToken(messaging, { 
+              vapidKey: &quot;BE2_9m83w2cu_fxhqV4eUowZQT7E8nm-FZZMWqN5DByd-Naykp52nWwA9uuW_L9x_3rPPsMNZzctsZD8j5YyaZw&quot;
+            })
+            .then(token =&gt; {
+              if (token) {
+                console.log(&quot;FCM Token:&quot;, token);
+
+                // إرسال الـ token إلى Vercel API
+                fetch(&#39;/api/saveToken&#39;, {
+                  method: &#39;POST&#39;,
+                  headers: { &#39;Content-Type&#39;: &#39;application/json&#39; },
+                  body: JSON.stringify({ token })
+                });
+              } else {
+                console.log(&#39;No registration token available.&#39;);
+              }
+            })
+            .catch(err =&gt; console.error(&#39;Error retrieving token: &#39;, err));
+          } else {
+            console.log(&#39;Notification permission not granted&#39;);
+          }
+        });
+
+      })
+      .catch(err =&gt; console.error(&#39;Service Worker registration failed:&#39;, err));
+  } else {
+    console.warn(&#39;Service Worker not supported in this browser&#39;);
+  }
+  </script>
 </body>
 </html>
