@@ -51,7 +51,7 @@ self.addEventListener('activate', event => {
 });
 
 // =================================================================
-// 5️⃣ Fetch (Offline Support)
+// 5️⃣ Fetch (Offline Support) - الكود المعدل
 // =================================================================
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
@@ -61,8 +61,12 @@ self.addEventListener('fetch', event => {
   if (url.origin.includes('fonts.googleapis.com') || url.origin.includes('fonts.gstatic.com')) {
     event.respondWith(
       caches.match(event.request).then(cached => cached || fetch(event.request).then(res => {
-        if (res.ok) caches.open(CACHE_NAME).then(c => c.put(event.request, res.clone()));
-        return res;
+        // 💡 التعديل هنا: يجب استنساخ res قبل تمريره للتخزين المؤقت، ثم إرجاع الأصل
+        if (res.ok) {
+          const cacheResponse = res.clone(); // استنساخ الاستجابة للتخزين المؤقت
+          caches.open(CACHE_NAME).then(c => c.put(event.request, cacheResponse));
+        }
+        return res; // إرجاع الاستجابة الأصلية للمتصفح
       }))
     );
     return;
@@ -73,10 +77,14 @@ self.addEventListener('fetch', event => {
     const cached = await caches.match(event.request);
     try {
       const networkResponse = await fetch(event.request);
+      
+      // 💡 التعديل هنا: يجب استنساخ networkResponse قبل تمريره للتخزين المؤقت
       if (networkResponse && networkResponse.ok) {
-        caches.open(CACHE_NAME).then(c => c.put(event.request, networkResponse.clone()));
+        const cacheResponse = networkResponse.clone(); // استنساخ الاستجابة للتخزين المؤقت
+        // لا نحتاج لـ await هنا، فقط نطلق العملية
+        caches.open(CACHE_NAME).then(c => c.put(event.request, cacheResponse));
       }
-      return cached || networkResponse;
+      return cached || networkResponse; // إرجاع الاستجابة الأصلية للمتصفح أو المخزنة
     } catch {
       if (cached) return cached;
       if (event.request.headers.get('accept')?.includes('text/html')) return caches.match(OFFLINE_FALLBACK_URL);
@@ -84,6 +92,7 @@ self.addEventListener('fetch', event => {
     }
   })());
 });
+
 
 // =================================================================
 // 6️⃣ Notification Click
