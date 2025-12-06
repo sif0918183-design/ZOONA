@@ -18,7 +18,7 @@
     <title>ZOONA </title>
     
     <!-- Manifest -->
-      <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json">
     
     <!-- الأيقونات -->
     <link rel="icon" type="image/png" href="icon/icon-72x72.png">
@@ -413,7 +413,7 @@
                 }, 5000);
                 
                 // إظهار إشعار قصير أيضاً
-                showToast('مرحباً بك في أكبر المتاجر السودانية ️', 3000);
+                showToast('مرحباً بك في أكبر المتاجر السودانية 🇸🇩', 3000);
             }
         }
         
@@ -802,59 +802,61 @@
             localStorage.setItem('zoona_first_use', new Date().toISOString());
         }
     </script>
+
 <!-- Firebase Messaging for PWA on Blogger -->
 <script type='module'>
-  import { initializeApp } from &quot;https://www.gstatic.com/firebasejs/10.3.0/firebase-app.js&quot;;
-  import { getMessaging, getToken } from &quot;https://www.gstatic.com/firebasejs/10.3.0/firebase-messaging.js&quot;;
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-app.js";
+  import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-messaging.js";
 
   const firebaseConfig = {
-    apiKey: &quot;AIzaSyBxQLDLqr4W3lApfYLPjSV5It7925a9Rr0&quot;,
-    authDomain: &quot;double-carport-476915-j7.firebaseapp.com&quot;,
-    projectId: &quot;double-carport-476915-j7&quot;,
-    storageBucket: &quot;double-carport-476915-j7.firebasestorage.app&quot;,
-    messagingSenderId: &quot;122641462099&quot;,
-    appId: &quot;1:122641462099:web:345b777a88757d3ef7e7a6&quot;
+    apiKey: "AIzaSyBxQLDLqr4W3lApfYLPjSV5It7925a9Rr0",
+    authDomain: "double-carport-476915-j7.firebaseapp.com",
+    projectId: "double-carport-476915-j7",
+    storageBucket: "double-carport-476915-j7.firebasestorage.app",
+    messagingSenderId: "122641462099",
+    appId: "1:122641462099:web:345b777a88757d3ef7e7a6"
   };
 
   const app = initializeApp(firebaseConfig);
   const messaging = getMessaging(app);
 
-  if (&#39;serviceWorker&#39; in navigator) {
-    navigator.serviceWorker.register(&#39;/service-worker.js&#39;, { scope: &#39;/&#39; })
-      .then(registration =&gt; {
-        console.log(&#39;Service Worker registered:&#39;, registration);
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js', { scope:'/' })
+      .then(registration => {
+        console.log('Service Worker registered:', registration);
 
-        Notification.requestPermission().then(permission =&gt; {
-          if (permission === &quot;granted&quot;) {
+        Notification.requestPermission().then(permission => {
+          if (permission === "granted") {
             getToken(messaging, { 
-              vapidKey: &quot;BE2_9m83w2cu_fxhqV4eUowZQT7E8nm-FZZMWqN5DByd-Naykp52nWwA9uuW_L9x_3rPPsMNZzctsZD8j5YyaZw&quot;
+              vapidKey: "BE2_9m83w2cu_fxhqV4eUowZQT7E8nm-FZZMWqN5DByd-Naykp52nWwA9uuW_L9x_3rPPsMNZzctsZD8j5YyaZw"
             })
-            .then(token =&gt; {
+            .then(token => {
               if (token) {
-                console.log(&quot;FCM Token:&quot;, token);
+                console.log("FCM Token:", token);
 
                 // إرسال الـ token إلى Vercel API
-                fetch(&#39;/api/saveToken&#39;, {
-                  method: &#39;POST&#39;,
-                  headers: { &#39;Content-Type&#39;: &#39;application/json&#39; },
+                fetch('/api/saveToken', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ token })
                 });
               } else {
-                console.log(&#39;No registration token available.&#39;);
+                console.log('No registration token available.');
               }
             })
-            .catch(err =&gt; console.error(&#39;Error retrieving token: &#39;, err));
+            .catch(err => console.error('Error retrieving token: ', err));
           } else {
-            console.log(&#39;Notification permission not granted&#39;);
+            console.log('Notification permission not granted');
           }
         });
 
       })
-      .catch(err =&gt; console.error(&#39;Service Worker registration failed:&#39;, err));
+      .catch(err => console.error('Service Worker registration failed:', err));
   } else {
-    console.warn(&#39;Service Worker not supported in this browser&#39;);
+    console.warn('Service Worker not supported in this browser');
   }
-  </script>
+</script>
+
 <!-- صندوق تثبيت PWA (نسخة موحدة) -->
 <div style="
 position: fixed;
