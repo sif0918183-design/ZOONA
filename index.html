@@ -873,5 +873,132 @@ OneSignalDeferred.push(async function(OneSignal) {
     console.warn(&#39;Service Worker not supported in this browser&#39;);
   }
   </script>
+<!-- صندوق تثبيت PWA (نسخة موحدة) -->
+<div style="
+position: fixed;
+right: 16px;
+left: 16px;
+bottom: 20px;
+max-width: 420px;
+margin: 0 auto;
+border-radius: 18px;
+padding: 16px 16px 14px 16px;
+background: linear-gradient(145deg, #c62828 0%, #ef5350 100%);
+color: #fff;
+box-shadow: 0 12px 32px rgba(139,0,0,0.25), 
+            0 4px 16px rgba(0,0,0,0.1),
+            inset 0 1px 0 rgba(255,255,255,0.2);
+display: none;
+z-index: 100000;
+font-family: 'Tajawal', 'Segoe UI', Tahoma, sans-serif;
+direction: rtl;
+backdrop-filter: blur(10px);
+border: 1px solid rgba(255,255,255,0.1);
+"
+id="pwa-install-box" aria-hidden="true" role="dialog">
+
+    <!-- زر الإغلاق -->
+    <div id="pwa-close" title="إغلاق" style="
+        position:absolute;top:10px;left:12px;color:#fff;font-size:18px;
+        cursor:pointer;width:28px;height:28px;display:flex;
+        align-items:center;justify-content:center;border-radius:50%;
+        transition:0.3s;
+    ">✖</div>
+
+    <div style="display:flex;gap:14px;align-items:center;">
+        <!-- ايقونة -->
+        <div style="
+            width:60px;height:60px;border-radius:14px;background:#fff;
+            display:flex;align-items:center;justify-content:center;
+            flex-shrink:0;box-shadow:0 6px 20px rgba(0,0,0,0.25);
+            border:2px solid rgba(255,255,255,0.3);overflow:hidden;
+        ">
+            <img src="https://cdn-icons-png.flaticon.com/512/2972/2972543.png" 
+                 style="width:44px;height:44px;border-radius:8px;object-fit:cover;">
+        </div>
+
+        <!-- نص -->
+        <div style="flex:1;text-align:right;">
+            <div style="font-weight:800;font-size:16px;margin-bottom:4px;">
+                ثبت تطبيق ZOONA على جوالك
+            </div>
+            <div style="font-size:13px;opacity:0.9;">
+                تجربة أسرع — تثبيت بنقرة واحدة بدون متجر
+            </div>
+        </div>
+
+        <!-- زر التثبيت -->
+        <button id="pwa-install-btn" style="
+            background:#fff;color:#c62828;border:none;padding:12px 20px;
+            border-radius:12px;font-weight:800;cursor:pointer;
+            box-shadow:0 8px 20px rgba(0,0,0,0.2),
+                        inset 0 1px 0 rgba(255,255,255,0.9);
+            min-width:120px;text-align:center;font-size:15px;
+        ">تثبيت</button>
+    </div>
+</div>
+
+<!-- سكربت التشغيل -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let deferredPrompt = null;
+    const box = document.getElementById('pwa-install-box');
+    const btn = document.getElementById('pwa-install-btn');
+    const close = document.getElementById('pwa-close');
+
+    // إضافة خط Tajawal
+    const f = document.createElement('link');
+    f.rel = "stylesheet";
+    f.href = "https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap";
+    document.head.appendChild(f);
+
+    function hasShownBefore() {
+        return localStorage.getItem('pwaInstallShown') === 'true';
+    }
+    function markAsShown() {
+        localStorage.setItem('pwaInstallShown', 'true');
+    }
+
+    function isInstalled() {
+        return window.matchMedia('(display-mode: standalone)').matches ||
+               window.navigator.standalone === true;
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+
+        if (isInstalled()) return;
+        if (hasShownBefore()) return;
+
+        setTimeout(() => {
+            box.style.display = 'block';
+            markAsShown();
+        }, 3000);
+    });
+
+    btn.addEventListener('click', async () => {
+        if (!deferredPrompt) {
+            box.style.display = 'none';
+            return;
+        }
+
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+
+        box.style.display = 'none';
+        deferredPrompt = null;
+    });
+
+    close.addEventListener('click', () => {
+        box.style.display = 'none';
+        markAsShown();
+    });
+
+    if (isInstalled()) {
+        box.style.display = 'none';
+    }
+});
+</script>
 </body>
 </html>
