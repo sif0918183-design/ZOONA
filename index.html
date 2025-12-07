@@ -1008,59 +1008,146 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+<!-- طلب تفعيل الإشعارات من زونا -->
 <div id="custom-notification-prompt" style="
     position: fixed; 
     bottom: 20px; 
     left: 50%; 
     transform: translateX(-50%); 
-    z-index: 1000; 
+    z-index: 10000; 
     background-color: #fff; 
     border: 2px solid #ff4500; 
-    border-radius: 12px; 
-    padding: 15px; 
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2); 
-    max-width: 90%; 
-    display: none; /* يبدأ مخفياً */
-    text-align: center;
+    border-radius: 18px; 
+    padding: 25px; 
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); 
+    max-width: 500px; 
+    width: 90%; 
+    display: none; 
+    text-align: center; 
     font-family: 'Tajawal', sans-serif;
+    animation: promptSlideUp 0.5s ease forwards;
 ">
-    <p style="color: #ff4500; font-weight: 700; margin-bottom: 10px; font-size: 1.1em;">
-        🎁 هل ترغب في الحصول على هدايا حصرية من زونا؟ 🎁
+    <div style="color: #ff4500; font-weight: 800; margin-bottom: 15px; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; gap: 10px;">
+        <span>هل ترغب في الحصول على هدايا حصرية من زونا؟🎁</span>
+    </div>
+    
+    <p style="color: #444; margin-bottom: 25px; font-size: 1.1rem; line-height: 1.6;">
+        فعّل الإشعارات الآن لتصلك عروض خاصة وخصومات مميزة قبل الجميع!
     </p>
-    <p style="color: #333; margin-bottom: 20px;">
-        فعّل الآن لتصلك عروض خاصة وخصومات مميزة قبل الجميع!
+    
+    <div style="background-color: #fff9f7; border-radius: 12px; padding: 15px; margin-bottom: 25px; text-align: right;">
+        <div style="display: flex; align-items: center; justify-content: flex-end; margin-bottom: 10px; color: #555;">
+            <span>خصومات حصرية تصل إلى 50%</span>
+            <span style="color: #ff4500; margin-left: 8px; font-size: 1.2rem;">🔥</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: flex-end; margin-bottom: 10px; color: #555;">
+            <span>إشعارات فورية عن العروض الجديدة</span>
+            <span style="color: #ff4500; margin-left: 8px; font-size: 1.2rem;">⚡</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: flex-end; color: #555;">
+            <span>هدايا مجانية</span>
+            <span style="color: #ff4500; margin-left: 8px; font-size: 1.2rem;">🎁</span>
+        </div>
+    </div>
+    
+    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 15px;">
+        <button id="activate-notifications" style="
+            background-color: #ff4500; 
+            color: white; 
+            border: none; 
+            padding: 14px 28px; 
+            border-radius: 12px; 
+            font-weight: 700; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            font-size: 1.05rem; 
+            flex: 1; 
+            min-width: 160px; 
+            box-shadow: 0 4px 12px rgba(255, 69, 0, 0.25);
+        ">
+            تفعيل الآن ❤️‍🔥
+        </button>
+        <button id="decline-notifications" style="
+            background-color: #f0f2f5; 
+            color: #666; 
+            border: 1px solid #ddd; 
+            padding: 14px 28px; 
+            border-radius: 12px; 
+            font-weight: 700; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            font-size: 1.05rem; 
+            flex: 1; 
+            min-width: 160px;
+        ">
+            عدم التفعيل
+        </button>
+    </div>
+    
+    <p style="margin-top: 20px; color: #888; font-size: 0.9rem;">
+        يمكنك تغيير هذا الإعداد لاحقاً من إعدادات المتصفح
     </p>
-    <button id="activate-notifications" style="
-        background-color: #ff4500; 
-        color: white; 
-        border: none; 
-        padding: 10px 20px; 
-        border-radius: 8px; 
-        font-weight: 700; 
-        cursor: pointer; 
-        margin-right: 10px;
-        transition: background-color 0.2s;
-    ">
-        تفعيل الآن ❤️‍🔥
-    </button>
-    <button id="decline-notifications" style="
-        background-color: #eee; 
-        color: #555; 
-        border: 1px solid #ccc; 
-        padding: 10px 20px; 
-        border-radius: 8px; 
-        cursor: pointer;
-        font-weight: 500;
-    ">
-        عدم التفعيل
-    </button>
 </div>
+
+<style>
+    @keyframes promptSlideUp {
+        from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    }
+    
+    @media (max-width: 768px) {
+        #custom-notification-prompt {
+            padding: 20px;
+            width: 95%;
+            border-radius: 16px;
+        }
+        
+        #custom-notification-prompt > div:first-child {
+            font-size: 1.3rem;
+        }
+        
+        #custom-notification-prompt p {
+            font-size: 1rem;
+        }
+        
+        #activate-notifications, #decline-notifications {
+            padding: 12px 20px;
+            font-size: 1rem;
+            min-width: 140px;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        #custom-notification-prompt {
+            padding: 18px;
+            border-radius: 14px;
+        }
+        
+        #custom-notification-prompt > div:first-child {
+            font-size: 1.2rem;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        #activate-notifications, #decline-notifications {
+            width: 100%;
+            min-width: unset;
+        }
+    }
+</style>
+
 <script type='module'>
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
   import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-messaging.js";
 
   const firebaseConfig = {
-    // ... (بيانات التهيئة الخاصة بك)
     apiKey: "AIzaSyBxQLDLqr4W3lApfYLPjSV5It7925a9Rr0",
     authDomain: "double-carport-476915-j7.firebaseapp.com",
     projectId: "double-carport-476915-j7",
@@ -1095,7 +1182,17 @@ document.addEventListener('DOMContentLoaded', function() {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ token })
-                      });
+                      })
+                      .then(response => {
+                          if (response.ok) {
+                              console.log('Token saved successfully');
+                              // عرض رسالة نجاح للمستخدم
+                              alert('✅ شكراً لتسجيلك! ستتلقى إشعاراتنا الحصرية قريباً.');
+                          } else {
+                              console.error('Failed to save token');
+                          }
+                      })
+                      .catch(error => console.error('Error saving token:', error));
                   } else {
                       console.log('No registration token available.');
                   }
@@ -1103,6 +1200,7 @@ document.addEventListener('DOMContentLoaded', function() {
               .catch(err => console.error('Error retrieving token: ', err));
           } else {
               console.log('Notification permission not granted');
+              alert('❌ لم يتم منح الإذن. لن تصلك إشعاراتنا.');
           }
       });
   }
@@ -1114,15 +1212,20 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const promptContainer = document.getElementById('custom-notification-prompt');
 
-        // 💡 1. التحقق من حالة الإذن الحالية
-        if (Notification.permission === 'default') {
-            
-            // 💡 2. إظهار الواجهة المخصصة
-            if (promptContainer) {
-                promptContainer.style.display = 'block';
-            }
+        // التحقق مما إذا رفض المستخدم مسبقاً
+        const userDeclined = localStorage.getItem('zona_notifications_declined');
 
-            // 💡 3. إعداد مستمعي الأحداث للأزرار المخصصة
+        // التحقق من حالة الإذن الحالية
+        if (Notification.permission === 'default' && !userDeclined) {
+            
+            // إظهار الواجهة المخصصة بعد تأخير بسيط
+            setTimeout(() => {
+                if (promptContainer) {
+                    promptContainer.style.display = 'block';
+                }
+            }, 3000); // تأخير 3 ثواني لتحميل الصفحة أولاً
+
+            // إعداد مستمعي الأحداث للأزرار المخصصة
             const activateBtn = document.getElementById('activate-notifications');
             const declineBtn = document.getElementById('decline-notifications');
 
@@ -1139,14 +1242,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 declineBtn.addEventListener('click', () => {
                     // إخفاء الواجهة المخصصة
                     if (promptContainer) promptContainer.style.display = 'none';
-                    // يمكنك هنا تخزين تفضيل الرفض في localStorage لتجنب الظهور مرة أخرى
+                    // تخزين تفضيل الرفض في localStorage لتجنب الظهور مرة أخرى
+                    localStorage.setItem('zona_notifications_declined', 'true');
+                    alert('💔 لن تصلك إشعاراتنا الحصرية. يمكنك تغيير هذا القرار لاحقاً من إعدادات المتصفح.');
                     console.log('User declined custom prompt for now.');
                 });
             }
 
         } else if (Notification.permission === 'granted') {
             // إذا كان الإذن ممنوحاً بالفعل، قم فقط بجلب/تحديث الـ Token (لضمان تسجيله)
-            requestAndSaveToken(registration);
+            console.log('الإذن ممنوح بالفعل، جاري تحديث الـ Token...');
+            getToken(messaging, { 
+                vapidKey: VAPID_KEY,
+                serviceWorkerRegistration: registration 
+            })
+            .then(token => {
+                if (token) {
+                    console.log("FCM Token updated:", token);
+                }
+            })
+            .catch(err => console.error('Error updating token: ', err));
+        } else if (Notification.permission === 'denied') {
+            console.log('المستخدم رفض الإذن مسبقاً');
         }
 
       })
@@ -1154,7 +1271,38 @@ document.addEventListener('DOMContentLoaded', function() {
   } else {
     console.warn('Service Worker not supported in this browser');
   }
+  
+  // تحسين تجربة المستخدم: إضافة تأثير hover على الأزرار
+  document.addEventListener('DOMContentLoaded', function() {
+      const activateBtn = document.getElementById('activate-notifications');
+      const declineBtn = document.getElementById('decline-notifications');
+      
+      if (activateBtn) {
+          activateBtn.addEventListener('mouseenter', function() {
+              this.style.backgroundColor = '#e03e00';
+              this.style.transform = 'translateY(-2px)';
+              this.style.boxShadow = '0 6px 16px rgba(255, 69, 0, 0.3)';
+          });
+          
+          activateBtn.addEventListener('mouseleave', function() {
+              this.style.backgroundColor = '#ff4500';
+              this.style.transform = 'translateY(0)';
+              this.style.boxShadow = '0 4px 12px rgba(255, 69, 0, 0.25)';
+          });
+      }
+      
+      if (declineBtn) {
+          declineBtn.addEventListener('mouseenter', function() {
+              this.style.backgroundColor = '#e4e6e9';
+              this.style.transform = 'translateY(-2px)';
+          });
+          
+          declineBtn.addEventListener('mouseleave', function() {
+              this.style.backgroundColor = '#f0f2f5';
+              this.style.transform = 'translateY(0)';
+          });
+      }
+  });
 </script>
-
 </body>
 </html>
