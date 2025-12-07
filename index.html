@@ -1008,6 +1008,153 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+<div id="custom-notification-prompt" style="
+    position: fixed; 
+    bottom: 20px; 
+    left: 50%; 
+    transform: translateX(-50%); 
+    z-index: 1000; 
+    background-color: #fff; 
+    border: 2px solid #ff4500; 
+    border-radius: 12px; 
+    padding: 15px; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2); 
+    max-width: 90%; 
+    display: none; /* يبدأ مخفياً */
+    text-align: center;
+    font-family: 'Tajawal', sans-serif;
+">
+    <p style="color: #ff4500; font-weight: 700; margin-bottom: 10px; font-size: 1.1em;">
+        🎁 هل ترغب في الحصول على هدايا حصرية من زونا؟ 🎁
+    </p>
+    <p style="color: #333; margin-bottom: 20px;">
+        فعّل الآن لتصلك عروض خاصة وخصومات مميزة قبل الجميع!
+    </p>
+    <button id="activate-notifications" style="
+        background-color: #ff4500; 
+        color: white; 
+        border: none; 
+        padding: 10px 20px; 
+        border-radius: 8px; 
+        font-weight: 700; 
+        cursor: pointer; 
+        margin-right: 10px;
+        transition: background-color 0.2s;
+    ">
+        تفعيل الآن ❤️‍🔥
+    </button>
+    <button id="decline-notifications" style="
+        background-color: #eee; 
+        color: #555; 
+        border: 1px solid #ccc; 
+        padding: 10px 20px; 
+        border-radius: 8px; 
+        cursor: pointer;
+        font-weight: 500;
+    ">
+        عدم التفعيل
+    </button>
+</div>
+<script type='module'>
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+  import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-messaging.js";
+
+  const firebaseConfig = {
+    // ... (بيانات التهيئة الخاصة بك)
+    apiKey: "AIzaSyBxQLDLqr4W3lApfYLPjSV5It7925a9Rr0",
+    authDomain: "double-carport-476915-j7.firebaseapp.com",
+    projectId: "double-carport-476915-j7",
+    storageBucket: "double-carport-476915-j7.firebasestorage.app",
+    messagingSenderId: "122641462099",
+    appId: "1:122641462099:web:345b777a88757d3ef7e7a6"
+  };
+  
+  const VAPID_KEY = "BE2_9m83w2cu_fxhqV4eUowZQT7E8nm-FZZMWqN5DByd-Naykp52nWwA9uuW_L9x_3rPPsMNZzctsZD8j5YyaZw";
+
+  const app = initializeApp(firebaseConfig);
+  const messaging = getMessaging(app);
+
+  /**
+   * دالة لجلب Token Firebase وإرساله إلى الخادم
+   * @param {ServiceWorkerRegistration} registration - تسجيل Service Worker النشط
+   */
+  function requestAndSaveToken(registration) {
+      // 1. طلب الإذن الأصلي من المتصفح
+      Notification.requestPermission().then(permission => {
+          if (permission === "granted") {
+              // 2. إذا تم منح الإذن، احصل على Token
+              getToken(messaging, { 
+                  vapidKey: VAPID_KEY,
+                  serviceWorkerRegistration: registration 
+              })
+              .then(token => {
+                  if (token) {
+                      console.log("FCM Token:", token);
+                      // 3. إرسال الـ token إلى Vercel API
+                      fetch('/api/saveToken', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ token })
+                      });
+                  } else {
+                      console.log('No registration token available.');
+                  }
+              })
+              .catch(err => console.error('Error retrieving token: ', err));
+          } else {
+              console.log('Notification permission not granted');
+          }
+      });
+  }
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
+      .then(registration => {
+        console.log('Service Worker registered:', registration);
+        
+        const promptContainer = document.getElementById('custom-notification-prompt');
+
+        // 💡 1. التحقق من حالة الإذن الحالية
+        if (Notification.permission === 'default') {
+            
+            // 💡 2. إظهار الواجهة المخصصة
+            if (promptContainer) {
+                promptContainer.style.display = 'block';
+            }
+
+            // 💡 3. إعداد مستمعي الأحداث للأزرار المخصصة
+            const activateBtn = document.getElementById('activate-notifications');
+            const declineBtn = document.getElementById('decline-notifications');
+
+            if (activateBtn) {
+                activateBtn.addEventListener('click', () => {
+                    // إخفاء الواجهة المخصصة
+                    if (promptContainer) promptContainer.style.display = 'none';
+                    // تشغيل عملية طلب الإذن وجلب الـ Token
+                    requestAndSaveToken(registration);
+                });
+            }
+            
+            if (declineBtn) {
+                declineBtn.addEventListener('click', () => {
+                    // إخفاء الواجهة المخصصة
+                    if (promptContainer) promptContainer.style.display = 'none';
+                    // يمكنك هنا تخزين تفضيل الرفض في localStorage لتجنب الظهور مرة أخرى
+                    console.log('User declined custom prompt for now.');
+                });
+            }
+
+        } else if (Notification.permission === 'granted') {
+            // إذا كان الإذن ممنوحاً بالفعل، قم فقط بجلب/تحديث الـ Token (لضمان تسجيله)
+            requestAndSaveToken(registration);
+        }
+
+      })
+      .catch(err => console.error('Service Worker registration failed:', err));
+  } else {
+    console.warn('Service Worker not supported in this browser');
+  }
+</script>
 
 </body>
 </html>
