@@ -342,9 +342,6 @@
     const welcomeMessage = document.getElementById('welcome-message');  
     const pullIndicator = document.getElementById('pull-indicator');  
     const appBaseURL = window.location.origin + window.location.pathname;
-    
-    // رابط التطبيق الأساسي
-    const APP_URL = "https://app.zoonasd.com";
       
     // تعيين عنوان التطبيق  
     document.title = appName;  
@@ -356,68 +353,19 @@
     let pullStartTime = 0;  
     let isRefreshing = false;
     
-    // متغيرات تتبع الرابط
-    let currentPageURL = siteURL;
-    let lastUpdateTime = 0;
-    
     // دالة لتحديث رابط المتصفح
-    function updateBrowserURL(url) {
+    function updateBrowserURL(currentPageURL) {
         try {
-            const now = Date.now();
-            // تحديث كل 500ms فقط لمنع التكرار
-            if (now - lastUpdateTime < 500) return;
-            
             // إنشاء رابط جديد للصفحة الحالية
-            const newURL = `${APP_URL}/?url=${encodeURIComponent(url)}`;
-            currentPageURL = url;
-            lastUpdateTime = now;
+            const newURL = `${appBaseURL}?url=${encodeURIComponent(currentPageURL)}`;
             
             // تحديث رابط المتصفح بدون إعادة تحميل الصفحة
             if (window.history && window.history.replaceState) {
-                const stateObj = { 
-                    url: url,
-                    timestamp: now
-                };
-                window.history.replaceState(stateObj, '', newURL);
-                console.log('تم تحديث الرابط إلى:', newURL);
-                
-                // تحديث عنوان الصفحة
-                updatePageTitle();
+                window.history.replaceState(null, '', newURL);
+                console.log('تم تحديث الرابط:', newURL);
             }
         } catch (error) {
             console.error('خطأ في تحديث الرابط:', error);
-        }
-    }
-    
-    // دالة لتحديث عنوان الصفحة
-    function updatePageTitle() {
-        try {
-            if (webview.contentWindow && webview.contentWindow.document) {
-                const pageTitle = webview.contentWindow.document.title;
-                if (pageTitle && pageTitle !== "" && pageTitle !== "ZOONA") {
-                    document.title = `${pageTitle} | ${appName}`;
-                } else {
-                    document.title = appName;
-                }
-            }
-        } catch (e) {
-            document.title = appName;
-        }
-    }
-    
-    // دالة لإرسال رسالة للـ iframe لطلب الرابط الحالي
-    function requestCurrentURL() {
-        try {
-            if (webview.contentWindow) {
-                // إرسال رسالة للطلب
-                webview.contentWindow.postMessage({ 
-                    type: "get_current_url",
-                    requestId: Date.now()
-                }, "*");
-            }
-        } catch (e) {
-            // استخدم الرابط المخزن
-            updateBrowserURL(currentPageURL);
         }
     }
       
@@ -457,7 +405,7 @@
                 welcomeMessage.style.display = 'none';  
             }, 5000);  
               
-            showToast('مرحباً بك في أكبر المتاجر السودانية 🇸🇩', 3000);  
+            showToast('مرحباً بك في أكبر المتاجر السودانية ', 3000);  
         }  
     }  
       
@@ -489,11 +437,13 @@
     window.addEventListener('offline', updateOnlineStatus);  
       
     // نظام السحب لأسفل للتحديث المحسن
+    let lastScrollTop = 0;
+    
     document.addEventListener('touchstart', (e) => {
         // التحقق إذا كنا في أعلى الصفحة
-        const isAtTop = window.scrollY <= 5;
+        const webviewScrollTop = webview.contentWindow?.pageYOffset || 0;
         
-        if (isAtTop && !isPulling && !isRefreshing) {
+        if (webviewScrollTop <= 5 && !isPulling && !isRefreshing) {
             startY = e.touches[0].clientY;
             currentY = startY;
             isPulling = true;
@@ -628,16 +578,28 @@
                 webviewContainer.style.display = 'block';  
             }, 500);  
               
-            // تحديث رابط المتصفح للصفحة الحالية
-            updateBrowserURL(siteURL);
-            
+            // تحديث عنوان الصفحة  
+            try {  
+                const pageTitle = webview.contentWindow.document.title;  
+                const currentURL = webview.contentWindow.location.href;
+                
+                // تحديث رابط المتصفح للصفحة الحالية
+                updateBrowserURL(currentURL);
+                
+                if (pageTitle && pageTitle !== "" && pageTitle !== "ZOONA") {  
+                    document.title = `${pageTitle} | ${appName}`;  
+                }  
+            } catch (e) {  
+                console.log('لا يمكن الوصول إلى عنوان الصفحة:', e);  
+            }  
+              
             // إظهار رسالة الترحيب بعد تأخير بسيط  
             setTimeout(() => {  
                 showWelcomeMessage();  
             }, 1000);  
               
-            // إعداد مراقبة التغييرات
-            setupNavigationMonitoring();
+            // مراقبة تغييرات الرابط داخل الـ webview
+            setupWebviewNavigationTracking();
               
             // إرسال رسالة تفيد بأن التطبيق جاهز  
             try {  
@@ -686,122 +648,136 @@
         };  
     }
     
-    // إعداد مراقبة التنقل
-    function setupNavigationMonitoring() {
-        // مراقبة الرسائل من الـ iframe
-        window.addEventListener('message', handleIframeMessage);
+    // تتبع التنقل داخل الـ webview
+    function setupWebviewNavigationTracking() {
+        // مراقبة تغييرات الرابط داخل iframe
+        let lastURL = webview.src;
         
-        // إعداد فاصل زمني لطلب الرابط
-        const checkInterval = setInterval(() => {
-            requestCurrentURL();
-        }, 1000);
-        
-        // حفظ المرجع لإيقافه لاحقاً
-        setupNavigationMonitoring.checkInterval = checkInterval;
-    }
-    
-    // معالج رسائل الـ iframe
-    function handleIframeMessage(event) {
-        // التحقق من مصدر الرسالة (يمكنك إضافة تحقق إضافي هنا)
-        
-        if (event.data && event.data.type === "current_url_response") {
-            // تحديث الرابط بناءً على الرد
-            const url = event.data.url;
-            if (url && url !== currentPageURL) {
-                updateBrowserURL(url);
+        setInterval(() => {
+            try {
+                const currentURL = webview.contentWindow.location.href;
+                
+                if (currentURL !== lastURL) {
+                    lastURL = currentURL;
+                    
+                    // تحديث رابط المتصفح
+                    updateBrowserURL(currentURL);
+                    
+                    // تحديث عنوان الصفحة
+                    const pageTitle = webview.contentWindow.document.title;
+                    if (pageTitle && pageTitle !== "" && pageTitle !== "ZOONA") {
+                        document.title = `${pageTitle} | ${appName}`;
+                    }
+                    
+                    console.log('تم تغيير الصفحة إلى:', currentURL);
+                }
+            } catch (e) {
+                // صمت على الأخطاء المتعلقة بحق الوصول
             }
-        }
+        }, 500);
         
-        if (event.data && event.data.type === "page_changed") {
-            // تحديث مباشر عند تغيير الصفحة
-            const url = event.data.url;
-            if (url) {
-                updateBrowserURL(url);
-            }
+        // إضافة مستمع لتغييرات الرابط عبر التاريخ
+        try {
+            const pushState = webview.contentWindow.history.pushState;
+            const replaceState = webview.contentWindow.history.replaceState;
+            
+            webview.contentWindow.history.pushState = function() {
+                pushState.apply(this, arguments);
+                setTimeout(() => {
+                    updateBrowserURL(webview.contentWindow.location.href);
+                }, 100);
+            };
+            
+            webview.contentWindow.history.replaceState = function() {
+                replaceState.apply(this, arguments);
+                setTimeout(() => {
+                    updateBrowserURL(webview.contentWindow.location.href);
+                }, 100);
+            };
+        } catch (e) {
+            console.log('لا يمكن تعديل التاريخ:', e);
         }
     }
       
     // ------------ نظام الرسائل بين التطبيق والموقع ------------  
     window.addEventListener("message", function(event) {  
-        // معالجة الرسائل الأخرى
-        switch(event.data?.type) {
-            case "request_location":
-                navigator.geolocation.getCurrentPosition(  
-                    (pos) => {  
-                        webview.contentWindow.postMessage({  
-                            status: "success",  
-                            latitude: pos.coords.latitude,  
-                            longitude: pos.coords.longitude,  
-                            accuracy: pos.coords.accuracy,  
-                            timestamp: pos.timestamp  
-                        }, "*");  
-                    },  
-                    (err) => {  
-                        webview.contentWindow.postMessage({  
-                            status: "error",  
-                            message: err.message,  
-                            code: err.code  
-                        }, "*");  
-                    },  
-                    {  
-                        enableHighAccuracy: true,  
-                        timeout: 15000,  
-                        maximumAge: 0  
-                    }  
-                );
-                break;
-                
-            case "download_file":
-                const { url, filename, type } = event.data;  
-                downloadFile(url, filename, type);
-                break;
-                
-            case "save_data":
-                const { key, value } = event.data;  
-                localStorage.setItem(`zoona_${key}`, JSON.stringify(value));  
-                webview.contentWindow.postMessage({  
-                    type: "data_saved",  
-                    key: key,  
-                    success: true  
-                }, "*");  
-                showToast('تم حفظ البيانات بنجاح ✓', 2000);
-                break;
-                
-            case "get_data":
-                const dataKey = event.data.key;  
-                const storedValue = localStorage.getItem(`zoona_${dataKey}`);  
-                webview.contentWindow.postMessage({  
-                    type: "data_retrieved",  
-                    key: dataKey,  
-                    value: storedValue ? JSON.parse(storedValue) : null,  
-                    success: true  
-                }, "*");
-                break;
-                
-            case "clear_data":
-                const clearKey = event.data.key;  
-                if (clearKey === 'all') {  
-                    localStorage.clear();  
-                    showToast('تم مسح جميع البيانات', 2000);  
-                } else {  
-                    localStorage.removeItem(`zoona_${clearKey}`);  
-                    showToast('تم مسح البيانات', 2000);  
-                }
-                break;
-                
-            case "update_url":
-                const newUrl = event.data.url;
-                if (newUrl) {
-                    updateBrowserURL(newUrl);
-                }
-                break;
-                
-            case "current_url_response":
-            case "page_changed":
-                // تمت معالجتها في handleIframeMessage
-                break;
+        // طلب الموقع الجغرافي  
+        if (event.data === "request_location") {  
+            navigator.geolocation.getCurrentPosition(  
+                (pos) => {  
+                    webview.contentWindow.postMessage({  
+                        status: "success",  
+                        latitude: pos.coords.latitude,  
+                        longitude: pos.coords.longitude,  
+                        accuracy: pos.coords.accuracy,  
+                        timestamp: pos.timestamp  
+                    }, "*");  
+                },  
+                (err) => {  
+                    webview.contentWindow.postMessage({  
+                        status: "error",  
+                        message: err.message,  
+                        code: err.code  
+                    }, "*");  
+                },  
+                {  
+                    enableHighAccuracy: true,  
+                    timeout: 15000,  
+                    maximumAge: 0  
+                }  
+            );  
+        }  
+          
+        // تنزيل الملفات  
+        else if (event.data.type === "download_file") {  
+            const { url, filename, type } = event.data;  
+            downloadFile(url, filename, type);  
+        }  
+          
+        // حفظ البيانات  
+        else if (event.data.type === "save_data") {  
+            const { key, value } = event.data;  
+            localStorage.setItem(`zoona_${key}`, JSON.stringify(value));  
+            webview.contentWindow.postMessage({  
+                type: "data_saved",  
+                key: key,  
+                success: true  
+            }, "*");  
+            showToast('تم حفظ البيانات بنجاح ✓', 2000);  
+        }  
+          
+        // جلب البيانات  
+        else if (event.data.type === "get_data") {  
+            const { key } = event.data;  
+            const value = localStorage.getItem(`zoona_${key}`);  
+            webview.contentWindow.postMessage({  
+                type: "data_retrieved",  
+                key: key,  
+                value: value ? JSON.parse(value) : null,  
+                success: true  
+            }, "*");  
+        }  
+          
+        // مسح البيانات  
+        else if (event.data.type === "clear_data") {  
+            const { key } = event.data;  
+            if (key === 'all') {  
+                localStorage.clear();  
+                showToast('تم مسح جميع البيانات', 2000);  
+            } else {  
+                localStorage.removeItem(`zoona_${key}`);  
+                showToast('تم مسح البيانات', 2000);  
+            }  
         }
-    });
+        
+        // تحديث الرابط من داخل الموقع
+        else if (event.data.type === "update_url") {
+            const { url } = event.data;
+            if (url) {
+                updateBrowserURL(url);
+            }
+        }  
+    });  
       
     // دالة تنزيل الملفات  
     function downloadFile(url, filename, type = 'image') {  
@@ -871,23 +847,21 @@
         }  
     });  
       
-        // دعم التثبيت كـ PWA (دون إشعارات)  
+    // دعم التثبيت كـ PWA  
     let deferredPrompt;  
       
     window.addEventListener('beforeinstallprompt', (e) => {  
         e.preventDefault();  
         deferredPrompt = e;  
-        // لا تظهر أي إشعارات للتثبيت  
     });  
       
     // إدارة الذاكرة  
     window.addEventListener('load', () => {  
-        // تنظيف الذاكرة القديمة  
         const now = new Date().getTime();  
         const cacheData = JSON.parse(localStorage.getItem('zoona_cache_meta') || '{}');  
           
         for (const key in cacheData) {  
-            if (now - cacheData[key].timestamp > 7 * 24 * 60 * 60 * 1000) { // 7 أيام  
+            if (now - cacheData[key].timestamp > 7 * 24 * 60 * 60 * 1000) {  
                 localStorage.removeItem(key);  
                 delete cacheData[key];  
             }  
@@ -918,144 +892,81 @@
     }  
 </script>
 
-<!-- Firebase Messaging for PWA on Blogger -->  <script type='module'>  
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";  
-  import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-messaging.js";  
-  
-  const firebaseConfig = {  
-    apiKey: "AIzaSyBxQLDLqr4W3lApfYLPjSV5It7925a9Rr0",  
-    authDomain: "double-carport-476915-j7.firebaseapp.com",  
-    projectId: "double-carport-476915-j7",  
-    storageBucket: "double-carport-476915-j7.firebasestorage.app",  
-    messagingSenderId: "122641462099",  
-    appId: "1:122641462099:web:345b777a88757d3ef7e7a6"  
-  };  
-  
-  const app = initializeApp(firebaseConfig);  
-  const messaging = getMessaging(app);  
-  
-  if ('serviceWorker' in navigator) {  
-    navigator.serviceWorker.register('/service-worker.js', { scope: '/' })  
-      .then(registration => {  
-        console.log('Service Worker registered:', registration);  
-  
-        Notification.requestPermission().then(permission => {  
-          if (permission === "granted") {  
-            //  التعديل هنا: تمرير كائن التسجيل (registration)  
-            getToken(messaging, {   
-              vapidKey: "BE2_9m83w2cu_fxhqV4eUowZQT7E8nm-FZZMWqN5DByd-Naykp52nWwA9uuW_L9x_3rPPsMNZzctsZD8j5YyaZw",  
-              serviceWorkerRegistration: registration   
-            })  
-            .then(token => {  
-              if (token) {  
-                console.log("FCM Token:", token);  
-  
-                // إرسال الـ token إلى Vercel API  
-                fetch('/api/saveToken', {  
-                  method: 'POST',  
-                  headers: { 'Content-Type': 'application/json' },  
-                  body: JSON.stringify({ token })  
-                });  
-              } else {  
-                console.log('No registration token available.');  
-              }  
-            })  
-            .catch(err => console.error('Error retrieving token: ', err));  
-          } else {  
-            console.log('Notification permission not granted');  
-          }  
-        });  
-  
-      })  
-      .catch(err => console.error('Service Worker registration failed:', err));  
-  } else {  
-    console.warn('Service Worker not supported in this browser');  
-  }  
-</script>  <!-- صندوق تثبيت PWA (نسخة موحدة) -->  <div style="  
+<!-- صندوق تثبيت PWA (نسخة موحدة) -->  
+<div style="  
 position: fixed;  
 right: 16px;  
 left: 16px;  
 bottom: 20px;  
 max-width: 420px;  
 margin: 0 auto;  
-border-radius: 20px; /* زاوية أكثر نعومة */  
-padding: 24px; /* مساحة داخلية أكبر */  
-background: #ffffff; /* خلفية بيضاء نظيفة */  
-color: #333333; /* لون نص داكن */  
-box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15),   
-            0 4px 12px rgba(0, 0, 0, 0.05); /* ظلال أكثر عمقًا واحترافية */  
+border-radius: 20px;  
+padding: 24px;  
+background: #ffffff;  
+color: #333333;  
+box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.05);  
 display: none;  
 z-index: 100000;  
 font-family: 'Tajawal', 'Segoe UI', Tahoma, sans-serif;  
-direction: rtl;  
-"  
-id="pwa-install-box" aria-hidden="true" role="dialog">  <div id="pwa-close" title="إغلاق" style="  
-    position:absolute;top:12px;left:12px;color:#999;font-size:20px;  
-    cursor:pointer;width:32px;height:32px;display:flex;  
-    align-items:center;justify-content:center;border-radius:50%;  
-    transition: color 0.3s, background-color 0.3s;  
-">  
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>  
-</div>  
-  
-<div style="display:flex;gap:16px;align-items:center;">  
-      
-    <div style="  
-        width: 72px; /* حجم أكبر قليلاً */  
-        height: 72px;  
-        border-radius: 18px; /* زوايا أيقونة محدثة */  
-        background: #f7f7f7;  
-        display:flex;align-items:center;justify-content:center;  
-        flex-shrink:0;box-shadow: 0 4px 12px rgba(0,0,0,0.1);  
-        overflow:hidden;  
-    ">  
-        <img src="https://i.ibb.co/pvjQjT2V/icon-512x512.png"   
-             style="width: 52px; height: 52px; border-radius: 10px; object-fit: cover;">  
+direction: rtl;"  
+id="pwa-install-box" aria-hidden="true" role="dialog">  
+    <div id="pwa-close" title="إغلاق" style="  
+        position:absolute;top:12px;left:12px;color:#999;font-size:20px;  
+        cursor:pointer;width:32px;height:32px;display:flex;  
+        align-items:center;justify-content:center;border-radius:50%;  
+        transition: color 0.3s, background-color 0.3s;">  
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>  
     </div>  
-
-    <div style="flex:1;text-align:right;">  
-        <div style="font-weight: 800; font-size: 18px; margin-bottom: 4px; color: #c62828;">  
-            تثبيت تطبيق <span style="font-family:'Segoe UI', Tahoma, sans-serif;">ZOONA</span>  
+    
+    <div style="display:flex;gap:16px;align-items:center;">  
+        <div style="  
+            width: 72px;  
+            height: 72px;  
+            border-radius: 18px;  
+            background: #f7f7f7;  
+            display:flex;align-items:center;justify-content:center;  
+            flex-shrink:0;box-shadow: 0 4px 12px rgba(0,0,0,0.1);  
+            overflow:hidden;">  
+            <img src="https://i.ibb.co/pvjQjT2V/icon-512x512.png"   
+                 style="width: 52px; height: 52px; border-radius: 10px; object-fit: cover;">  
         </div>  
-        <div style="font-size: 14px; color: #555555; line-height: 1.5;">  
-            ✨ تجربة شراء أسرع — تثبيت مباشر بنقرة واحدة  
+    
+        <div style="flex:1;text-align:right;">  
+            <div style="font-weight: 800; font-size: 18px; margin-bottom: 4px; color: #c62828;">  
+                تثبيت تطبيق <span style="font-family:'Segoe UI', Tahoma, sans-serif;">ZOONA</span>  
+            </div>  
+            <div style="font-size: 14px; color: #555555; line-height: 1.5;">  
+                ✨ تجربة شراء أسرع — تثبيت مباشر بنقرة واحدة  
+            </div>  
         </div>  
     </div>  
-
+    
+    <button id="pwa-install-btn" style="  
+        width: 100%;  
+        margin-top: 20px;   
+        background: #c62828;  
+        color: #fff;  
+        border: none;  
+        padding: 14px 20px;  
+        border-radius: 14px;  
+        font-weight: 700;  
+        cursor: pointer;  
+        box-shadow: 0 8px 20px rgba(198, 40, 40, 0.3),  
+                    inset 0 1px 0 rgba(255, 255, 255, 0.3);  
+        text-align: center;  
+        font-size: 16px;  
+        letter-spacing: 0.5px;  
+        transition: background-color 0.3s ease;">  
+        تثبيت الآن وتجربة الأداء الفائق  
+    </button>  
 </div>  
 
-<button id="pwa-install-btn" style="  
-    width: 100%; /* عرض كامل */  
-    margin-top: 20px;   
-    background: #c62828; /* استخدام اللون الأساسي الأحمر القوي */  
-    color: #fff;  
-    border: none;  
-    padding: 14px 20px;  
-    border-radius: 14px;  
-    font-weight: 700;  
-    cursor: pointer;  
-    box-shadow: 0 8px 20px rgba(198, 40, 40, 0.3),  
-                inset 0 1px 0 rgba(255, 255, 255, 0.3); /* ظلال وزر مميز */  
-    text-align: center;  
-    font-size: 16px;  
-    letter-spacing: 0.5px;  
-    transition: background-color 0.3s ease;  
-">  
-    تثبيت الآن وتجربة الأداء الفائق  
-</button>
-
-</div>  <script>  
+<script>  
 document.addEventListener('DOMContentLoaded', function() {  
     let deferredPrompt = null;  
     const box = document.getElementById('pwa-install-box');  
     const btn = document.getElementById('pwa-install-btn');  
     const close = document.getElementById('pwa-close');  
-  
-    // إضافة خط Tajawal للتأكد من المظهر المتناسق  
-    const f = document.createElement('link');  
-    f.rel = "stylesheet";  
-    f.href = "https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap";  
-    document.head.appendChild(f);  
   
     function hasShownBefore() {  
         return localStorage.getItem('pwaInstallShown') === 'true';  
@@ -1065,7 +976,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }  
   
     function isInstalled() {  
-        // التحقق مما إذا كان التطبيق مثبتاً كـ PWA  
         return window.matchMedia('(display-mode: standalone)').matches ||  
                window.navigator.standalone === true;  
     }  
@@ -1077,7 +987,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isInstalled()) return;  
         if (hasShownBefore()) return;  
   
-        // إظهار الصندوق بعد تأخير 3 ثوانٍ  
         setTimeout(() => {  
             box.style.display = 'block';  
         }, 3000);  
@@ -1100,14 +1009,17 @@ document.addEventListener('DOMContentLoaded', function() {
   
     close.addEventListener('click', () => {  
         box.style.display = 'none';  
-        markAsShown(); // وضع علامة "تم العرض" عند الإغلاق اليدوي  
+        markAsShown();  
     });  
   
     if (isInstalled()) {  
         box.style.display = 'none';  
     }  
 });  
-</script>  <!-- طلب تفعيل الإشعارات من زونا -->  <div id="custom-notification-prompt" style="  
+</script>  
+
+<!-- طلب تفعيل الإشعارات من زونا -->  
+<div id="custom-notification-prompt" style="  
     position: fixed;   
     bottom: 20px;   
     left: 50%;   
@@ -1123,68 +1035,68 @@ document.addEventListener('DOMContentLoaded', function() {
     display: none;   
     text-align: center;   
     font-family: 'Tajawal', sans-serif;  
-    animation: promptSlideUp 0.5s ease forwards;  
-">  
+    animation: promptSlideUp 0.5s ease forwards;">  
     <div style="color: #ff4500; font-weight: 800; margin-bottom: 15px; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; gap: 10px;">  
         <span>هل ترغب في الحصول على هدايا حصرية من زونا؟</span>  
-    </div>  <p style="color: #444; margin-bottom: 25px; font-size: 1.1rem; line-height: 1.6;">  
-    فعّل الإشعارات الآن لتصلك عروض خاصة وخصومات مميزة قبل الجميع!  
-</p>  
-  
-<div style="background-color: #fff9f7; border-radius: 12px; padding: 15px; margin-bottom: 25px; text-align: right;">  
-    <div style="display: flex; align-items: center; justify-content: flex-end; margin-bottom: 10px; color: #555;">  
-        <span>خصومات حصرية تصل إلى 50%</span>  
-        <span style="color: #ff4500; margin-left: 8px; font-size: 1.2rem;"></span>  
     </div>  
-    <div style="display: flex; align-items: center; justify-content: flex-end; margin-bottom: 10px; color: #555;">  
-        <span>إشعارات فورية عن العروض الجديدة</span>  
-        <span style="color: #ff4500; margin-left: 8px; font-size: 1.2rem;">⚡</span>  
+    
+    <p style="color: #444; margin-bottom: 25px; font-size: 1.1rem; line-height: 1.6;">  
+        فعّل الإشعارات الآن لتصلك عروض خاصة وخصومات مميزة قبل الجميع!  
+    </p>  
+    
+    <div style="background-color: #fff9f7; border-radius: 12px; padding: 15px; margin-bottom: 25px; text-align: right;">  
+        <div style="display: flex; align-items: center; justify-content: flex-end; margin-bottom: 10px; color: #555;">  
+            <span>خصومات حصرية تصل إلى 50%</span>  
+            <span style="color: #ff4500; margin-left: 8px; font-size: 1.2rem;"></span>  
+        </div>  
+        <div style="display: flex; align-items: center; justify-content: flex-end; margin-bottom: 10px; color: #555;">  
+            <span>إشعارات فورية عن العروض الجديدة</span>  
+            <span style="color: #ff4500; margin-left: 8px; font-size: 1.2rem;">⚡</span>  
+        </div>  
+        <div style="display: flex; align-items: center; justify-content: flex-end; color: #555;">  
+            <span>هدايا مجانية</span>  
+            <span style="color: #ff4500; margin-left: 8px; font-size: 1.2rem;"></span>  
+        </div>  
     </div>  
-    <div style="display: flex; align-items: center; justify-content: flex-end; color: #555;">  
-        <span>هدايا مجانية</span>  
-        <span style="color: #ff4500; margin-left: 8px; font-size: 1.2rem;"></span>  
+    
+    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 15px;">  
+        <button id="activate-notifications" style="  
+            background-color: #ff4500;   
+            color: white;   
+            border: none;   
+            padding: 14px 28px;   
+            border-radius: 12px;   
+            font-weight: 700;   
+            cursor: pointer;   
+            transition: all 0.3s ease;   
+            font-size: 1.05rem;   
+            flex: 1;   
+            min-width: 160px;   
+            box-shadow: 0 4px 12px rgba(255, 69, 0, 0.25);">  
+            تفعيل الآن ❤️‍  
+        </button>  
+        <button id="decline-notifications" style="  
+            background-color: #f0f2f5;   
+            color: #666;   
+            border: 1px solid #ddd;   
+            padding: 14px 28px;   
+            border-radius: 12px;   
+            font-weight: 700;   
+            cursor: pointer;   
+            transition: all 0.3s ease;   
+            font-size: 1.05rem;   
+            flex: 1;   
+            min-width: 160px;">  
+            عدم التفعيل  
+        </button>  
     </div>  
+    
+    <p style="margin-top: 20px; color: #888; font-size: 0.9rem;">  
+        يمكنك تغيير هذا الإعداد لاحقاً من إعدادات المتصفح  
+    </p>  
 </div>  
-  
-<div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 15px;">  
-    <button id="activate-notifications" style="  
-        background-color: #ff4500;   
-        color: white;   
-        border: none;   
-        padding: 14px 28px;   
-        border-radius: 12px;   
-        font-weight: 700;   
-        cursor: pointer;   
-        transition: all 0.3s ease;   
-        font-size: 1.05rem;   
-        flex: 1;   
-        min-width: 160px;   
-        box-shadow: 0 4px 12px rgba(255, 69, 0, 0.25);  
-    ">  
-        تفعيل الآن ❤️‍  
-    </button>  
-    <button id="decline-notifications" style="  
-        background-color: #f0f2f5;   
-        color: #666;   
-        border: 1px solid #ddd;   
-        padding: 14px 28px;   
-        border-radius: 12px;   
-        font-weight: 700;   
-        cursor: pointer;   
-        transition: all 0.3s ease;   
-        font-size: 1.05rem;   
-        flex: 1;   
-        min-width: 160px;  
-    ">  
-        عدم التفعيل  
-    </button>  
-</div>  
-  
-<p style="margin-top: 20px; color: #888; font-size: 0.9rem;">  
-    يمكنك تغيير هذا الإعداد لاحقاً من إعدادات المتصفح  
-</p>
 
-</div>  <style>  
+<style>  
     @keyframes promptSlideUp {  
         from {  
             opacity: 0;  
@@ -1235,7 +1147,9 @@ document.addEventListener('DOMContentLoaded', function() {
             min-width: unset;  
         }  
     }  
-</style>  <script type='module'>  
+</style>  
+
+<script type='module'>  
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";  
   import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-messaging.js";  
   
@@ -1253,15 +1167,9 @@ document.addEventListener('DOMContentLoaded', function() {
   const app = initializeApp(firebaseConfig);  
   const messaging = getMessaging(app);  
   
-  /**  
-   * دالة لجلب Token Firebase وإرساله إلى الخادم  
-   * @param {ServiceWorkerRegistration} registration - تسجيل Service Worker النشط  
-   */  
   function requestAndSaveToken(registration) {  
-      // 1. طلب الإذن الأصلي من المتصفح  
       Notification.requestPermission().then(permission => {  
           if (permission === "granted") {  
-              // 2. إذا تم منح الإذن، احصل على Token  
               getToken(messaging, {   
                   vapidKey: VAPID_KEY,  
                   serviceWorkerRegistration: registration   
@@ -1269,7 +1177,6 @@ document.addEventListener('DOMContentLoaded', function() {
               .then(token => {  
                   if (token) {  
                       console.log("FCM Token:", token);  
-                      // 3. إرسال الـ token إلى Vercel API  
                       fetch('/api/saveToken', {  
                           method: 'POST',  
                           headers: { 'Content-Type': 'application/json' },  
@@ -1278,7 +1185,6 @@ document.addEventListener('DOMContentLoaded', function() {
                       .then(response => {  
                           if (response.ok) {  
                               console.log('Token saved successfully');  
-                              // عرض رسالة نجاح للمستخدم  
                               alert('✅ شكراً لتسجيلك! ستتلقى إشعاراتنا الحصرية قريباً.');  
                           } else {  
                               console.error('Failed to save token');  
@@ -1303,38 +1209,28 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Service Worker registered:', registration);  
           
         const promptContainer = document.getElementById('custom-notification-prompt');  
-  
-        // التحقق مما إذا رفض المستخدم مسبقاً  
         const userDeclined = localStorage.getItem('zona_notifications_declined');  
   
-        // التحقق من حالة الإذن الحالية  
         if (Notification.permission === 'default' && !userDeclined) {  
-              
-            // إظهار الواجهة المخصصة بعد تأخير بسيط  
             setTimeout(() => {  
                 if (promptContainer) {  
                     promptContainer.style.display = 'block';  
                 }  
-            }, 3000); // تأخير 3 ثواني لتحميل الصفحة أولاً  
+            }, 3000);  
   
-            // إعداد مستمعي الأحداث للأزرار المخصصة  
             const activateBtn = document.getElementById('activate-notifications');  
             const declineBtn = document.getElementById('decline-notifications');  
   
             if (activateBtn) {  
                 activateBtn.addEventListener('click', () => {  
-                    // إخفاء الواجهة المخصصة  
                     if (promptContainer) promptContainer.style.display = 'none';  
-                    // تشغيل عملية طلب الإذن وجلب الـ Token  
                     requestAndSaveToken(registration);  
                 });  
             }  
               
             if (declineBtn) {  
                 declineBtn.addEventListener('click', () => {  
-                    // إخفاء الواجهة المخصصة  
                     if (promptContainer) promptContainer.style.display = 'none';  
-                    // تخزين تفضيل الرفض في localStorage لتجنب الظهور مرة أخرى  
                     localStorage.setItem('zona_notifications_declined', 'true');  
                     alert(' لن تصلك إشعاراتنا الحصرية. يمكنك تغيير هذا القرار لاحقاً من إعدادات المتصفح.');  
                     console.log('User declined custom prompt for now.');  
@@ -1342,7 +1238,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }  
   
         } else if (Notification.permission === 'granted') {  
-            // إذا كان الإذن ممنوحاً بالفعل، قم فقط بجلب/تحديث الـ Token (لضمان تسجيله)  
             console.log('الإذن ممنوح بالفعل، جاري تحديث الـ Token...');  
             getToken(messaging, {   
                 vapidKey: VAPID_KEY,  
@@ -1364,7 +1259,6 @@ document.addEventListener('DOMContentLoaded', function() {
     console.warn('Service Worker not supported in this browser');  
   }  
     
-  // تحسين تجربة المستخدم: إضافة تأثير hover على الأزرار  
   document.addEventListener('DOMContentLoaded', function() {  
       const activateBtn = document.getElementById('activate-notifications');  
       const declineBtn = document.getElementById('decline-notifications');  
@@ -1395,6 +1289,7 @@ document.addEventListener('DOMContentLoaded', function() {
           });  
       }  
   });  
-</script> 
-</body> 
-</html>  
+</script>  
+
+</body>  
+</html>
