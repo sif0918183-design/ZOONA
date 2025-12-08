@@ -55,40 +55,119 @@ self.addEventListener('activate', event => {
 // =================================================================
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
+  const isNavigationRequest = event.request.mode === 'navigate';
+  
+  // تجاهل طلبات غير GET
   if (event.request.method !== 'GET') return;
 
   // Google Fonts cache-first
   if (url.origin.includes('fonts.googleapis.com') || url.origin.includes('fonts.gstatic.com')) {
     event.respondWith(
-      caches.match(event.request).then(cached => cached || fetch(event.request).then(res => {
-        // 💡 التعديل هنا: يجب استنساخ res قبل تمريره للتخزين المؤقت، ثم إرجاع الأصل
-        if (res.ok) {
-          const cacheResponse = res.clone(); // استنساخ الاستجابة للتخزين المؤقت
-          caches.open(CACHE_NAME).then(c => c.put(event.request, cacheResponse));
-        }
-        return res; // إرجاع الاستجابة الأصلية للمتصفح
-      }))
+      caches.match(event.request).then(cached => {
+        if (cached) return cached;
+        
+        return fetch(event.request).then(response => {
+          if (response.ok) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return response;
+        }).catch(() => {
+          // يمكنك إرجاع رد افتراضي للخطوط
+          return new Response('', {
+            status: 408,
+            statusText: 'الخطوط غير متوفرة حالياً'
+          });
+        });
+      })
     );
     return;
   }
 
-  // Stale-While-Revalidate
+  // Stale-While-Revalidate للطلبات الأخرى
   event.respondWith((async () => {
-    const cached = await caches.match(event.request);
+    const cache = await caches.open(CACHE_NAME);
+    const cachedResponse = await cache.match(event.request);
+    
+    // تحديث ذكي في الخلفية
+    const fetchPromise = fetch(event.request).then(async networkResponse => {
+      if (networkResponse && networkResponse.ok) {
+        const responseClone = networkResponse.clone();
+        await cache.put(event.request, responseClone);
+      }
+      return networkResponse;
+    }).catch(() => {
+      // تجاهل الأخطاء في تحديث الخلفية
+      return null;
+    });
+
+    // إذا كان طلب تصفح (صفحة HTML) والعملية متصلة
+    if (isNavigationRequest) {
+      try {
+        const networkResponse = await fetchPromise;
+        if (networkResponse && networkResponse.ok) {
+          return networkResponse;
+        }
+        
+        // إذا فشل طلب الشبكة، حاول استخدام المحفوظ
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        
+        // إذا لم يكن هناك محفوظ، ارجع إلى صفحة OFFLINE_FALLBACK_URL
+        const offlinePage = await cache.match('/p/offline.html');
+        if (offlinePage) {
+          return offlinePage;
+        }
+        
+        // رد افتراضي إذا لم توجد صفحة OFFLINE
+        return new Response(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <title>غير متصل بالإنترنت - ZOONA SD</title>
+            <style>
+              body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+              h1 { color: #333; }
+              p { color: #666; }
+            </style>
+          </head>
+          <body>
+            <h1>عذراً، أنت غير متصل بالإنترنت</h1>
+            <p>يرجى التحقق من اتصالك بالشبكة وحاول مرة أخرى.</p>
+            <p>متجر ZOONA SD</p>
+          </body>
+          </html>
+        `, {
+          status: 200,
+          headers: { 'Content-Type': 'text/html; charset=utf-8' }
+        });
+      } catch (error) {
+        // معالجة الأخطاء هنا
+        const offlinePage = await cache.match('/p/offline.html');
+        return offlinePage || new Response('غير متصل بالإنترنت', {
+          status: 503,
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+        });
+      }
+    }
+    
+    // للطلبات غير التصفحية (صور، CSS، JS، إلخ)
     try {
       const networkResponse = await fetch(event.request);
-      
-      // 💡 التعديل هنا: يجب استنساخ networkResponse قبل تمريره للتخزين المؤقت
-      if (networkResponse && networkResponse.ok) {
-        const cacheResponse = networkResponse.clone(); // استنساخ الاستجابة للتخزين المؤقت
-        // لا نحتاج لـ await هنا، فقط نطلق العملية
-        caches.open(CACHE_NAME).then(c => c.put(event.request, cacheResponse));
+      if (networkResponse.ok) {
+        const responseClone = networkResponse.clone();
+        cache.put(event.request, responseClone);
       }
-      return cached || networkResponse; // إرجاع الاستجابة الأصلية للمتصفح أو المخزنة
-    } catch {
-      if (cached) return cached;
-      if (event.request.headers.get('accept')?.includes('text/html')) return caches.match(OFFLINE_FALLBACK_URL);
-      return new Response('متجر ZOONA — غير متصل بالإنترنت', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' }});
+      return cachedResponse || networkResponse;
+    } catch (error) {
+      return cachedResponse || new Response('الملف غير متوفر حالياً', {
+        status: 408,
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+      });
     }
   })());
 });
