@@ -353,16 +353,14 @@
     <div id="toast"></div>
     
     <script>
-       // ✅ قراءة المسار من شريط العنوان
-let path = window.location.pathname.replace(/^\/+/, "");
+        // استخراج الرابط المطلوب من متغير url
+        const params = new URLSearchParams(window.location.search);
+        let siteURL = params.get("url");
 
-// ✅ إذا لم يكن هناك مسار افتح الصفحة الرئيسية
-if (!path || !path.startsWith("www.zoonasd.com")) {
-    path = "www.zoonasd.com/";
-}
-
-// ✅ تكوين رابط الموقع الحقيقي
-let siteURL = "https://" + path;
+        // اذا لم يوجد رابط → نفتح الصفحة الرئيسية
+        if (!siteURL) {
+            siteURL = "https://www.zoonasd.com/";
+        }
 
         // المتغيرات العامة
         const appName = "ZOONA";
@@ -494,11 +492,9 @@ let siteURL = "https://" + path;
                 pullIndicator.classList.remove('show');
                 showToast('جاري تحديث الصفحة...', 1500);
                 
-    setTimeout(() => {
-    if (webview && webview.src) {
-        webview.src = webview.src;
-    }
-}, 300);
+                setTimeout(() => {
+                    webview.contentWindow.location.reload();
+                }, 300);
             }
         });
         
@@ -553,12 +549,6 @@ let siteURL = "https://" + path;
             webview.src = siteURL;
             
             webview.onload = () => {
-// ✅ تزامن العنوان في شريط المتصفح
-try {
-    const currentURL = webview.contentWindow.location.href;
-    const cleanPath = currentURL.replace("https://", "");
-    history.replaceState(null, "", "/" + cleanPath);
-} catch (e) {}
                 // إخفاء شاشة التحميل
                 splash.style.opacity = '0';
                 setTimeout(() => {
