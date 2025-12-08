@@ -2,12 +2,82 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>غير متصل بالإنترنت</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>body { font-family: sans-serif; text-align: center; padding-top: 50px; } </style>
+    <title>ZOONA - غير متصل بالإنترنت</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #D32F2F; /* لون theme_color من manifest */
+            --background-color: #FFFFFF;
+            --text-color: #333333;
+        }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 400px;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            background: #fcfcfc;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        p {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .icon {
+            font-size: 50px;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        a {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: #FFFFFF;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 700;
+            transition: background-color 0.3s;
+        }
+
+        a:hover {
+            background-color: #b71c1c; /* ظل أغمق للون الأساسي */
+        }
+    </style>
 </head>
 <body>
-    <h1>متجر ZOONA</h1>
-    <p>أنت غير متصل بالإنترنت. يرجى التحقق من اتصالك والمحاولة مرة أخرى.</p>
+    <div class="container">
+        <div class="icon">
+            &#9888;
+        </div>
+        <h1>أنت غير متصل بالإنترنت</h1>
+        <p>
+            للأسف، لا يمكننا الوصول إلى متجر **ZOONA** حاليًا. يُرجى التحقق من اتصالك بالشبكة والمحاولة مرة أخرى.
+        </p>
+        <a href="/">المحاولة مرة أخرى (الرئيسية)</a>
+    </div>
 </body>
 </html>
