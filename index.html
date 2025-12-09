@@ -892,7 +892,7 @@
     }  
 </script>
 
-<!-- صندوق تثبيت PWA (نسخة موحدة) -->  
+<!-- صندوق تثبيت PWA مُحسّن -->
 <div style="  
 position: fixed;  
 right: 16px;  
@@ -968,40 +968,124 @@ document.addEventListener('DOMContentLoaded', function() {
     const btn = document.getElementById('pwa-install-btn');  
     const close = document.getElementById('pwa-close');  
   
+    // التحقق من تثبيت PWA بدقة أكبر
+    function isPWAInstalled() {
+        // الطرق المختلفة للتحقق من التثبيت
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+        const isFullscreen = window.matchMedia('(display-mode: fullscreen)').matches;
+        const isMinimalUI = window.matchMedia('(display-mode: minimal-ui)').matches;
+        
+        // للـ iOS
+        const isIOSStandalone = ('standalone' in window.navigator) && 
+                               (window.navigator.standalone === true);
+        
+        // للتحقق من تطبيقات pwabuilder.com أو أي PWA آخر
+        const hasPWALauncher = document.referrer.includes('android-app://') || 
+                              window.location.protocol === 'file:';
+        
+        // التحقق من وجود service worker نشط
+        let hasActiveServiceWorker = false;
+        if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            hasActiveServiceWorker = registrations.length > 0;
+        }
+        
+        return isStandalone || isFullscreen || isMinimalUI || isIOSStandalone || 
+               hasPWALauncher || hasActiveServiceWorker;
+    }  
+  
     function hasShownBefore() {  
         return localStorage.getItem('pwaInstallShown') === 'true';  
     }  
+    
     function markAsShown() {  
         localStorage.setItem('pwaInstallShown', 'true');  
     }  
   
-    function isInstalled() {  
-        return window.matchMedia('(display-mode: standalone)').matches ||  
-               window.navigator.standalone === true;  
-    }  
+    // التحقق من جميع المتصفحات
+    function isMobileBrowser() {
+        const userAgent = navigator.userAgent.toLowerCase();
+        return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
+    }
+    
+    // التحقق من متصفحات iOS
+    function isIOSBrowser() {
+        const userAgent = navigator.userAgent.toLowerCase();
+        return /iphone|ipad|ipod/.test(userAgent);
+    }
+    
+    // التحقق من متصفحات Android
+    function isAndroidBrowser() {
+        const userAgent = navigator.userAgent.toLowerCase();
+        return /android/.test(userAgent);
+    }
   
     window.addEventListener('beforeinstallprompt', (e) => {  
         e.preventDefault();  
         deferredPrompt = e;  
   
-        if (isInstalled()) return;  
-        if (hasShownBefore()) return;  
+        if (isPWAInstalled()) {
+            console.log('PWA مثبت بالفعل');
+            return;
+        }  
+        
+        if (hasShownBefore()) {
+            console.log('تم عرض الرسالة من قبل');
+            return;
+        }  
   
+        // تأخير العرض بحسب نوع الجهاز
+        const delay = isMobileBrowser() ? 3000 : 5000;
+        
         setTimeout(() => {  
-            box.style.display = 'block';  
-        }, 3000);  
+            box.style.display = 'block';
+            console.log('عرض رسالة التثبيت');
+        }, delay);  
     });  
+  
+    // معالجة المتصفحات التي لا تدعم beforeinstallprompt
+    if (!('beforeinstallprompt' in window)) {
+        setTimeout(() => {
+            if (!isPWAInstalled() && !hasShownBefore()) {
+                // عرض رسالة بديلة للمتصفحات القديمة
+                console.log('المتصفح لا يدعم التثبيت التلقائي');
+                
+                // يمكنك إضافة زر يدوي للتثبيت
+                // أو عرض تعليمات للمستخدم
+            }
+        }, 5000);
+    }
   
     btn.addEventListener('click', async () => {  
         if (!deferredPrompt) {  
             box.style.display = 'none';  
             markAsShown();  
+            
+            // توجيه المستخدم للتعليمات حسب المتصفح
+            if (isIOSBrowser()) {
+                alert('لتثبيت التطبيق على iOS:\n1. اضغط على زر المشاركة\n2. اختر "إضافة إلى الشاشة الرئيسية"');
+            } else if (isAndroidBrowser()) {
+                alert('لتثبيت التطبيق على Android:\n1. اضغط على القائمة (النقاط الثلاث)\n2. اختر "إضافة إلى الشاشة الرئيسية"');
+            } else {
+                alert('لتثبيت التطبيق:\n1. اضغط على القائمة (النقاط الثلاث)\n2. اختر "تثبيت التطبيق" أو "إضافة إلى الشاشة الرئيسية"');
+            }
+            
             return;  
         }  
   
-        deferredPrompt.prompt();  
-        await deferredPrompt.userChoice;  
-  
+        try {
+            deferredPrompt.prompt();  
+            const choiceResult = await deferredPrompt.userChoice;
+            
+            if (choiceResult.outcome === 'accepted') {
+                console.log('قام المستخدم بتثبيت PWA');
+            } else {
+                console.log('رفض المستخدم تثبيت PWA');
+            }
+        } catch (error) {
+            console.error('خطأ في تثبيت PWA:', error);
+        }
+        
         box.style.display = 'none';  
         markAsShown();  
         deferredPrompt = null;  
@@ -1012,11 +1096,41 @@ document.addEventListener('DOMContentLoaded', function() {
         markAsShown();  
     });  
   
-    if (isInstalled()) {  
+    close.addEventListener('mouseenter', () => {  
+        close.style.backgroundColor = '#f0f0f0';  
+        close.style.color = '#333';  
+    });  
+  
+    close.addEventListener('mouseleave', () => {  
+        close.style.backgroundColor = 'transparent';  
+        close.style.color = '#999';  
+    });  
+  
+    // إضافة تأثير hover للزر
+    btn.addEventListener('mouseenter', () => {  
+        btn.style.backgroundColor = '#b71c1c';  
+    });  
+    
+    btn.addEventListener('mouseleave', () => {  
+        btn.style.backgroundColor = '#c62828';  
+    });  
+  
+    // التحقق عند تحميل الصفحة
+    if (isPWAInstalled()) {  
         box.style.display = 'none';  
     }  
+    
+    // إخفاء الصندوق عند النقر خارجيه (اختياري)
+    document.addEventListener('click', (e) => {
+        if (box.style.display === 'block' && 
+            !box.contains(e.target) && 
+            e.target !== btn) {
+            box.style.display = 'none';
+            markAsShown();
+        }
+    });
 });  
-</script>  
+</script>
 
 <!-- طلب تفعيل الإشعارات من زونا -->  
 <div id="custom-notification-prompt" style="  
