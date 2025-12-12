@@ -1132,278 +1132,302 @@ document.addEventListener('DOMContentLoaded', function() {
 });  
 </script>
 
-<!-- طلب تفعيل الإشعارات من زونا -->  
-<div id="custom-notification-prompt" style="  
-    position: fixed;   
-    bottom: 20px;   
-    left: 50%;   
-    transform: translateX(-50%);   
-    z-index: 10000;   
-    background-color: #fff;   
-    border: 2px solid #ff4500;   
-    border-radius: 18px;   
-    padding: 25px;   
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);   
-    max-width: 500px;   
-    width: 90%;   
-    display: none;   
-    text-align: center;   
-    font-family: 'Tajawal', sans-serif;  
-    animation: promptSlideUp 0.5s ease forwards;">  
-    <div style="color: #ff4500; font-weight: 800; margin-bottom: 15px; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; gap: 10px;">  
-        <span>هل ترغب في الحصول على هدايا حصرية من زونا؟</span>  
-    </div>  
+<!-- طلب تفعيل الإشعارات من زونا -->
+<div id="custom-notification-prompt" style="
+    position: fixed; 
+    bottom: 20px; 
+    left: 50%; 
+    transform: translateX(-50%); 
+    z-index: 10000; 
+    background-color: #fff; 
+    border: 2px solid #ff4500; 
+    border-radius: 18px; 
+    padding: 25px; 
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); 
+    max-width: 500px; 
+    width: 90%; 
+    display: none; 
+    text-align: center; 
+    font-family: 'Tajawal', sans-serif;
+    animation: promptSlideUp 0.5s ease forwards;
+">
+    <div style="color: #ff4500; font-weight: 800; margin-bottom: 15px; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; gap: 10px;">
+        <span>🎁</span>
+        <span>هل ترغب في الحصول على هدايا حصرية من زونا؟</span>
+        <span>🎁</span>
+    </div>
     
-    <p style="color: #444; margin-bottom: 25px; font-size: 1.1rem; line-height: 1.6;">  
-        فعّل الإشعارات الآن لتصلك عروض خاصة وخصومات مميزة قبل الجميع!  
-    </p>  
+    <p style="color: #444; margin-bottom: 25px; font-size: 1.1rem; line-height: 1.6;">
+        فعّل الإشعارات الآن لتصلك عروض خاصة وخصومات مميزة قبل الجميع!
+    </p>
     
-    <div style="background-color: #fff9f7; border-radius: 12px; padding: 15px; margin-bottom: 25px; text-align: right;">  
-        <div style="display: flex; align-items: center; justify-content: flex-end; margin-bottom: 10px; color: #555;">  
-            <span>خصومات حصرية تصل إلى 50%</span>  
-            <span style="color: #ff4500; margin-left: 8px; font-size: 1.2rem;"></span>  
-        </div>  
-        <div style="display: flex; align-items: center; justify-content: flex-end; margin-bottom: 10px; color: #555;">  
-            <span>إشعارات فورية عن العروض الجديدة</span>  
-            <span style="color: #ff4500; margin-left: 8px; font-size: 1.2rem;">⚡</span>  
-        </div>  
-        <div style="display: flex; align-items: center; justify-content: flex-end; color: #555;">  
-            <span>هدايا مجانية</span>  
-            <span style="color: #ff4500; margin-left: 8px; font-size: 1.2rem;"></span>  
-        </div>  
-    </div>  
+    <div style="background-color: #fff9f7; border-radius: 12px; padding: 15px; margin-bottom: 25px; text-align: right;">
+        <div style="display: flex; align-items: center; justify-content: flex-end; margin-bottom: 10px; color: #555;">
+            <span>خصومات حصرية تصل إلى 50%</span>
+            <span style="color: #ff4500; margin-left: 8px; font-size: 1.2rem;">🔥</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: flex-end; margin-bottom: 10px; color: #555;">
+            <span>إشعارات فورية عن العروض الجديدة</span>
+            <span style="color: #ff4500; margin-left: 8px; font-size: 1.2rem;">⚡</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: flex-end; color: #555;">
+            <span>هدايا مجانية مع أول طلبية</span>
+            <span style="color: #ff4500; margin-left: 8px; font-size: 1.2rem;">🎁</span>
+        </div>
+    </div>
     
-    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 15px;">  
-        <button id="activate-notifications" style="  
-            background-color: #ff4500;   
-            color: white;   
-            border: none;   
-            padding: 14px 28px;   
-            border-radius: 12px;   
-            font-weight: 700;   
-            cursor: pointer;   
-            transition: all 0.3s ease;   
-            font-size: 1.05rem;   
-            flex: 1;   
-            min-width: 160px;   
-            box-shadow: 0 4px 12px rgba(255, 69, 0, 0.25);">  
-            تفعيل الآن ❤️‍  
-        </button>  
-        <button id="decline-notifications" style="  
-            background-color: #f0f2f5;   
-            color: #666;   
-            border: 1px solid #ddd;   
-            padding: 14px 28px;   
-            border-radius: 12px;   
-            font-weight: 700;   
-            cursor: pointer;   
-            transition: all 0.3s ease;   
-            font-size: 1.05rem;   
-            flex: 1;   
-            min-width: 160px;">  
-            عدم التفعيل  
-        </button>  
-    </div>  
+    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 15px;">
+        <button id="activate-notifications" style="
+            background-color: #ff4500; 
+            color: white; 
+            border: none; 
+            padding: 14px 28px; 
+            border-radius: 12px; 
+            font-weight: 700; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            font-size: 1.05rem; 
+            flex: 1; 
+            min-width: 160px; 
+            box-shadow: 0 4px 12px rgba(255, 69, 0, 0.25);
+        ">
+            تفعيل الآن ❤️‍🔥
+        </button>
+        <button id="decline-notifications" style="
+            background-color: #f0f2f5; 
+            color: #666; 
+            border: 1px solid #ddd; 
+            padding: 14px 28px; 
+            border-radius: 12px; 
+            font-weight: 700; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            font-size: 1.05rem; 
+            flex: 1; 
+            min-width: 160px;
+        ">
+            عدم التفعيل الآن
+        </button>
+    </div>
     
-    <p style="margin-top: 20px; color: #888; font-size: 0.9rem;">  
-        يمكنك تغيير هذا الإعداد لاحقاً من إعدادات المتصفح  
-    </p>  
-</div>  
+    <p style="margin-top: 20px; color: #888; font-size: 0.9rem;">
+        يمكنك تغيير هذا الإعداد لاحقاً من إعدادات المتصفح
+    </p>
+</div>
 
-<style>  
-    @keyframes promptSlideUp {  
-        from {  
-            opacity: 0;  
-            transform: translateX(-50%) translateY(30px);  
-        }  
-        to {  
-            opacity: 1;  
-            transform: translateX(-50%) translateY(0);  
-        }  
-    }  
-      
-    @media (max-width: 768px) {  
-        #custom-notification-prompt {  
-            padding: 20px;  
-            width: 95%;  
-            border-radius: 16px;  
-        }  
-          
-        #custom-notification-prompt > div:first-child {  
-            font-size: 1.3rem;  
-        }  
-          
-        #custom-notification-prompt p {  
-            font-size: 1rem;  
-        }  
-          
-        #activate-notifications, #decline-notifications {  
-            padding: 12px 20px;  
-            font-size: 1rem;  
-            min-width: 140px;  
-        }  
-    }  
-      
-    @media (max-width: 480px) {  
-        #custom-notification-prompt {  
-            padding: 18px;  
-            border-radius: 14px;  
-        }  
-          
-        #custom-notification-prompt > div:first-child {  
-            font-size: 1.2rem;  
-            flex-direction: column;  
-            gap: 5px;  
-        }  
-          
-        #activate-notifications, #decline-notifications {  
-            width: 100%;  
-            min-width: unset;  
-        }  
-    }  
-</style>  
-
-<script type='module'>  
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";  
-  import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-messaging.js";  
-  
-  const firebaseConfig = {  
-    apiKey: "AIzaSyBxQLDLqr4W3lApfYLPjSV5It7925a9Rr0",  
-    authDomain: "double-carport-476915-j7.firebaseapp.com",  
-    projectId: "double-carport-476915-j7",  
-    storageBucket: "double-carport-476915-j7.firebasestorage.app",  
-    messagingSenderId: "122641462099",  
-    appId: "1:122641462099:web:345b777a88757d3ef7e7a6"  
-  };  
+<style>
+    @keyframes promptSlideUp {
+        from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    }
     
-  const VAPID_KEY = "BE2_9m83w2cu_fxhqV4eUowZQT7E8nm-FZZMWqN5DByd-Naykp52nWwA9uuW_L9x_3rPPsMNZzctsZD8j5YyaZw";  
-  
-  const app = initializeApp(firebaseConfig);  
-  const messaging = getMessaging(app);  
-  
-  function requestAndSaveToken(registration) {  
-      Notification.requestPermission().then(permission => {  
-          if (permission === "granted") {  
-              getToken(messaging, {   
-                  vapidKey: VAPID_KEY,  
-                  serviceWorkerRegistration: registration   
-              })  
-              .then(token => {  
-                  if (token) {  
-                      console.log("FCM Token:", token);  
-                      fetch('/api/saveToken', {  
-                          method: 'POST',  
-                          headers: { 'Content-Type': 'application/json' },  
-                          body: JSON.stringify({ token })  
-                      })  
-                      .then(response => {  
-                          if (response.ok) {  
-                              console.log('Token saved successfully');  
-                              alert('✅ شكراً لتسجيلك! ستتلقى إشعاراتنا الحصرية قريباً.');  
-                          } else {  
-                              console.error('Failed to save token');  
-                          }  
-                      })  
-                      .catch(error => console.error('Error saving token:', error));  
-                  } else {  
-                      console.log('No registration token available.');  
-                  }  
-              })  
-              .catch(err => console.error('Error retrieving token: ', err));  
-          } else {  
-              console.log('Notification permission not granted');  
-              alert('❌ لم يتم منح الإذن. لن تصلك إشعاراتنا.');  
-          }  
-      });  
-  }  
-  
-  if ('serviceWorker' in navigator) {  
-    navigator.serviceWorker.register('/service-worker.js', { scope: '/' })  
-      .then(registration => {  
-        console.log('Service Worker registered:', registration);  
-          
-        const promptContainer = document.getElementById('custom-notification-prompt');  
-        const userDeclined = localStorage.getItem('zona_notifications_declined');  
-  
-        if (Notification.permission === 'default' && !userDeclined) {  
-            setTimeout(() => {  
-                if (promptContainer) {  
-                    promptContainer.style.display = 'block';  
-                }  
-            }, 3000);  
-  
-            const activateBtn = document.getElementById('activate-notifications');  
-            const declineBtn = document.getElementById('decline-notifications');  
-  
-            if (activateBtn) {  
-                activateBtn.addEventListener('click', () => {  
-                    if (promptContainer) promptContainer.style.display = 'none';  
-                    requestAndSaveToken(registration);  
-                });  
-            }  
-              
-            if (declineBtn) {  
-                declineBtn.addEventListener('click', () => {  
-                    if (promptContainer) promptContainer.style.display = 'none';  
-                    localStorage.setItem('zona_notifications_declined', 'true');  
-                    alert(' لن تصلك إشعاراتنا الحصرية. يمكنك تغيير هذا القرار لاحقاً من إعدادات المتصفح.');  
-                    console.log('User declined custom prompt for now.');  
-                });  
-            }  
-  
-        } else if (Notification.permission === 'granted') {  
-            console.log('الإذن ممنوح بالفعل، جاري تحديث الـ Token...');  
-            getToken(messaging, {   
-                vapidKey: VAPID_KEY,  
-                serviceWorkerRegistration: registration   
-            })  
-            .then(token => {  
-                if (token) {  
-                    console.log("FCM Token updated:", token);  
-                }  
-            })  
-            .catch(err => console.error('Error updating token: ', err));  
-        } else if (Notification.permission === 'denied') {  
-            console.log('المستخدم رفض الإذن مسبقاً');  
-        }  
-  
-      })  
-      .catch(err => console.error('Service Worker registration failed:', err));  
-  } else {  
-    console.warn('Service Worker not supported in this browser');  
-  }  
-    
-  document.addEventListener('DOMContentLoaded', function() {  
-      const activateBtn = document.getElementById('activate-notifications');  
-      const declineBtn = document.getElementById('decline-notifications');  
+    @media (max-width: 768px) {
+        #custom-notification-prompt {
+            padding: 20px;
+            width: 95%;
+            border-radius: 16px;
+        }
         
-      if (activateBtn) {  
-          activateBtn.addEventListener('mouseenter', function() {  
-              this.style.backgroundColor = '#e03e00';  
-              this.style.transform = 'translateY(-2px)';  
-              this.style.boxShadow = '0 6px 16px rgba(255, 69, 0, 0.3)';  
-          });  
-            
-          activateBtn.addEventListener('mouseleave', function() {  
-              this.style.backgroundColor = '#ff4500';  
-              this.style.transform = 'translateY(0)';  
-              this.style.boxShadow = '0 4px 12px rgba(255, 69, 0, 0.25)';  
-          });  
-      }  
+        #custom-notification-prompt > div:first-child {
+            font-size: 1.3rem;
+        }
         
-      if (declineBtn) {  
-          declineBtn.addEventListener('mouseenter', function() {  
-              this.style.backgroundColor = '#e4e6e9';  
-              this.style.transform = 'translateY(-2px)';  
-          });  
-            
-          declineBtn.addEventListener('mouseleave', function() {  
-              this.style.backgroundColor = '#f0f2f5';  
-              this.style.transform = 'translateY(0)';  
-          });  
-      }  
-  });  
-</script>  
+        #custom-notification-prompt p {
+            font-size: 1rem;
+        }
+        
+        #activate-notifications, #decline-notifications {
+            padding: 12px 20px;
+            font-size: 1rem;
+            min-width: 140px;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        #custom-notification-prompt {
+            padding: 18px;
+            border-radius: 14px;
+        }
+        
+        #custom-notification-prompt > div:first-child {
+            font-size: 1.2rem;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        #activate-notifications, #decline-notifications {
+            width: 100%;
+            min-width: unset;
+        }
+    }
+</style>
 
+<script type='module'>
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+  import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-messaging.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBxQLDLqr4W3lApfYLPjSV5It7925a9Rr0",
+    authDomain: "double-carport-476915-j7.firebaseapp.com",
+    projectId: "double-carport-476915-j7",
+    storageBucket: "double-carport-476915-j7.firebasestorage.app",
+    messagingSenderId: "122641462099",
+    appId: "1:122641462099:web:345b777a88757d3ef7e7a6"
+  };
+  
+  const VAPID_KEY = "BE2_9m83w2cu_fxhqV4eUowZQT7E8nm-FZZMWqN5DByd-Naykp52nWwA9uuW_L9x_3rPPsMNZzctsZD8j5YyaZw";
+
+  const app = initializeApp(firebaseConfig);
+  const messaging = getMessaging(app);
+
+  /**
+   * دالة لجلب Token Firebase وإرساله إلى الخادم
+   * @param {ServiceWorkerRegistration} registration - تسجيل Service Worker النشط
+   */
+  function requestAndSaveToken(registration) {
+      // 1. طلب الإذن الأصلي من المتصفح
+      Notification.requestPermission().then(permission => {
+          if (permission === "granted") {
+              // 2. إذا تم منح الإذن، احصل على Token
+              getToken(messaging, { 
+                  vapidKey: VAPID_KEY,
+                  serviceWorkerRegistration: registration 
+              })
+              .then(token => {
+                  if (token) {
+                      console.log("FCM Token:", token);
+                      // 3. إرسال الـ token إلى Vercel API
+                      fetch('/api/saveToken', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ token })
+                      })
+                      .then(response => {
+                          if (response.ok) {
+                              console.log('Token saved successfully');
+                              // عرض رسالة نجاح للمستخدم
+                              alert('✅ شكراً لتسجيلك! ستتلقى إشعاراتنا الحصرية قريباً.');
+                          } else {
+                              console.error('Failed to save token');
+                          }
+                      })
+                      .catch(error => console.error('Error saving token:', error));
+                  } else {
+                      console.log('No registration token available.');
+                  }
+              })
+              .catch(err => console.error('Error retrieving token: ', err));
+          } else {
+              console.log('Notification permission not granted');
+              alert('❌ لم يتم منح الإذن. لن تصلك إشعاراتنا.');
+          }
+      });
+  }
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
+      .then(registration => {
+        console.log('Service Worker registered:', registration);
+        
+        const promptContainer = document.getElementById('custom-notification-prompt');
+
+        // التحقق مما إذا رفض المستخدم مسبقاً
+        const userDeclined = localStorage.getItem('zona_notifications_declined');
+
+        // التحقق من حالة الإذن الحالية
+        if (Notification.permission === 'default' && !userDeclined) {
+            
+            // إظهار الواجهة المخصصة بعد تأخير بسيط
+            setTimeout(() => {
+                if (promptContainer) {
+                    promptContainer.style.display = 'block';
+                }
+            }, 3000); // تأخير 3 ثواني لتحميل الصفحة أولاً
+
+            // إعداد مستمعي الأحداث للأزرار المخصصة
+            const activateBtn = document.getElementById('activate-notifications');
+            const declineBtn = document.getElementById('decline-notifications');
+
+            if (activateBtn) {
+                activateBtn.addEventListener('click', () => {
+                    // إخفاء الواجهة المخصصة
+                    if (promptContainer) promptContainer.style.display = 'none';
+                    // تشغيل عملية طلب الإذن وجلب الـ Token
+                    requestAndSaveToken(registration);
+                });
+            }
+            
+            if (declineBtn) {
+                declineBtn.addEventListener('click', () => {
+                    // إخفاء الواجهة المخصصة
+                    if (promptContainer) promptContainer.style.display = 'none';
+                    // تخزين تفضيل الرفض في localStorage لتجنب الظهور مرة أخرى
+                    localStorage.setItem('zona_notifications_declined', 'true');
+                    alert('💔 لن تصلك إشعاراتنا الحصرية. يمكنك تغيير هذا القرار لاحقاً من إعدادات المتصفح.');
+                    console.log('User declined custom prompt for now.');
+                });
+            }
+
+        } else if (Notification.permission === 'granted') {
+            // إذا كان الإذن ممنوحاً بالفعل، قم فقط بجلب/تحديث الـ Token (لضمان تسجيله)
+            console.log('الإذن ممنوح بالفعل، جاري تحديث الـ Token...');
+            getToken(messaging, { 
+                vapidKey: VAPID_KEY,
+                serviceWorkerRegistration: registration 
+            })
+            .then(token => {
+                if (token) {
+                    console.log("FCM Token updated:", token);
+                }
+            })
+            .catch(err => console.error('Error updating token: ', err));
+        } else if (Notification.permission === 'denied') {
+            console.log('المستخدم رفض الإذن مسبقاً');
+        }
+
+      })
+      .catch(err => console.error('Service Worker registration failed:', err));
+  } else {
+    console.warn('Service Worker not supported in this browser');
+  }
+  
+  // تحسين تجربة المستخدم: إضافة تأثير hover على الأزرار
+  document.addEventListener('DOMContentLoaded', function() {
+      const activateBtn = document.getElementById('activate-notifications');
+      const declineBtn = document.getElementById('decline-notifications');
+      
+      if (activateBtn) {
+          activateBtn.addEventListener('mouseenter', function() {
+              this.style.backgroundColor = '#e03e00';
+              this.style.transform = 'translateY(-2px)';
+              this.style.boxShadow = '0 6px 16px rgba(255, 69, 0, 0.3)';
+          });
+          
+          activateBtn.addEventListener('mouseleave', function() {
+              this.style.backgroundColor = '#ff4500';
+              this.style.transform = 'translateY(0)';
+              this.style.boxShadow = '0 4px 12px rgba(255, 69, 0, 0.25)';
+          });
+      }
+      
+      if (declineBtn) {
+          declineBtn.addEventListener('mouseenter', function() {
+              this.style.backgroundColor = '#e4e6e9';
+              this.style.transform = 'translateY(-2px)';
+          });
+          
+          declineBtn.addEventListener('mouseleave', function() {
+              this.style.backgroundColor = '#f0f2f5';
+              this.style.transform = 'translateY(0)';
+          });
+      }
+  });
+</script>
 </body>  
 </html>
