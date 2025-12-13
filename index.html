@@ -1266,6 +1266,19 @@ document.addEventListener('DOMContentLoaded', function() {
             min-width: unset;
         }
     }
+/* 📱 تحسين نافذة الإشعارات للموبايل فقط */
+@media (max-width: 768px) {
+    #custom-notification-prompt {
+        height: 50vh;              /* نصف ارتفاع الشاشة */
+        max-height: 50vh;
+        overflow-y: auto;          /* تمرير عند الحاجة */
+        top: 50%;
+        bottom: auto;
+        left: 50%;
+        transform: translate(-50%, -50%); /* توسيط كامل */
+        width: 92%;
+    }
+}
 </style>
 
 <script type='module'>
