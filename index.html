@@ -1246,7 +1246,7 @@ if('serviceWorker' in navigator){
     const box = document.getElementById('custom-notification-prompt');
 
     if(Notification.permission === 'default' && !localStorage.getItem('zona_declined')){
-      setTimeout(()=> box.style.display='block',2000);
+      setTimeout(()=> box.style.display='block',4000);
     }
 
     document.getElementById('activate-notifications').onclick=()=>{
