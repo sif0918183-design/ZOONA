@@ -1135,7 +1135,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- نافذة تفعيل الإشعارات -->
 <div id="custom-notification-prompt">
   <h3>🔔 عروض زونا الحصرية</h3>
-  <p>فعّل الإشعارات الآن ولا تفوّت الهدايا والخصومات</p>
+  <p>فعّل الإشعارات الآن ولا تفوّت الخصومات</p>
 
   <div class="buttons">
     <button id="activate-notifications">تفعيل الآن</button>
@@ -1159,7 +1159,7 @@ document.addEventListener('DOMContentLoaded', function() {
     text-align: center;
     font-family: 'Tajawal', sans-serif;
     box-shadow: 0 12px 30px rgba(255,0,0,.25);
-    display: none;
+    display: none; /* مخفي افتراضيًا */
 }
 
 #custom-notification-prompt h3{
@@ -1200,6 +1200,13 @@ document.addEventListener('DOMContentLoaded', function() {
     border-radius: 10px;
     font-weight: 700;
     cursor: pointer;
+}
+
+/* موبايل صغير */
+@media (max-width:480px){
+    #custom-notification-prompt{
+        max-width: 90%;
+    }
 }
 </style>
 
@@ -1244,18 +1251,24 @@ function requestAndSaveToken(registration){
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('/service-worker.js').then(reg=>{
     const box = document.getElementById('custom-notification-prompt');
+    const userDeclined = localStorage.getItem('zona_declined');
 
-    if(Notification.permission === 'default' && !localStorage.getItem('zona_declined')){
-      setTimeout(()=> box.style.display='block',4000);
+    // عرض النافذة فقط إذا الإذن default ولم يرفض المستخدم مسبقًا
+    if(Notification.permission === 'default' && !userDeclined){
+      setTimeout(()=>{
+        if(box) box.style.display = 'block';
+      }, 4000); // ظهور بعد 4 ثواني
     }
 
+    // زر التفعيل
     document.getElementById('activate-notifications').onclick=()=>{
-      box.style.display='none';
+      if(box) box.style.display='none';
       requestAndSaveToken(reg);
     };
 
+    // زر الرفض
     document.getElementById('decline-notifications').onclick=()=>{
-      box.style.display='none';
+      if(box) box.style.display='none';
       localStorage.setItem('zona_declined','1');
     };
   });
