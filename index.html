@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#D32F2F">  
     <meta name="mobile-web-app-capable" content="yes">  
-    <meta name="apple-mobile-web-capable" content="yes">  
+    <meta name="apple-mobile-web-app-capable" content="yes">  
     <meta name="apple-mobile-app-status-bar-style" content="black-translucent">  
     <meta name="description" content="متجر ZOONA الإلكتروني - التسوق أونلاين في السودان">  
     <meta name="keywords" content="zoona, متجر, تسوق, سوداني, شراء, منتجات, سودان">  
@@ -291,6 +291,17 @@
             transform: translateY(0);  
         }  
     }  
+
+    /* أنماط نافذة الإشعارات */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+        to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+    
+    @keyframes slideInRight {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
 </style>
 
 </head>  
@@ -986,7 +997,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // التحقق من وجود service worker نشط
         let hasActiveServiceWorker = false;
         if ('serviceWorker' in navigator) {
-            const registrations = await navigator.serviceWorker.getRegistrations();
+            const registrations = navigator.serviceWorker.getRegistrations();
             hasActiveServiceWorker = registrations.length > 0;
         }
         
@@ -1132,87 +1143,145 @@ document.addEventListener('DOMContentLoaded', function() {
 });  
 </script>
 
-<!-- نافذة تفعيل الإشعارات -->
-<div id="custom-notification-prompt">
-  <h3>🔔 عروض زونا الحصرية</h3>
-  <p>فعّل الإشعارات الآن ولا تفوّت الخصومات</p>
+<!-- زر يدوي لتفعيل الإشعارات (للإعدادات) -->
+<button id="manual-notification-btn" style="
+  position: fixed;
+  bottom: 100px;
+  right: 25px;
+  background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);
+  color: white;
+  width: 56px;
+  height: 56px;
+  border-radius: 28px;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 6px 20px rgba(211, 47, 47, 0.4);
+  z-index: 1000;
+  border: none;
+  cursor: pointer;
+  font-size: 22px;
+  transition: all 0.3s ease;
+  font-family: 'Tajawal', sans-serif;
+  z-index: 1004;
+"
+onclick="showNotificationSettings()">
+  🔔
+</button>
 
-  <div class="buttons">
-    <button id="activate-notifications">تفعيل الآن</button>
-    <button id="decline-notifications">لاحقًا</button>
-  </div>
-</div>
-
-<style>
-#custom-notification-prompt{
+<!-- نافذة تفعيل الإشعارات المحدثة -->
+<div id="custom-notification-prompt" style="display: none;">
+  <div style="
     position: fixed;
     top: 50%;
     left: 50%;
-    transform: translate(-50%,-50%);
-    z-index: 10000;
+    transform: translate(-50%, -50%);
+    z-index: 10010;
     background: #ffffff;
-    border: 2px solid #ff0000;
-    border-radius: 14px;
-    padding: 18px;
-    width: 320px;
-    max-width: 90%;
+    border: 2px solid #D32F2F;
+    border-radius: 20px;
+    padding: 24px;
+    width: 90%;
+    max-width: 400px;
     text-align: center;
     font-family: 'Tajawal', sans-serif;
-    box-shadow: 0 12px 30px rgba(255,0,0,.25);
-    display: none; /* مخفي افتراضيًا */
-}
-
-#custom-notification-prompt h3{
-    margin: 0 0 8px;
-    color: #ff0000;
-    font-size: 1.2rem;
-    font-weight: 800;
-}
-
-#custom-notification-prompt p{
-    margin: 0 0 16px;
-    font-size: .95rem;
-    color: #444;
-}
-
-#custom-notification-prompt .buttons{
-    display: flex;
-    gap: 10px;
-}
-
-#activate-notifications{
-    flex: 1;
-    background: linear-gradient(135deg,#ff0000,#ff4d4d);
-    color: #fff;
-    border: none;
-    padding: 10px;
-    border-radius: 10px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-#decline-notifications{
-    flex: 1;
-    background: #fff;
-    color: #ff0000;
-    border: 1px solid #ff0000;
-    padding: 10px;
-    border-radius: 10px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-/* موبايل صغير */
-@media (max-width:480px){
-    #custom-notification-prompt{
-        max-width: 90%;
-    }
-}
-</style>
+    box-shadow: 0 20px 40px rgba(211, 47, 47, 0.25);
+    direction: rtl;
+    animation: fadeIn 0.3s ease-out;
+  ">
+    <div style="margin-bottom: 20px;">
+      <div style="
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        font-size: 36px;
+        color: white;
+        box-shadow: 0 8px 20px rgba(211, 47, 47, 0.3);
+      ">
+        🔔
+      </div>
+      
+      <h3 style="
+        margin: 0 0 10px;
+        color: #D32F2F;
+        font-size: 22px;
+        font-weight: 800;
+      ">
+        عروض زونا الحصرية 🎁
+      </h3>
+      
+      <p style="
+        margin: 0 0 20px;
+        font-size: 16px;
+        color: #555;
+        line-height: 1.5;
+      ">
+        تفعيل الإشعارات يعني:<br>
+        ✓ أولوية الوصول للعروض<br>
+        ✓ تنبيهات الخصومات الحصرية<br>
+        ✓ متابعة طلباتك لحظة بلحظة<br>
+        ✓ عروض خاصة للمشتركين
+      </p>
+    </div>
+    
+    <div style="display: flex; gap: 12px; direction: rtl;">
+      <button id="activate-notifications" style="
+        flex: 1;
+        background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);
+        color: #fff;
+        border: none;
+        padding: 16px 20px;
+        border-radius: 14px;
+        font-weight: 800;
+        cursor: pointer;
+        font-size: 16px;
+        box-shadow: 0 8px 20px rgba(211, 47, 47, 0.3);
+        transition: all 0.3s ease;
+        font-family: 'Tajawal', sans-serif;
+      "
+      onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 12px 25px rgba(211, 47, 47, 0.4)';"
+      onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 8px 20px rgba(211, 47, 47, 0.3)';">
+        تفعيل الإشعارات
+      </button>
+      
+      <button id="decline-notifications" style="
+        flex: 1;
+        background: #fff;
+        color: #D32F2F;
+        border: 2px solid #D32F2F;
+        padding: 16px 20px;
+        border-radius: 14px;
+        font-weight: 800;
+        cursor: pointer;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        font-family: 'Tajawal', sans-serif;
+      "
+      onmouseover="this.style.background='#f9f9f9'; this.style.transform='scale(1.02)';"
+      onmouseout="this.style.background='#fff'; this.style.transform='scale(1)';">
+        لاحقاً
+      </button>
+    </div>
+    
+    <p style="
+      margin: 15px 0 0;
+      font-size: 13px;
+      color: #888;
+      font-weight: 500;
+    ">
+      يمكنك تفعيلها لاحقاً من إعدادات التطبيق
+    </p>
+  </div>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-messaging.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-messaging.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBxQLDLqr4W3lApfYLPjSV5It7925a9Rr0",
@@ -1225,54 +1294,265 @@ const firebaseConfig = {
 
 const VAPID_KEY = "BE2_9m83w2cu_fxhqV4eUowZQT7E8nm-FZZMWqN5DByd-Naykp52nWwA9uuW_L9x_3rPPsMNZzctsZD8j5YyaZw";
 
+// تهيئة Firebase
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
-function requestAndSaveToken(registration){
-  Notification.requestPermission().then(permission=>{
-    if(permission === "granted"){
-      getToken(messaging,{
+// دالة لطلب وتخزين التوكن
+function requestAndSaveToken(registration) {
+  Notification.requestPermission().then(permission => {
+    if (permission === "granted") {
+      getToken(messaging, {
         vapidKey: VAPID_KEY,
         serviceWorkerRegistration: registration
-      }).then(token=>{
-        if(token){
-          fetch('/api/saveToken',{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({token})
+      }).then(token => {
+        if (token) {
+          console.log('FCM Token:', token);
+          
+          // حفظ التوكن في الخادم
+          fetch('/api/saveToken', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              token: token,
+              device: navigator.userAgent,
+              timestamp: new Date().toISOString(),
+              app: 'ZOONA'
+            })
+          })
+          .then(response => response.json())
+          .then(data => {
+            console.log('Token saved successfully:', data);
+            showToast('تم تفعيل الإشعارات بنجاح ✅');
+          })
+          .catch(error => {
+            console.error('Error saving token:', error);
+            // حفظ التوكن محلياً ريثما يتم الاتصال بالخادم
+            localStorage.setItem('fcm_token_pending', token);
           });
-          alert('تم التفعيل بنجاح ✅');
+          
+          // تسجيل التوكن محلياً
+          localStorage.setItem('fcm_token', token);
+          localStorage.setItem('notifications_enabled', 'true');
+          localStorage.setItem('notifications_enabled_date', new Date().toISOString());
+          
+          // إخفاء النافذة
+          const box = document.getElementById('custom-notification-prompt');
+          if (box) box.style.display = 'none';
         }
+      }).catch(error => {
+        console.error('Error getting FCM token:', error);
+        showToast('حدث خطأ في تفعيل الإشعارات', 3000);
       });
+    } else if (permission === "denied") {
+      localStorage.setItem('notifications_declined', 'true');
+      localStorage.setItem('notifications_declined_date', new Date().toISOString());
+      showToast('تم رفض تفعيل الإشعارات', 2000);
+      
+      // إخفاء النافذة
+      const box = document.getElementById('custom-notification-prompt');
+      if (box) box.style.display = 'none';
     }
   });
 }
 
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/service-worker.js').then(reg=>{
-    const box = document.getElementById('custom-notification-prompt');
-    const userDeclined = localStorage.getItem('zona_declined');
-
-    // عرض النافذة فقط إذا الإذن default ولم يرفض المستخدم مسبقًا
-    if(Notification.permission === 'default' && !userDeclined){
-      setTimeout(()=>{
-        if(box) box.style.display = 'block';
-      }, 4000); // ظهور بعد 4 ثواني
+// دالة لعرض إشعار مخصص
+function showCustomNotification(notification) {
+  // إنشاء عنصر إشعار مخصص
+  const notificationElement = document.createElement('div');
+  notificationElement.className = 'custom-notification';
+  notificationElement.innerHTML = `
+    <div style="
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);
+      color: white;
+      padding: 16px 24px;
+      border-radius: 12px;
+      box-shadow: 0 8px 25px rgba(211, 47, 47, 0.3);
+      z-index: 10010;
+      max-width: 350px;
+      animation: slideInRight 0.3s ease-out;
+      font-family: 'Tajawal', sans-serif;
+      direction: rtl;
+      border-right: 4px solid #FFEB3B;
+    ">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="font-size: 24px;">🔔</div>
+        <div style="flex: 1;">
+          <div style="font-weight: 800; font-size: 16px; margin-bottom: 4px;">
+            ${notification.title || 'ZOONA'}
+          </div>
+          <div style="font-size: 14px; opacity: 0.9;">
+            ${notification.body || 'إشعار جديد'}
+          </div>
+        </div>
+        <button onclick="this.parentElement.parentElement.remove()" 
+                style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">
+          ✕
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(notificationElement);
+  
+  // إزالة الإشعار تلقائياً بعد 5 ثواني
+  setTimeout(() => {
+    if (notificationElement.parentNode) {
+      notificationElement.remove();
     }
-
-    // زر التفعيل
-    document.getElementById('activate-notifications').onclick=()=>{
-      if(box) box.style.display='none';
-      requestAndSaveToken(reg);
-    };
-
-    // زر الرفض
-    document.getElementById('decline-notifications').onclick=()=>{
-      if(box) box.style.display='none';
-      localStorage.setItem('zona_declined','1');
-    };
-  });
+  }, 5000);
 }
+
+// استقبال الرسائل أثناء استخدام التطبيق
+onMessage(messaging, (payload) => {
+  console.log('Message received:', payload);
+  
+  // إشعار مخصص للرسائل الواردة
+  if (payload.notification) {
+    showCustomNotification(payload.notification);
+  }
+});
+
+// دالة لعرض إعدادات الإشعارات
+window.showNotificationSettings = function() {
+  const enabled = localStorage.getItem('notifications_enabled');
+  const declined = localStorage.getItem('notifications_declined');
+  
+  let message = 'حالة الإشعارات:\n\n';
+  
+  if (enabled) {
+    message += '✅ الإشعارات مفعلة\n';
+    const date = localStorage.getItem('notifications_enabled_date');
+    if (date) {
+      message += `تم التفعيل في: ${new Date(date).toLocaleDateString('ar-SA')}`;
+    }
+  } else if (declined) {
+    message += '❌ الإشعارات معطلة\n';
+    const date = localStorage.getItem('notifications_declined_date');
+    if (date) {
+      message += `تم التعطيل في: ${new Date(date).toLocaleDateString('ar-SA')}`;
+    }
+    message += '\nهل ترغب في تفعيلها الآن؟';
+    
+    if (confirm(message)) {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(registration => {
+          requestAndSaveToken(registration);
+        });
+      }
+      return;
+    }
+  } else {
+    message += '⚠️ لم يتم تحديد حالة الإشعارات\n';
+    message += 'هل ترغب في تفعيلها الآن؟';
+    
+    if (confirm(message)) {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(registration => {
+          requestAndSaveToken(registration);
+        });
+      }
+      return;
+    }
+  }
+  
+  if (!declined && !enabled) {
+    if (confirm(message)) {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(registration => {
+          requestAndSaveToken(registration);
+        });
+      }
+    }
+  } else if (enabled || declined) {
+    alert(message);
+  }
+};
+
+// تهيئة نظام الإشعارات بعد تحميل الصفحة بالكامل
+window.addEventListener('load', function() {
+  // انتظار إضافي لضمان تحميل كل شيء
+  setTimeout(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(registration => {
+          console.log('Service Worker registered for notifications');
+          
+          // إعداد أزرار النافذة
+          const activateBtn = document.getElementById('activate-notifications');
+          const declineBtn = document.getElementById('decline-notifications');
+          
+          if (activateBtn) {
+            activateBtn.onclick = () => {
+              requestAndSaveToken(registration);
+            };
+          }
+          
+          if (declineBtn) {
+            declineBtn.onclick = () => {
+              const box = document.getElementById('custom-notification-prompt');
+              if (box) box.style.display = 'none';
+              localStorage.setItem('notifications_declined', 'true');
+              localStorage.setItem('notifications_declined_date', new Date().toISOString());
+              showToast('يمكنك تفعيل الإشعارات لاحقاً من الإعدادات', 3000);
+            };
+          }
+          
+          // محاولة استعادة التوكن المخزن
+          const savedToken = localStorage.getItem('fcm_token');
+          if (savedToken) {
+            console.log('Found saved FCM token');
+          }
+          
+          // التحقق من وجود توكن معلق
+          const pendingToken = localStorage.getItem('fcm_token_pending');
+          if (pendingToken && navigator.onLine) {
+            fetch('/api/saveToken', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token: pendingToken })
+            }).then(() => {
+              localStorage.removeItem('fcm_token_pending');
+            });
+          }
+          
+          // عرض نافذة الإشعارات بعد 4 ثواني من تحميل الموقع
+          setTimeout(() => {
+            const box = document.getElementById('custom-notification-prompt');
+            const userDeclined = localStorage.getItem('notifications_declined');
+            const userEnabled = localStorage.getItem('notifications_enabled');
+            
+            // التحقق من الشروط قبل العرض
+            if (Notification.permission === 'default' && 
+                !userDeclined && 
+                !userEnabled && 
+                box &&
+                document.getElementById('splash').style.display === 'none') {
+              
+              box.style.display = 'block';
+              console.log('عرض نافذة الإشعارات بعد التأخير');
+            }
+          }, 4000); // انتظار 4 ثواني بعد تحميل الموقع
+          
+        })
+        .catch(error => {
+          console.error('Service Worker registration failed:', error);
+        });
+    }
+    
+    // إظهار زر الإعدادات بعد 8 ثواني
+    setTimeout(() => {
+      const manualBtn = document.getElementById('manual-notification-btn');
+      if (manualBtn) {
+        manualBtn.style.display = 'flex';
+      }
+    }, 8000);
+    
+  }, 1000); // تأخير إضافي لضمان استقرار الصفحة
+});
 </script>
 </body>  
 </html>
