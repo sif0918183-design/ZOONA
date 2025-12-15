@@ -1336,6 +1336,10 @@ function requestAndSaveToken(registration) {
           localStorage.setItem('notifications_enabled', 'true');
           localStorage.setItem('notifications_enabled_date', new Date().toISOString());
           
+          // إخفاء زر الجرس لأن الإشعارات مفعلة الآن ✅
+          const bellBtn = document.getElementById('manual-notification-btn');
+          if (bellBtn) bellBtn.style.display = 'none';
+          
           // إخفاء النافذة
           const box = document.getElementById('custom-notification-prompt');
           if (box) box.style.display = 'none';
@@ -1429,6 +1433,13 @@ window.showNotificationSettings = function() {
     if (date) {
       message += `تم التفعيل في: ${new Date(date).toLocaleDateString('ar-SA')}`;
     }
+    
+    // إخفاء زر الجرس لأن الإشعارات مفعلة ✅
+    const bellBtn = document.getElementById('manual-notification-btn');
+    if (bellBtn) bellBtn.style.display = 'none';
+    
+    alert(message);
+    return;
   } else if (declined) {
     message += '❌ الإشعارات معطلة\n';
     const date = localStorage.getItem('notifications_declined_date');
@@ -1476,6 +1487,13 @@ window.showNotificationSettings = function() {
 window.addEventListener('load', function() {
   // انتظار إضافي لضمان تحميل كل شيء
   setTimeout(() => {
+    // التحقق إذا كانت الإشعارات مفعلة وإخفاء زر الجرس ✅
+    const notificationsEnabled = localStorage.getItem('notifications_enabled');
+    if (notificationsEnabled === 'true') {
+      const bellBtn = document.getElementById('manual-notification-btn');
+      if (bellBtn) bellBtn.style.display = 'none';
+    }
+    
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/service-worker.js')
         .then(registration => {
@@ -1497,6 +1515,17 @@ window.addEventListener('load', function() {
               if (box) box.style.display = 'none';
               localStorage.setItem('notifications_declined', 'true');
               localStorage.setItem('notifications_declined_date', new Date().toISOString());
+              
+              // إظهار زر الجرس لأن المستخدم رفض الإشعارات وقد يرغب بتفعيلها لاحقاً ✅
+              const bellBtn = document.getElementById('manual-notification-btn');
+              if (bellBtn) {
+                bellBtn.style.display = 'flex';
+                // تأخير بسيط لضمان ظهور الزر
+                setTimeout(() => {
+                  bellBtn.style.display = 'flex';
+                }, 100);
+              }
+              
               showToast('يمكنك تفعيل الإشعارات لاحقاً من الإعدادات', 3000);
             };
           }
@@ -1537,19 +1566,21 @@ window.addEventListener('load', function() {
             }
           }, 4000); // انتظار 4 ثواني بعد تحميل الموقع
           
+          // إظهار زر الإعدادات بعد 8 ثواني فقط إذا لم تكن الإشعارات مفعلة ✅
+          setTimeout(() => {
+            const manualBtn = document.getElementById('manual-notification-btn');
+            const notificationsEnabled = localStorage.getItem('notifications_enabled');
+            
+            if (manualBtn && notificationsEnabled !== 'true') {
+              manualBtn.style.display = 'flex';
+            }
+          }, 8000);
+          
         })
         .catch(error => {
           console.error('Service Worker registration failed:', error);
         });
     }
-    
-    // إظهار زر الإعدادات بعد 8 ثواني
-    setTimeout(() => {
-      const manualBtn = document.getElementById('manual-notification-btn');
-      if (manualBtn) {
-        manualBtn.style.display = 'flex';
-      }
-    }, 8000);
     
   }, 1000); // تأخير إضافي لضمان استقرار الصفحة
 });
