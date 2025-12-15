@@ -174,27 +174,31 @@ self.addEventListener('fetch', event => {
 
 
 // =================================================================
-// 6️⃣ Notification Click
+// 6️⃣ Standard Push API
 // =================================================================
-self.addEventListener('notificationclick', event => {
-  event.notification.close();
-  const urlToOpen = event.notification.data?.url || '/';
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-      for (const client of clientList) {
-        if (client.url.startsWith(self.registration.scope) && 'focus' in client) {
-          client.focus();
-          client.navigate(urlToOpen);
-          return;
-        }
-      }
-      if (clients.openWindow) return clients.openWindow(urlToOpen);
-    })
-  );
+self.addEventListener('push', function(event) {
+  const data = event.data.json();
+
+  self.registration.showNotification(data.notification.title, {
+    body: data.notification.body,
+    icon: data.notification.icon || '/assets/splash-logo.png',
+    vibrate: [100, 50, 100],
+    data: data.data,
+    requireInteraction: false
+  });
 });
 
 // =================================================================
-// 7️⃣ FCM Push Notifications + Badge
+// 7️⃣ Notification Click (مدمج لجميع أنواع الإشعارات)
+// =================================================================
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  const url = event.notification.data?.url || '/';
+  event.waitUntil(clients.openWindow(url));
+});
+
+// =================================================================
+// 8️⃣ FCM Push Notifications + Badge
 // =================================================================
 messaging.onBackgroundMessage(payload => {
   const title = payload.notification.title || 'ZOONA';
@@ -214,7 +218,7 @@ messaging.onBackgroundMessage(payload => {
 });
 
 // =================================================================
-// 8️⃣ Background / Periodic Sync (Optional)
+// 9️⃣ Background / Periodic Sync (Optional)
 // =================================================================
 self.addEventListener('sync', event => {
   if (event.tag === 'sync-zoona-data') event.waitUntil(Promise.resolve());
