@@ -585,7 +585,7 @@ function renderProducts() {
         <div class="prod-cat">${p.category}</div>
         <div class="prod-name">${p.name}</div>
         <div class="prod-price">${Number(p.price).toLocaleString()} SDG</div>
-        ${p.oldPrice ? `<div class="prod-old">${Number(p.oldPrice).toLocaleString()} SDG</div>` : ''}
+        ${p.old_price ? `<div class="prod-old">${Number(p.old_price).toLocaleString()} SDG</div>` : ''}
         <div class="prod-actions">
           <button class="act-btn edit-btn" onclick="openEditModal(${p.id})"><i class="fas fa-pen"></i> تعديل</button>
           <button class="act-btn del-btn" onclick="openDeleteModal(${p.id},'${p.name.replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i> حذف</button>
@@ -616,11 +616,14 @@ function openEditModal(id) {
   document.getElementById('fName').value = p.name;
   document.getElementById('fCategory').value = p.category;
   document.getElementById('fPrice').value = p.price;
-  document.getElementById('fOldPrice').value = p.oldPrice || '';
+  document.getElementById('fOldPrice').value = p.old_price || '';
   document.getElementById('fDiscount').value = p.discount || '';
   document.getElementById('fDesc').value = p.description || '';
   document.getElementById('fWarehouse').value = p.warehouse || 'الخرطوم';
   document.getElementById('fImage').value = p.image || '';
+
+  // Load delivery cities from database
+  setDeliveryCitiesToForm(p.delivery_cities || []);
 
   if (p.image) {
     if (p.image.startsWith('http')) {
