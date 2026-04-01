@@ -730,7 +730,8 @@ window.addEventListener('DOMContentLoaded', () => {
 // ── Load Products ──
 async function loadProducts() {
   try {
-    const res = await fetch('products.json');
+    // استخدام API للحصول على المنتجات من السيرفر
+    const res = await fetch('/api/products');
     allProducts = await res.json();
     filteredProducts = [...allProducts];
     renderProducts(filteredProducts);
