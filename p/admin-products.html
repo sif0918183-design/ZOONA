@@ -215,6 +215,21 @@ textarea.form-control{resize:vertical;min-height:80px}
 /* Spinner */
 .spinner{display:inline-block;width:20px;height:20px;border:3px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* Delivery Cities Section */
+.delivery-cities-section{border:2px solid #e0e0e0;border-radius:10px;overflow:hidden;margin-top:8px}
+.delivery-type-group{background:#fafafa;border-bottom:1px solid #e0e0e0;padding:12px}
+.delivery-type-group:last-child{border-bottom:none}
+.delivery-type-header{font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px}
+.delivery-cities-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.city-tag{display:inline-flex;align-items:center;gap:4px;background:#fff;border:2px solid var(--border);padding:4px 8px;border-radius:6px;font-size:12px;font-weight:600}
+.city-tag .city-price{color:var(--red);font-weight:700}
+.city-tag .city-remove{background:none;border:none;color:#999;cursor:pointer;margin-right:4px;font-size:14px}
+.city-tag .city-remove:hover{color:var(--red)}
+.add-city-row{display:flex;gap:6px}
+.add-city-row input{font-size:12px;padding:8px}
+.add-city-btn{background:var(--red);color:#fff;border:none;padding:8px 14px;border-radius:6px;font-weight:700;cursor:pointer}
+
 </style>
 </head>
 <body>
@@ -357,7 +372,33 @@ textarea.form-control{resize:vertical;min-height:80px}
         </select>
       </div>
 
-      <!-- Image -->
+      
+
+      <!-- Delivery Cities Section -->
+      <div class="form-group">
+        <label class="form-label"><i class="fas fa-shipping-fast"></i> مدن التوصيل المتاحة</label>
+        <div class="delivery-cities-section">
+          <div class="delivery-type-group">
+            <div class="delivery-type-header">دفع عند الاستلام (COD)</div>
+            <div class="delivery-cities-list" id="codCitiesList"></div>
+            <div class="add-city-row">
+              <input type="text" id="newCodCity" class="form-control" placeholder="المدينة" style="flex:2">
+              <input type="number" id="newCodPrice" class="form-control" placeholder="السعر" style="flex:1">
+              <button type="button" class="add-city-btn" onclick="addDeliveryCity('cod')">+</button>
+            </div>
+          </div>
+          <div class="delivery-type-group">
+            <div class="delivery-type-header">دفع مقدم</div>
+            <div class="delivery-cities-list" id="prepaidCitiesList"></div>
+            <div class="add-city-row">
+              <input type="text" id="newPrepaidCity" class="form-control" placeholder="المدينة" style="flex:2">
+              <input type="number" id="newPrepaidPrice" class="form-control" placeholder="السعر" style="flex:1">
+              <button type="button" class="add-city-btn" onclick="addDeliveryCity('prepaid')">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+<!-- Image -->
       <div class="form-group">
         <label class="form-label">صورة المنتج</label>
         <div class="img-method-tabs">
@@ -411,11 +452,43 @@ textarea.form-control{resize:vertical;min-height:80px}
 
 <script>
 /* ══════════════════════════════════════
-   ZOONA Admin - Products Manager
+   ZOONA Admin - Products Manager (Supabase)
 ══════════════════════════════════════ */
 
+// Supabase Configuration
+const SUPABASE_URL = 'https://yhujvalqfmnlyffvejbh.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlodWp2YWxxZm1ubHlmZnZlamJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNTc3OTcsImV4cCI6MjA3ODYzMzc5N30.mMG55moG7HdM-vDzT5R5HiD7kKdE_Jr9BkRio4MJGqw';
+
 const ADMIN_PASS = 'zoona2025';
-const API = '/api/products';
+
+// Supabase client functions
+async function supabaseFetch(endpoint, options = {}) {
+  const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
+  const headers = {
+    'Content-Type': 'application/json',
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'Prefer': options.prefer || 'return=representation'
+  };
+  
+  const response = await fetch(url, { ...options, headers });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Request failed');
+  }
+  return response.json();
+}
+
+// Check admin password
+async function verifyAdminPassword(password) {
+  try {
+    const result = await supabaseFetch('admin_settings?key=eq.admin_password&select=value');
+    return result.length > 0 && result[0].value === password;
+  } catch {
+    // Fallback to local check if table doesn't exist
+    return password === ADMIN_PASS;
+  }
+}
 
 let allProducts = [];
 let filtered = [];
@@ -452,15 +525,15 @@ if (sessionStorage.getItem('admin_auth') === '1') {
   window.addEventListener('DOMContentLoaded', loadProducts);
 }
 
-// ── Load Products ──
+// ── Load Products from Supabase ──
 async function loadProducts() {
   try {
-    const res = await fetch(API);
-    allProducts = await res.json();
+    allProducts = await supabaseFetch('products?select=*&order=id.desc');
     buildCategoryFilter();
     applyFilters();
     updateStats();
   } catch(e) {
+    console.error('Error loading products:', e);
     showToast('❌ خطأ في تحميل المنتجات', 'red');
   }
 }
@@ -668,7 +741,7 @@ function previewUrl(url) {
   }
 }
 
-// ── Submit Form ──
+// ── Submit Form (Add/Edit) to Supabase ──
 async function submitForm(e) {
   e.preventDefault();
   const btn = document.getElementById('formSubmitBtn');
@@ -678,33 +751,43 @@ async function submitForm(e) {
   // Collect image
   let image = document.getElementById('fImage').value;
   if (imgTabMode === 'url') image = document.getElementById('fImageUrl').value || image;
+  
+  // Get delivery cities from form
+  const deliveryCities = getDeliveryCitiesFromForm();
 
   const data = {
     name: document.getElementById('fName').value.trim(),
     category: document.getElementById('fCategory').value,
-    price: document.getElementById('fPrice').value,
-    oldPrice: document.getElementById('fOldPrice').value || null,
-    discount: document.getElementById('fDiscount').value || null,
+    price: Number(document.getElementById('fPrice').value) || 0,
+    old_price: Number(document.getElementById('fOldPrice').value) || null,
+    discount: Number(document.getElementById('fDiscount').value) || null,
     description: document.getElementById('fDesc').value.trim(),
     warehouse: document.getElementById('fWarehouse').value,
-    image: image
+    image: image,
+    delivery_cities: deliveryCities
   };
 
   const editId = document.getElementById('fEditId').value;
   const isEdit = !!editId;
 
   try {
-    const res = await fetch(isEdit ? `${API}/${editId}` : API, {
-      method: isEdit ? 'PUT' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    if (!res.ok) throw new Error('Server error');
+    if (isEdit) {
+      await supabaseFetch(`products?id=eq.${editId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ ...data, updated_at: new Date().toISOString() })
+      });
+    } else {
+      await supabaseFetch('products', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+    }
 
     showToast(isEdit ? '✅ تم تحديث المنتج بنجاح' : '✅ تم إضافة المنتج بنجاح', 'green');
     closeFormModal(null);
     await loadProducts();
   } catch(err) {
+    console.error('Error saving product:', err);
     showToast('❌ حدث خطأ أثناء الحفظ', 'red');
   } finally {
     btn.disabled = false;
@@ -712,7 +795,7 @@ async function submitForm(e) {
   }
 }
 
-// ── Delete ──
+// ── Delete from Supabase ──
 function openDeleteModal(id, name) {
   deleteTargetId = id;
   document.getElementById('deleteMsg').innerHTML = `هل أنت متأكد من حذف المنتج:<br><strong>${name}</strong>؟<br><br>لا يمكن التراجع عن هذا الإجراء.`;
@@ -733,8 +816,7 @@ async function confirmDelete() {
   btn.disabled = true;
 
   try {
-    const res = await fetch(`${API}/${deleteTargetId}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error();
+    await supabaseFetch(`products?id=eq.${deleteTargetId}`, { method: 'DELETE' });
     showToast('✅ تم حذف المنتج', 'green');
     closeDeleteModal();
     await loadProducts();
@@ -765,6 +847,71 @@ document.addEventListener('keydown', e => {
     closeDeleteModal();
   }
 });
+
+// ── Delivery Cities Management ──
+let deliveryCitiesData = { cod: [], prepaid: [] };
+
+// Default cities (for new products)
+deliveryCitiesData = { 
+  cod: [
+    { name: 'الخرطم', price: 0, type: 'cod' },
+    { name: 'أم درمان', price: 0, type: 'cod' },
+    { name: 'بحري', price: 0, type: 'cod' }
+  ], 
+  prepaid: [
+    { name: 'الخرطم', price: 0, type: 'prepaid' },
+    { name: 'أم درمان', price: 0, type: 'prepaid' },
+    { name: 'بحري', price: 0, type: 'prepaid' }
+  ] 
+};
+
+
+function addDeliveryCity(type) {
+  const cityInput = document.getElementById(type === 'cod' ? 'newCodCity' : 'newPrepaidCity');
+  const priceInput = document.getElementById(type === 'cod' ? 'newCodPrice' : 'newPrepaidPrice');
+  const name = cityInput.value.trim();
+  const price = parseInt(priceInput.value) || 0;
+  
+  if (!name) {
+    showToast('يرجى إدخال اسم المدينة', 'red');
+    return;
+  }
+  
+  deliveryCitiesData[type].push({ name, price, type });
+  cityInput.value = '';
+  priceInput.value = '';
+  renderDeliveryCities(type);
+}
+
+function removeDeliveryCity(type, index) {
+  deliveryCitiesData[type].splice(index, 1);
+  renderDeliveryCities(type);
+}
+
+function renderDeliveryCities(type) {
+  const listEl = document.getElementById(type === 'cod' ? 'codCitiesList' : 'prepaidCitiesList');
+  listEl.innerHTML = deliveryCitiesData[type].map((city, i) =>
+    '<div class="city-tag">' + city.name + ' - ' + city.price.toLocaleString() + ' SDG ' +
+    '<button type="button" class="city-remove" onclick="removeDeliveryCity(\'' + type + '\',' + i + ')">✕</button></div>'
+  ).join('');
+}
+
+function getDeliveryCitiesFromForm() {
+  return [...deliveryCitiesData.cod, ...deliveryCitiesData.prepaid];
+}
+
+function setDeliveryCitiesToForm(cities) {
+  deliveryCitiesData = { cod: [], prepaid: [] };
+  if (cities && Array.isArray(cities)) {
+    cities.forEach(city => {
+      const type = city.type === 'cod' ? 'cod' : 'prepaid';
+      deliveryCitiesData[type].push({ name: city.name, price: city.price, type: type });
+    });
+  }
+  renderDeliveryCities('cod');
+  renderDeliveryCities('prepaid');
+}
+
 </script>
 </body>
 </html>
