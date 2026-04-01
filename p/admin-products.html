@@ -757,6 +757,7 @@ async function submitForm(e) {
   
   // Get delivery cities from form
   const deliveryCities = getDeliveryCitiesFromForm();
+  console.log('Saving delivery_cities:', JSON.stringify(deliveryCities));
 
   const data = {
     name: document.getElementById('fName').value.trim(),
@@ -769,6 +770,8 @@ async function submitForm(e) {
     image: image,
     delivery_cities: deliveryCities
   };
+  
+  console.log('Full data to save:', JSON.stringify(data));
 
   const editId = document.getElementById('fEditId').value;
   const isEdit = !!editId;
