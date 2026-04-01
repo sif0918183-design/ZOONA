@@ -1,1589 +1,1206 @@
-<!DOCTYPE html>  
-<html lang="ar" dir="rtl">  
-<head>   
-    <meta charset="UTF-8">  
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#D32F2F">  
-    <meta name="mobile-web-app-capable" content="yes">  
-    <meta name="apple-mobile-web-app-capable" content="yes">  
-    <meta name="apple-mobile-app-status-bar-style" content="black-translucent">  
-    <meta name="description" content="متجر ZOONA الإلكتروني - التسوق أونلاين في السودان">  
-    <meta name="keywords" content="zoona, متجر, تسوق, سوداني, شراء, منتجات, سودان">  
-    <meta name="author" content="ZOONA">  
-    <title>ZOONA</title>  
-    <link rel="manifest" href="manifest.json">  
-    <link rel="icon" type="image/png" href="icon/icon-72x72.png">  
-    <link rel="apple-touch-icon" href="icon/icon-152x152.png">  
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">  
-  
-<style>  
-    * {  
-        margin: 0;  
-        padding: 0;  
-        box-sizing: border-box;  
-        -webkit-tap-highlight-color: transparent;  
-    }  
-      
-    body, html {  
-        width: 100%;  
-        height: 100%;  
-        overflow: hidden;  
-        font-family: 'Tajawal', -apple-system, BlinkMacSystemFont, sans-serif;  
-        background: #FFFFFF;  
-        position: fixed;  
-    }  
-      
-    #splash {  
-        position: fixed;  
-        top: 0;  
-        left: 0;  
-        width: 100%;  
-        height: 100%;  
-        background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);  
-        display: flex;  
-        flex-direction: column;  
-        justify-content: center;  
-        align-items: center;  
-        z-index: 9999;  
-        transition: opacity 0.5s;  
-    }  
-      
-    .splash-logo {  
-        width: 150px;  
-        height: 150px;  
-        margin-bottom: 20px;  
-        animation: pulse 2s infinite;  
-        filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));  
-    }  
-      
-    .splash-text {  
-        color: white;  
-        font-size: 20px;  
-        font-weight: 700;  
-        margin-top: 20px;  
-        letter-spacing: 1px;  
-        font-family: 'Tajawal', sans-serif;  
-    }  
-      
-    .loader {  
-        width: 60px;  
-        height: 4px;  
-        background: rgba(255,255,255,0.3);  
-        margin-top: 30px;  
-        border-radius: 2px;  
-        overflow: hidden;  
-    }  
-      
-    .loader::after {  
-        content: '';  
-        display: block;  
-        width: 50%;  
-        height: 100%;  
-        background: white;  
-        border-radius: 2px;  
-        animation: loading 1.5s infinite ease-in-out;  
-    }  
-      
-    @keyframes pulse {  
-        0% { transform: scale(1); }  
-        50% { transform: scale(1.05); }  
-        100% { transform: scale(1); }  
-    }  
-      
-    @keyframes loading {  
-        0% { transform: translateX(-100%); }  
-        100% { transform: translateX(200%); }  
-    }  
-      
-    #webview-container {  
-        width: 100%;  
-        height: 100%;  
-        display: none;  
-    }  
-      
-    #webview {  
-        width: 100%;  
-        height: 100%;  
-        border: none;  
-        background: #FFFFFF;  
-    }  
-      
-    .status-bar {  
-        height: env(safe-area-inset-top, 0px);  
-        background: #D32F2F;  
-        width: 100%;  
-    }  
-      
-    #back-button {  
-        position: fixed;  
-        bottom: 25px;  
-        left: 25px;  
-        background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);  
-        color: white;  
-        width: 56px;  
-        height: 56px;  
-        border-radius: 28px;  
-        display: none;  
-        justify-content: center;  
-        align-items: center;  
-        box-shadow: 0 6px 20px rgba(211, 47, 47, 0.4);  
-        z-index: 1000;  
-        border: none;  
-        cursor: pointer;  
-        font-size: 22px;  
-        font-weight: bold;  
-        transition: all 0.3s ease;  
-        font-family: 'Tajawal', sans-serif;  
-    }  
-      
-    #back-button:hover {  
-        transform: scale(1.1);  
-        box-shadow: 0 8px 25px rgba(211, 47, 47, 0.5);  
-    }  
-      
-    #back-button:active {  
-        transform: scale(0.95);  
-    }  
-      
-    #toast {  
-        position: fixed;  
-        bottom: 90px;  
-        left: 50%;  
-        transform: translateX(-50%);  
-        background: #D32F2F;  
-        color: white;  
-        padding: 16px 32px;  
-        border-radius: 28px;  
-        display: none;  
-        z-index: 1001;  
-        box-shadow: 0 8px 25px rgba(211, 47, 47, 0.3);  
-        font-weight: 600;  
-        max-width: 85%;  
-        text-align: center;  
-        backdrop-filter: blur(10px);  
-        border: 1px solid rgba(255,255,255,0.1);  
-        font-family: 'Tajawal', sans-serif;  
-        font-size: 15px;  
-        animation: slideUp 0.3s ease-out;  
-    }  
-      
-    @keyframes slideUp {  
-        from {  
-            opacity: 0;  
-            transform: translateX(-50%) translateY(20px);  
-        }  
-        to {  
-            opacity: 1;  
-            transform: translateX(-50%) translateY(0);  
-        }  
-    }  
-      
-    .offline-message {  
-        position: fixed;  
-        top: 0;  
-        left: 0;  
-        width: 100%;  
-        background: #B71C1C;  
-        color: white;  
-        text-align: center;  
-        padding: 16px;  
-        display: none;  
-        z-index: 1002;  
-        font-weight: 600;  
-        box-shadow: 0 4px 12px rgba(183, 28, 28, 0.3);  
-        font-family: 'Tajawal', sans-serif;  
-        font-size: 15px;  
-    }  
-      
-    #refresh-button {  
-        position: fixed;  
-        bottom: 25px;  
-        right: 25px;  
-        background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);  
-        color: white;  
-        width: 56px;  
-        height: 56px;  
-        border-radius: 28px;  
-        display: none;  
-        justify-content: center;  
-        align-items: center;  
-        box-shadow: 0 6px 20px rgba(211, 47, 47, 0.4);  
-        z-index: 1000;  
-        border: none;  
-        cursor: pointer;  
-        font-size: 22px;  
-        transition: all 0.3s ease;  
-        font-family: 'Tajawal', sans-serif;  
-    }  
-      
-    #refresh-button:hover {  
-        transform: rotate(30deg);  
-    }  
-      
-    /* تحسين لمؤشر السحب */  
-    .pull-indicator {  
-        position: fixed;  
-        top: -80px;  
-        left: 0;  
-        width: 100%;  
-        height: 80px;  
-        background: linear-gradient(to bottom, #D32F2F, #B71C1C);  
-        display: flex;  
-        justify-content: center;  
-        align-items: center;  
-        color: white;  
-        z-index: 999;  
-        transition: top 0.3s ease;  
-        font-family: 'Tajawal', sans-serif;  
-        font-weight: 600;  
-        font-size: 16px;  
-        padding-top: env(safe-area-inset-top, 0px);  
-    }  
-      
-    .pull-indicator.show {  
-        top: 0;  
-    }  
-      
-    .pull-indicator .icon {  
-        margin-left: 10px;  
-        font-size: 20px;  
-        transition: transform 0.3s;  
-    }  
-      
-    .background-pattern {  
-        position: fixed;  
-        top: 0;  
-        left: 0;  
-        width: 100%;  
-        height: 100%;  
-        background-image:   
-            radial-gradient(circle at 25% 25%, rgba(211, 47, 47, 0.03) 0%, transparent 50%),  
-            radial-gradient(circle at 75% 75%, rgba(183, 28, 28, 0.03) 0%, transparent 50%);  
-        pointer-events: none;  
-        z-index: -1;  
-    }  
-      
-    .welcome-message {  
-        position: fixed;  
-        top: 20px;  
-        right: 20px;  
-        background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);  
-        color: white;  
-        padding: 12px 24px;  
-        border-radius: 25px;  
-        z-index: 1003;  
-        box-shadow: 0 6px 20px rgba(211, 47, 47, 0.3);  
-        font-family: 'Tajawal', sans-serif;  
-        font-weight: 700;  
-        font-size: 15px;  
-        display: none;  
-        animation: fadeInDown 0.5s ease-out;  
-        border: 2px solid rgba(255,255,255,0.2);  
-    }  
-      
-    @keyframes fadeInDown {  
-        from {  
-            opacity: 0;  
-            transform: translateY(-20px);  
-        }  
-        to {  
-            opacity: 1;  
-            transform: translateY(0);  
-        }  
-    }  
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="theme-color" content="#D32F2F">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="متجر ZOONA الإلكتروني - أحدث الموبايلات والأجهزة الإلكترونية في السودان">
+  <title>ZOONA - متجر إلكتروني</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon/icon-72x72.png">
+  <link rel="apple-touch-icon" href="icon/icon-152x152.png">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    /* أنماط نافذة الإشعارات */
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
-        to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-    }
-    
-    @keyframes slideInRight {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+:root {
+  --red: #D32F2F;
+  --red-dark: #B71C1C;
+  --red-light: #FFEBEE;
+  --red-gradient: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);
+  --font: 'Tajawal', sans-serif;
+  --bottom-nav-h: 62px;
+}
+
+html, body {
+  width:100%; height:100%; font-family:var(--font);
+  background:#f5f5f5; overflow-x:hidden;
+}
+
+/* ─── SPLASH ─── */
+#splash {
+  position:fixed; inset:0; background:var(--red-gradient);
+  display:flex; flex-direction:column; justify-content:center; align-items:center;
+  z-index:9999; transition:opacity .5s;
+}
+.splash-logo { width:140px; height:140px; margin-bottom:20px; animation:pulse 2s infinite; filter:drop-shadow(0 4px 12px rgba(0,0,0,.25)); }
+.splash-text { color:#fff; font-size:22px; font-weight:800; letter-spacing:2px; margin-top:10px; }
+.splash-loader { width:70px; height:4px; background:rgba(255,255,255,.3); border-radius:2px; overflow:hidden; margin-top:25px; }
+.splash-loader::after { content:''; display:block; width:45%; height:100%; background:#fff; border-radius:2px; animation:load 1.4s infinite ease-in-out; }
+@keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+@keyframes load { 0%{transform:translateX(-120%)} 100%{transform:translateX(270%)} }
+
+/* ─── APP WRAPPER ─── */
+#app { display:none; flex-direction:column; height:100vh; overflow:hidden; }
+
+/* ─── HEADER ─── */
+.store-header {
+  background:var(--red-gradient); padding:10px 12px 8px;
+  position:sticky; top:0; z-index:100;
+  box-shadow:0 2px 8px rgba(0,0,0,.2);
+}
+.header-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.header-logo-wrap { display:flex; align-items:center; gap:8px; }
+.header-logo-img { width:44px; height:44px; border-radius:10px; object-fit:cover; }
+.header-logo-text { color:#fff; font-size:22px; font-weight:900; line-height:1; font-family:var(--font); }
+.header-logo-sub { color:rgba(255,255,255,.85); font-size:10px; font-weight:500; }
+.header-btns { display:flex; align-items:center; gap:6px; }
+.hbtn {
+  display:inline-flex; align-items:center; gap:5px;
+  background:rgba(255,255,255,.18); border:1.5px solid rgba(255,255,255,.85);
+  color:#fff; padding:6px 10px; border-radius:50px;
+  text-decoration:none; font-family:var(--font); font-weight:700; font-size:12px;
+  cursor:pointer; transition:.25s; line-height:1;
+  box-shadow:0 0 8px rgba(255,255,255,.4), 0 3px 8px rgba(0,0,0,.2);
+}
+.hbtn:hover { background:rgba(255,255,255,.3); transform:translateY(-1px); }
+.hbtn i { font-size:11px; }
+.header-search { display:flex; align-items:center; background:rgba(255,255,255,.95); border-radius:25px; padding:7px 14px; gap:8px; }
+.header-search i { color:#999; font-size:14px; }
+.header-search input { border:none; outline:none; background:transparent; font-family:var(--font); font-size:14px; width:100%; color:#333; direction:rtl; }
+.header-search input::placeholder { color:#aaa; }
+
+/* ─── LOCATION BAR ─── */
+.location-bar {
+  background:#fff; padding:7px 14px; display:flex; align-items:center; gap:7px;
+  border-bottom:1px solid #eee; cursor:pointer; transition:.2s;
+}
+.location-bar:hover { background:#fafafa; }
+.location-bar i { color:var(--red); font-size:14px; }
+.location-bar span { font-size:13px; color:#555; font-weight:500; flex:1; }
+.location-bar .change-loc { font-size:12px; color:var(--red); font-weight:700; }
+
+/* ─── PAGES ─── */
+.page { display:none; flex:1; overflow-y:auto; padding-bottom:var(--bottom-nav-h); }
+.page.active { display:block; }
+
+/* ─── HOME PAGE ─── */
+/* Banner */
+.zona-banner {
+  position:relative; overflow:hidden; border-radius:12px; margin:12px;
+  padding:14px 16px; text-align:center; font-family:var(--font); color:#fff;
+  background:linear-gradient(120deg,#8b0000,#c20000,#ff3b3b); background-size:300% 300%;
+  animation:bannerGrad 8s ease infinite; box-shadow:0 4px 12px rgba(0,0,0,.2);
+}
+@keyframes bannerGrad { 0%{background-position:0 50%} 50%{background-position:100% 50%} 100%{background-position:0 50%} }
+.zona-banner::before {
+  content:""; position:absolute; top:0; left:-75%; width:50%; height:100%;
+  background:linear-gradient(120deg,transparent 0%,rgba(255,255,255,.35) 50%,transparent 100%);
+  transform:skewX(-20deg); animation:shine 6s linear infinite;
+}
+@keyframes shine { 0%{left:-75%} 50%{left:125%} 100%{left:125%} }
+.zona-banner h2 { font-size:17px; font-weight:800; margin-bottom:4px; position:relative; z-index:1; }
+.zona-banner .rotating-msg { font-size:13px; font-weight:500; opacity:0; transition:opacity .7s; min-height:22px; position:relative; z-index:1; margin-bottom:8px; }
+.zona-banner a {
+  display:inline-block; background:#fff; color:#a10000; padding:7px 18px; border-radius:8px;
+  text-decoration:none; font-weight:800; font-size:13px; position:relative; z-index:1;
+  transition:.25s; box-shadow:0 2px 6px rgba(255,255,255,.3);
+}
+.zona-banner a:hover { background:#ffe5e5; }
+
+/* Category Filter */
+.cat-filter { display:flex; gap:8px; padding:4px 12px 10px; overflow-x:auto; scrollbar-width:none; }
+.cat-filter::-webkit-scrollbar { display:none; }
+.cat-btn {
+  flex-shrink:0; background:#fff; border:2px solid #e0e0e0; color:#555;
+  padding:6px 14px; border-radius:20px; font-family:var(--font); font-size:13px;
+  font-weight:600; cursor:pointer; transition:.2s; white-space:nowrap;
+}
+.cat-btn.active, .cat-btn:hover { background:var(--red); border-color:var(--red); color:#fff; }
+
+/* Product Grid */
+.section-title { font-size:17px; font-weight:800; color:#222; padding:0 12px 8px; }
+.products-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; padding:0 10px 10px; }
+
+/* Product Card */
+.product-card {
+  background:#fff; border-radius:14px; overflow:hidden;
+  box-shadow:0 2px 8px rgba(0,0,0,.08); transition:.25s; cursor:pointer;
+  display:flex; flex-direction:column;
+}
+.product-card:hover { transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.12); }
+.product-img-wrap { position:relative; width:100%; padding-top:85%; overflow:hidden; background:#f9f9f9; }
+.product-img-wrap img { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; }
+.product-discount-badge {
+  position:absolute; top:8px; right:8px; background:var(--red); color:#fff;
+  font-size:11px; font-weight:800; padding:3px 7px; border-radius:6px;
+}
+.product-info { padding:10px; flex:1; display:flex; flex-direction:column; }
+.product-name { font-size:13px; font-weight:700; color:#222; line-height:1.4; margin-bottom:6px; }
+.product-prices { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+.product-price { font-size:14px; font-weight:800; color:var(--red); }
+.product-old-price { font-size:11px; color:#999; text-decoration:line-through; }
+.product-label { display:inline-block; background:var(--red-light); color:var(--red); font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; margin-bottom:6px; }
+.add-to-cart-btn {
+  width:100%; background:var(--red-gradient); color:#fff; border:none; padding:9px 8px;
+  border-radius:9px; font-family:var(--font); font-size:13px; font-weight:700;
+  cursor:pointer; transition:.2s; display:flex; align-items:center; justify-content:center; gap:6px;
+  margin-top:auto;
+}
+.add-to-cart-btn:hover { filter:brightness(1.1); transform:translateY(-1px); }
+.add-to-cart-btn.added { background:linear-gradient(135deg,#2e7d32,#1b5e20); }
+
+/* ─── CATEGORIES PAGE ─── */
+.categories-page { padding:12px; }
+.cat-page-title { font-size:22px; font-weight:800; color:#222; text-align:center; margin-bottom:16px; }
+.cat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.cat-item {
+  background:linear-gradient(120deg,#8b0000,#c20000,#ff3b3b); background-size:300% 300%;
+  animation:bannerGrad 8s ease infinite; border-radius:14px; padding:16px 10px;
+  text-align:center; color:#fff; cursor:pointer; transition:.25s;
+  box-shadow:0 4px 12px rgba(0,0,0,.18); text-decoration:none; display:block;
+  position:relative; overflow:hidden;
+}
+.cat-item::before { content:""; position:absolute; top:0; left:-75%; width:50%; height:100%; background:linear-gradient(120deg,transparent 0%,rgba(255,255,255,.25) 50%,transparent 100%); transform:skewX(-20deg); animation:shine 6s linear infinite; }
+.cat-item:hover { transform:scale(1.04); box-shadow:0 6px 20px rgba(0,0,0,.28); }
+.cat-item .cat-icon { width:72px; height:72px; background:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 10px; box-shadow:inset 0 0 6px rgba(0,0,0,.08); }
+.cat-item .cat-icon i { font-size:28px; color:#c20000; }
+.cat-item .cat-name { background:#fff; color:#c20000; display:inline-block; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:800; margin-bottom:4px; }
+.cat-item p { font-size:11px; color:rgba(255,255,255,.9); margin:0; line-height:1.3; }
+@media (max-width:360px) { .cat-grid { grid-template-columns:repeat(2,1fr); } }
+
+/* ─── CART PAGE ─── */
+.cart-page { padding:12px; }
+.cart-empty { text-align:center; padding:60px 20px; }
+.cart-empty i { font-size:60px; color:#ddd; margin-bottom:16px; display:block; }
+.cart-empty h3 { color:#888; font-size:18px; margin-bottom:8px; }
+.cart-empty p { color:#aaa; font-size:14px; margin-bottom:20px; }
+.cart-empty .go-shop { background:var(--red-gradient); color:#fff; border:none; padding:12px 28px; border-radius:25px; font-family:var(--font); font-size:15px; font-weight:700; cursor:pointer; }
+.cart-item { background:#fff; border-radius:12px; padding:12px; margin-bottom:10px; display:flex; gap:10px; box-shadow:0 2px 6px rgba(0,0,0,.07); }
+.cart-item-img { width:70px; height:70px; border-radius:8px; object-fit:cover; flex-shrink:0; }
+.cart-item-info { flex:1; }
+.cart-item-name { font-size:14px; font-weight:700; color:#222; margin-bottom:4px; }
+.cart-item-price { font-size:15px; font-weight:800; color:var(--red); margin-bottom:8px; }
+.cart-qty { display:flex; align-items:center; gap:10px; }
+.qty-btn { width:30px; height:30px; border-radius:50%; background:var(--red); color:#fff; border:none; font-size:18px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; }
+.qty-val { font-size:16px; font-weight:700; min-width:20px; text-align:center; }
+.remove-item { background:none; border:none; color:#ccc; font-size:20px; cursor:pointer; padding:4px; margin-right:auto; }
+.remove-item:hover { color:var(--red); }
+.cart-summary { background:#fff; border-radius:12px; padding:16px; margin-bottom:12px; box-shadow:0 2px 6px rgba(0,0,0,.07); }
+.cart-row { display:flex; justify-content:space-between; padding:6px 0; font-size:14px; border-bottom:1px solid #f0f0f0; }
+.cart-row:last-child { border:none; font-weight:800; font-size:16px; color:var(--red); padding-top:10px; }
+.checkout-btn { width:100%; background:var(--red-gradient); color:#fff; border:none; padding:15px; border-radius:12px; font-family:var(--font); font-size:16px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 12px rgba(211,47,47,.35); transition:.25s; }
+.checkout-btn:hover { filter:brightness(1.08); transform:translateY(-1px); }
+
+/* ─── ORDERS PAGE ─── */
+.orders-page { padding:12px; }
+.orders-empty { text-align:center; padding:60px 20px; }
+.orders-empty i { font-size:60px; color:#ddd; margin-bottom:16px; display:block; }
+.order-card { background:#fff; border-radius:12px; padding:14px; margin-bottom:10px; box-shadow:0 2px 6px rgba(0,0,0,.07); }
+.order-id { font-size:12px; color:#888; margin-bottom:4px; direction:ltr; text-align:right; }
+.order-items { font-size:14px; font-weight:600; color:#222; margin-bottom:4px; }
+.order-total { font-size:15px; font-weight:800; color:var(--red); margin-bottom:6px; }
+.order-date { font-size:12px; color:#999; }
+.order-status { display:inline-block; background:#FFF3E0; color:#E65100; font-size:11px; font-weight:700; padding:3px 8px; border-radius:5px; margin-bottom:6px; }
+.order-status.done { background:#E8F5E9; color:#2E7D32; }
+.clear-orders-btn { background:none; border:2px solid #ddd; color:#888; padding:10px 20px; border-radius:25px; font-family:var(--font); font-size:14px; font-weight:700; cursor:pointer; margin-top:8px; }
+
+/* ─── MORE PAGE ─── */
+.more-page { padding:12px; }
+.more-header { text-align:center; padding:20px 0 16px; }
+.more-logo { width:80px; height:80px; border-radius:18px; margin:0 auto 10px; display:block; }
+.more-logo-text { font-size:20px; font-weight:900; color:#222; }
+.more-logo-sub { font-size:13px; color:#888; }
+.more-menu { background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.07); margin-bottom:12px; }
+.more-item { display:flex; align-items:center; gap:14px; padding:15px 16px; border-bottom:1px solid #f5f5f5; cursor:pointer; text-decoration:none; color:inherit; transition:.2s; }
+.more-item:last-child { border:none; }
+.more-item:hover { background:#fff5f5; }
+.more-item-icon { width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0; }
+.more-item-text { flex:1; }
+.more-item-title { font-size:15px; font-weight:700; color:#222; }
+.more-item-sub { font-size:12px; color:#999; }
+.more-item-arrow { color:#ccc; font-size:13px; }
+
+/* Page content area (for pages loaded inline) */
+.inline-page { display:none; flex:1; overflow-y:auto; padding-bottom:var(--bottom-nav-h); }
+.inline-page.active { display:block; }
+.inline-page-header { background:var(--red-gradient); padding:14px 16px; display:flex; align-items:center; gap:12px; }
+.inline-page-header .back-btn { color:#fff; font-size:20px; cursor:pointer; border:none; background:none; }
+.inline-page-header h2 { color:#fff; font-size:17px; font-weight:800; }
+.inline-page-body { padding:16px; }
+.about-container { font-family:var(--font); line-height:1.8; color:#333; }
+.about-container h1 { color:var(--red); font-size:22px; margin-bottom:12px; font-weight:800; }
+.about-container h2 { color:#222; font-size:16px; margin:16px 0 6px; font-weight:700; }
+.about-container p { margin-bottom:10px; font-size:14px; }
+.about-container ul { margin-right:20px; margin-bottom:10px; }
+.about-container li { margin-bottom:5px; font-size:14px; }
+.about-container .highlight-box { background:var(--red-light); border-right:4px solid var(--red); padding:12px 14px; border-radius:8px; margin-bottom:12px; }
+
+/* ─── BOTTOM NAV ─── */
+.bottom-nav {
+  position:fixed; bottom:0; left:0; right:0; height:var(--bottom-nav-h);
+  background:#fff; display:flex; border-top:1px solid #eee;
+  box-shadow:0 -2px 12px rgba(0,0,0,.08); z-index:100;
+}
+.nav-item { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; transition:.2s; border:none; background:none; padding:6px 0; position:relative; }
+.nav-item:hover { background:#fafafa; }
+.nav-item i { font-size:20px; color:#bbb; margin-bottom:3px; transition:.2s; }
+.nav-item span { font-size:11px; color:#bbb; font-family:var(--font); font-weight:600; transition:.2s; }
+.nav-item.active i, .nav-item.active span { color:var(--red); }
+.nav-item.active i { transform:scale(1.1); }
+.cart-badge {
+  position:absolute; top:4px; right:calc(50% - 16px);
+  background:var(--red); color:#fff; font-size:10px; font-weight:800;
+  width:17px; height:17px; border-radius:50%; display:none;
+  align-items:center; justify-content:center;
+}
+.cart-badge.show { display:flex; }
+
+/* ─── FLOATING BUTTONS ─── */
+.float-btns { position:fixed; bottom:calc(var(--bottom-nav-h) + 14px); left:0; right:0; display:flex; justify-content:space-between; padding:0 16px; pointer-events:none; z-index:99; }
+.float-btn { width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; cursor:pointer; border:none; pointer-events:all; box-shadow:0 4px 14px rgba(0,0,0,.25); transition:.25s; }
+.float-btn:hover { transform:scale(1.1); }
+.float-btn.call { background:linear-gradient(135deg,#ff4d4d,#b30000); color:#fff; }
+.float-btn.whatsapp { background:linear-gradient(135deg,#25D366,#128C7E); color:#fff; }
+
+/* ─── TOAST ─── */
+#toast {
+  position:fixed; bottom:calc(var(--bottom-nav-h) + 72px); left:50%; transform:translateX(-50%);
+  background:#333; color:#fff; padding:12px 24px; border-radius:25px;
+  font-family:var(--font); font-size:14px; font-weight:600; z-index:9999;
+  display:none; max-width:85%; text-align:center; box-shadow:0 4px 12px rgba(0,0,0,.25);
+}
+#toast.red { background:var(--red); }
+#toast.green { background:#2E7D32; }
+
+/* ─── PRODUCT DETAIL MODAL ─── */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:500; display:none; align-items:flex-end; }
+.modal-overlay.show { display:flex; }
+.product-modal {
+  background:#fff; border-radius:20px 20px 0 0; width:100%; max-height:88vh;
+  overflow-y:auto; padding:16px; animation:slideUp2 .3s ease;
+  padding-bottom:calc(var(--bottom-nav-h) + 16px);
+}
+@keyframes slideUp2 { from{transform:translateY(100%)} to{transform:translateY(0)} }
+.modal-close { float:left; background:none; border:none; font-size:24px; color:#999; cursor:pointer; padding:0; line-height:1; }
+.modal-img { width:100%; max-height:240px; object-fit:contain; border-radius:12px; background:#f9f9f9; margin:12px 0; }
+.modal-name { font-size:18px; font-weight:800; color:#222; margin-bottom:8px; clear:both; }
+.modal-price-wrap { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.modal-price { font-size:22px; font-weight:900; color:var(--red); }
+.modal-old { font-size:15px; color:#bbb; text-decoration:line-through; }
+.modal-desc { font-size:14px; color:#555; line-height:1.7; margin-bottom:16px; }
+.modal-qty-wrap { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+.modal-qty-label { font-size:14px; font-weight:600; color:#333; }
+.modal-add-btn { width:100%; background:var(--red-gradient); color:#fff; border:none; padding:15px; border-radius:12px; font-family:var(--font); font-size:16px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; }
+
+/* Pull indicator */
+.pull-indicator { position:fixed; top:-70px; left:0; right:0; height:70px; background:var(--red-gradient); display:flex; align-items:center; justify-content:center; gap:8px; color:#fff; font-weight:700; font-size:15px; z-index:99; transition:top .3s ease; }
+.pull-indicator.show { top:0; }
+
+/* Responsive */
+@media (min-width:480px) {
+  .products-grid { grid-template-columns:repeat(3,1fr); }
+  .cat-grid { grid-template-columns:repeat(3,1fr); }
+}
 </style>
+</head>
+<body>
 
-</head>  
-<body id="zoona-app" data-app-type="webview" data-store="sudan">  
-    <div class="background-pattern"></div>
-    <div class="status-bar"></div>
-    <div class="welcome-message" id="welcome-message">أهلاً بك في متجر ZOONA السوداني</div>
-    <div class="pull-indicator" id="pull-indicator">
-        <span>حرر لتحديث الصفحة</span>
-        <span class="icon">⟳</span>
-    </div>
-    <div id="splash">  
-        <img src="assets/splash-logo.png" alt="ZOONA Logo" class="splash-logo">  
-        <div class="splash-text">ZOONA</div>  
-        <div class="loader"></div>  
-    </div>
-    <div class="offline-message" id="offline-message">⚠️ أنت غير متصل بالإنترنت. جاري استخدام النسخة المخزنة.</div>
-    <div id="webview-container">  
-        <iframe id="webview"   
-                allow="geolocation; camera; microphone; autoplay; clipboard-write; encrypted-media"  
-                allowfullscreen  
-                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-downloads"  
-                referrerpolicy="strict-origin-when-cross-origin"  
-                title="متجر ZOONA السوداني"></iframe>  
-    </div>
-    <button id="back-button" aria-label="رجوع">←</button>  
-    <button id="refresh-button" aria-label="تحديث">↻</button>
-    <div id="toast"></div>
-  
-<script>  
-    // استخراج الرابط المطلوب من متغير url  
-    const params = new URLSearchParams(window.location.search);  
-    let siteURL = params.get("url");  
+<!-- ─── SPLASH ─── -->
+<div id="splash">
+  <img src="assets/splash-logo.png" alt="ZOONA" class="splash-logo">
+  <div class="splash-text">ZOONA</div>
+  <div class="splash-loader"></div>
+</div>
 
-    // اذا لم يوجد رابط → نفتح الصفحة الرئيسية  
-    if (!siteURL) {  
-        siteURL = "https://www.zoonasd.com/";  
-    }  
+<!-- ─── PULL INDICATOR ─── -->
+<div class="pull-indicator" id="pullIndicator">
+  <i class="fas fa-sync-alt"></i>
+  <span id="pullText">اسحب للتحديث</span>
+</div>
 
-    // المتغيرات العامة  
-    const appName = "ZOONA";  
-    const webview = document.getElementById("webview");  
-    const splash = document.getElementById("splash");  
-    const webviewContainer = document.getElementById('webview-container');  
-    const backButton = document.getElementById('back-button');  
-    const refreshButton = document.getElementById('refresh-button');  
-    const toast = document.getElementById('toast');  
-    const offlineMessage = document.getElementById('offline-message');  
-    const welcomeMessage = document.getElementById('welcome-message');  
-    const pullIndicator = document.getElementById('pull-indicator');  
-    const appBaseURL = window.location.origin + window.location.pathname;
-      
-    // تعيين عنوان التطبيق  
-    document.title = appName;  
-      
-    // متغيرات السحب للتحديث  
-    let startY = 0;  
-    let currentY = 0;  
-    let isPulling = false;  
-    let pullStartTime = 0;  
-    let isRefreshing = false;
-    
-    // دالة لتحديث رابط المتصفح
-    function updateBrowserURL(currentPageURL) {
-        try {
-            // إنشاء رابط جديد للصفحة الحالية
-            const newURL = `${appBaseURL}?url=${encodeURIComponent(currentPageURL)}`;
-            
-            // تحديث رابط المتصفح بدون إعادة تحميل الصفحة
-            if (window.history && window.history.replaceState) {
-                window.history.replaceState(null, '', newURL);
-                console.log('تم تحديث الرابط:', newURL);
-            }
-        } catch (error) {
-            console.error('خطأ في تحديث الرابط:', error);
-        }
-    }
-      
-    // تهيئة Service Worker  
-    if ('serviceWorker' in navigator) {  
-        window.addEventListener('load', () => {  
-            navigator.serviceWorker.register('service-worker.js')  
-                .then(registration => {  
-                    console.log('ServiceWorker مسجل بنجاح لتطبيق ZOONA');  
-                })  
-                .catch(err => {  
-                    console.error('فشل تسجيل ServiceWorker:', err);  
-                });  
-        });  
-    }  
-      
-    // دالة لإظهار الإشعارات  
-    function showToast(message, duration = 3000) {  
-        toast.textContent = message;  
-        toast.style.display = 'block';  
-          
-        setTimeout(() => {  
-            toast.style.display = 'none';  
-        }, duration);  
-    }  
-      
-    // دالة لإظهار رسالة الترحيب  
-    function showWelcomeMessage() {  
-        const today = new Date().toDateString();  
-        const lastWelcomeDate = localStorage.getItem('zoona_last_welcome_date');  
-          
-        if (lastWelcomeDate !== today) {  
-            welcomeMessage.style.display = 'block';  
-            localStorage.setItem('zoona_last_welcome_date', today);  
-              
-            setTimeout(() => {  
-                welcomeMessage.style.display = 'none';  
-            }, 5000);  
-              
-            showToast('مرحباً بك في أكبر المتاجر السودانية ', 3000);  
-        }  
-    }  
-      
-    // دالة لإظهار رسالة عدم الاتصال  
-    function showOfflineMessage() {  
-        offlineMessage.style.display = 'block';  
-        showToast('تم تفعيل وضع العمل دون اتصال', 3000);  
-          
-        setTimeout(() => {  
-            offlineMessage.style.display = 'none';  
-        }, 5000);  
-    }  
-      
-    // التحقق من الاتصال بالإنترنت  
-    function updateOnlineStatus() {  
-        if (navigator.onLine) {  
-            offlineMessage.style.display = 'none';  
-              
-            if (!isPulling) {  
-                pullIndicator.classList.remove('show');  
-            }  
-        } else {  
-            showOfflineMessage();  
-        }  
-    }  
-      
-    // مستمعات حالة الاتصال  
-    window.addEventListener('online', updateOnlineStatus);  
-    window.addEventListener('offline', updateOnlineStatus);  
-      
-    // نظام السحب لأسفل للتحديث المحسن
-    let lastScrollTop = 0;
-    
-    document.addEventListener('touchstart', (e) => {
-        // التحقق إذا كنا في أعلى الصفحة
-        const webviewScrollTop = webview.contentWindow?.pageYOffset || 0;
-        
-        if (webviewScrollTop <= 5 && !isPulling && !isRefreshing) {
-            startY = e.touches[0].clientY;
-            currentY = startY;
-            isPulling = true;
-            pullStartTime = Date.now();
-            
-            // إعادة تعيين المؤشر
-            pullIndicator.style.top = '-80px';
-            pullIndicator.querySelector('.icon').style.transform = 'rotate(0deg)';
-        }
-    });
-    
-    document.addEventListener('touchmove', (e) => {
-        if (!isPulling) return;
-        
-        currentY = e.touches[0].clientY;
-        const pullDistance = currentY - startY;
-        
-        if (pullDistance > 0) {
-            e.preventDefault();
-            
-            // حساب المسافة مع حد أقصى
-            const maxPull = 150;
-            const calculatedTop = Math.min(pullDistance, maxPull) - 80;
-            pullIndicator.style.top = calculatedTop + 'px';
-            
-            // تدوير الأيقونة بناءً على المسافة
-            const iconRotation = Math.min((pullDistance / maxPull) * 360, 360);
-            pullIndicator.querySelector('.icon').style.transform = `rotate(${iconRotation}deg)`;
-            
-            // تغيير النص بناءً على المسافة
-            if (pullDistance > 100) {
-                pullIndicator.querySelector('span:first-child').textContent = 'حرر لتحديث الصفحة';
-                pullIndicator.classList.add('show');
-            } else {
-                pullIndicator.querySelector('span:first-child').textContent = 'اسحب للتحديث';
-                pullIndicator.classList.remove('show');
-            }
-        }
-    });
-    
-    document.addEventListener('touchend', () => {
-        if (!isPulling) return;
-        
-        const pullDistance = currentY - startY;
-        const pullDuration = Date.now() - pullStartTime;
-        
-        isPulling = false;
-        
-        // إرجاع المؤشر إلى الأعلى بسلاسة
-        pullIndicator.style.transition = 'top 0.3s ease';
-        pullIndicator.style.top = '-80px';
-        
-        setTimeout(() => {
-            pullIndicator.style.transition = '';
-        }, 300);
-        
-        // إذا تجاوز السحب 100 بكسل وكانت المدة أقل من ثانية
-        if (pullDistance > 100 && pullDuration < 1000) {
-            isRefreshing = true;
-            pullIndicator.classList.remove('show');
-            
-            showToast('جاري تحديث الصفحة...', 1500);
-            
-            // تحديث صفحة الويب الحالية
-            if (webview.contentWindow) {
-                setTimeout(() => {
-                    webview.contentWindow.location.reload();
-                    isRefreshing = false;
-                }, 300);
-            }
-        } else if (pullDistance > 50) {
-            // سحب غير كافي، إرجاع بسلاسة
-            pullIndicator.querySelector('.icon').style.transform = 'rotate(0deg)';
-        }
-    });
-      
-    // تهيئة التطبيق  
-    document.addEventListener('DOMContentLoaded', () => {  
-        updateOnlineStatus();  
-          
-        // محاكاة وقت تحميل الشاشة  
-        setTimeout(() => {  
-            loadWebview();  
-        }, 2000);  
-          
-        // زر العودة  
-        backButton.addEventListener('click', () => {  
-            if (webview.contentWindow && webview.contentWindow.history.length > 1) {  
-                webview.contentWindow.history.back();  
-                showToast('جاري الرجوع للصفحة السابقة', 1500);  
-            }  
-        });  
-          
-        // زر التحديث  
-        refreshButton.addEventListener('click', () => {  
-            if (webview.contentWindow) {  
-                showToast('جاري تحديث الصفحة...', 1500);  
-                webview.contentWindow.location.reload();  
-            }  
-        });  
-          
-        // تحديث ظهور أزرار التحكم  
-        setInterval(() => {  
-            try {  
-                // زر العودة  
-                if (webview.contentWindow && webview.contentWindow.history.length > 1) {  
-                    backButton.style.display = 'flex';  
-                } else {  
-                    backButton.style.display = 'none';  
-                }  
-                  
-                // زر التحديث  
-                if (webview.contentWindow) {  
-                    refreshButton.style.display = 'flex';  
-                }  
-            } catch (e) {  
-                backButton.style.display = 'none';  
-                refreshButton.style.display = 'none';  
-            }  
-        }, 1000);  
-    });  
-      
-    // تحميل الموقع  
-    function loadWebview() {  
-        webview.src = siteURL;  
-          
-        webview.onload = () => {  
-            // إخفاء شاشة التحميل  
-            splash.style.opacity = '0';  
-            setTimeout(() => {  
-                splash.style.display = 'none';  
-                webviewContainer.style.display = 'block';  
-            }, 500);  
-              
-            // تحديث عنوان الصفحة  
-            try {  
-                const pageTitle = webview.contentWindow.document.title;  
-                const currentURL = webview.contentWindow.location.href;
-                
-                // تحديث رابط المتصفح للصفحة الحالية
-                updateBrowserURL(currentURL);
-                
-                if (pageTitle && pageTitle !== "" && pageTitle !== "ZOONA") {  
-                    document.title = `${pageTitle} | ${appName}`;  
-                }  
-            } catch (e) {  
-                console.log('لا يمكن الوصول إلى عنوان الصفحة:', e);  
-            }  
-              
-            // إظهار رسالة الترحيب بعد تأخير بسيط  
-            setTimeout(() => {  
-                showWelcomeMessage();  
-            }, 1000);  
-              
-            // مراقبة تغييرات الرابط داخل الـ webview
-            setupWebviewNavigationTracking();
-              
-            // إرسال رسالة تفيد بأن التطبيق جاهز  
-            try {  
-                webview.contentWindow.postMessage({  
-                    type: 'app_ready',  
-                    app_name: 'ZOONA Store',  
-                    country: 'Sudan',  
-                    features: {  
-                        storage: true,  
-                        geolocation: true,  
-                        download: true,  
-                        version: '1.0.0',  
-                        currency: 'SDG'  
-                    }  
-                }, '*');  
-            } catch (e) {  
-                console.log('لا يمكن إرسال الرسالة للإطار');  
-            }  
-        };  
-          
-        webview.onerror = () => {  
-            splash.innerHTML = `  
-                <div style="text-align: center; color: white; padding: 20px; font-family: 'Tajawal', sans-serif;">  
-                    <h2 style="margin-bottom: 20px; font-weight: 700;">⚠️ حدث خطأ في التحميل</h2>  
-                    <p style="margin-bottom: 30px; font-size: 16px;">يرجى التحقق من اتصال الإنترنت</p>  
-                    <button onclick="location.reload()" style="  
-                        margin-top: 20px;  
-                        padding: 12px 40px;  
-                        background: white;  
-                        color: #D32F2F;  
-                        border: none;  
-                        border-radius: 25px;  
-                        font-size: 16px;  
-                        cursor: pointer;  
-                        font-weight: bold;  
-                        box-shadow: 0 4px 15px rgba(0,0,0,0.2);  
-                        font-family: 'Tajawal', sans-serif;  
-                        transition: all 0.3s;  
-                    " onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 20px rgba(0,0,0,0.3)';"  
-                    onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.2)';">  
-                        إعادة المحاولة  
-                    </button>  
-                </div>  
-            `;  
-            showToast('فشل تحميل الموقع، يرجى المحاولة مرة أخرى', 4000);  
-        };  
-    }
-    
-    // تتبع التنقل داخل الـ webview
-    function setupWebviewNavigationTracking() {
-        // مراقبة تغييرات الرابط داخل iframe
-        let lastURL = webview.src;
-        
-        setInterval(() => {
-            try {
-                const currentURL = webview.contentWindow.location.href;
-                
-                if (currentURL !== lastURL) {
-                    lastURL = currentURL;
-                    
-                    // تحديث رابط المتصفح
-                    updateBrowserURL(currentURL);
-                    
-                    // تحديث عنوان الصفحة
-                    const pageTitle = webview.contentWindow.document.title;
-                    if (pageTitle && pageTitle !== "" && pageTitle !== "ZOONA") {
-                        document.title = `${pageTitle} | ${appName}`;
-                    }
-                    
-                    console.log('تم تغيير الصفحة إلى:', currentURL);
-                }
-            } catch (e) {
-                // صمت على الأخطاء المتعلقة بحق الوصول
-            }
-        }, 500);
-        
-        // إضافة مستمع لتغييرات الرابط عبر التاريخ
-        try {
-            const pushState = webview.contentWindow.history.pushState;
-            const replaceState = webview.contentWindow.history.replaceState;
-            
-            webview.contentWindow.history.pushState = function() {
-                pushState.apply(this, arguments);
-                setTimeout(() => {
-                    updateBrowserURL(webview.contentWindow.location.href);
-                }, 100);
-            };
-            
-            webview.contentWindow.history.replaceState = function() {
-                replaceState.apply(this, arguments);
-                setTimeout(() => {
-                    updateBrowserURL(webview.contentWindow.location.href);
-                }, 100);
-            };
-        } catch (e) {
-            console.log('لا يمكن تعديل التاريخ:', e);
-        }
-    }
-      
-    // ------------ نظام الرسائل بين التطبيق والموقع ------------  
-    window.addEventListener("message", function(event) {  
-        // طلب الموقع الجغرافي  
-        if (event.data === "request_location") {  
-            navigator.geolocation.getCurrentPosition(  
-                (pos) => {  
-                    webview.contentWindow.postMessage({  
-                        status: "success",  
-                        latitude: pos.coords.latitude,  
-                        longitude: pos.coords.longitude,  
-                        accuracy: pos.coords.accuracy,  
-                        timestamp: pos.timestamp  
-                    }, "*");  
-                },  
-                (err) => {  
-                    webview.contentWindow.postMessage({  
-                        status: "error",  
-                        message: err.message,  
-                        code: err.code  
-                    }, "*");  
-                },  
-                {  
-                    enableHighAccuracy: true,  
-                    timeout: 15000,  
-                    maximumAge: 0  
-                }  
-            );  
-        }  
-          
-        // تنزيل الملفات  
-        else if (event.data.type === "download_file") {  
-            const { url, filename, type } = event.data;  
-            downloadFile(url, filename, type);  
-        }  
-          
-        // حفظ البيانات  
-        else if (event.data.type === "save_data") {  
-            const { key, value } = event.data;  
-            localStorage.setItem(`zoona_${key}`, JSON.stringify(value));  
-            webview.contentWindow.postMessage({  
-                type: "data_saved",  
-                key: key,  
-                success: true  
-            }, "*");  
-            showToast('تم حفظ البيانات بنجاح ✓', 2000);  
-        }  
-          
-        // جلب البيانات  
-        else if (event.data.type === "get_data") {  
-            const { key } = event.data;  
-            const value = localStorage.getItem(`zoona_${key}`);  
-            webview.contentWindow.postMessage({  
-                type: "data_retrieved",  
-                key: key,  
-                value: value ? JSON.parse(value) : null,  
-                success: true  
-            }, "*");  
-        }  
-          
-        // مسح البيانات  
-        else if (event.data.type === "clear_data") {  
-            const { key } = event.data;  
-            if (key === 'all') {  
-                localStorage.clear();  
-                showToast('تم مسح جميع البيانات', 2000);  
-            } else {  
-                localStorage.removeItem(`zoona_${key}`);  
-                showToast('تم مسح البيانات', 2000);  
-            }  
-        }
-        
-        // تحديث الرابط من داخل الموقع
-        else if (event.data.type === "update_url") {
-            const { url } = event.data;
-            if (url) {
-                updateBrowserURL(url);
-            }
-        }  
-    });  
-      
-    // دالة تنزيل الملفات  
-    function downloadFile(url, filename, type = 'image') {  
-        showToast(`جاري تنزيل ${filename}... ⏳`, 3000);  
-          
-        const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');  
-        const finalFilename = `${filename.replace(/\.[^/.]+$/, "")}_${timestamp}${filename.match(/\.[^/.]+$/)?.[0] || ''}`;  
-          
-        fetch(url, {  
-            mode: 'cors',  
-            credentials: 'include'  
-        })  
-        .then(response => {  
-            if (!response.ok) throw new Error('فشل تحميل الملف');  
-            return response.blob();  
-        })  
-        .then(blob => {  
-            const url = window.URL.createObjectURL(blob);  
-            const a = document.createElement('a');  
-            a.style.display = 'none';  
-            a.href = url;  
-            a.download = finalFilename;  
-            a.setAttribute('download', finalFilename);  
-              
-            document.body.appendChild(a);  
-            a.click();  
-            window.URL.revokeObjectURL(url);  
-            a.remove();  
-              
-            showToast(`تم تنزيل ${filename} بنجاح ✅`, 3000);  
-              
-            webview.contentWindow.postMessage({  
-                type: "download_complete",  
-                filename: finalFilename,  
-                originalName: filename,  
-                success: true,  
-                timestamp: new Date().toISOString()  
-            }, "*");  
-              
-            const downloads = JSON.parse(localStorage.getItem('zoona_downloads') || '[]');  
-            downloads.unshift({  
-                filename: finalFilename,  
-                originalName: filename,  
-                type: type,  
-                date: new Date().toISOString(),  
-                url: url  
-            });  
-            localStorage.setItem('zoona_downloads', JSON.stringify(downloads.slice(0, 50)));  
-        })  
-        .catch(err => {  
-            console.error('خطأ في التنزيل:', err);  
-            showToast('فشل التنزيل، يرجى المحاولة مرة أخرى', 3000);  
-              
-            webview.contentWindow.postMessage({  
-                type: "download_complete",  
-                filename: filename,  
-                success: false,  
-                error: err.message  
-            }, "*");  
-        });  
-    }  
-      
-    // منع الإجراءات الافتراضية  
-    document.addEventListener('contextmenu', e => {  
-        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {  
-            e.preventDefault();  
-        }  
-    });  
-      
-    // دعم التثبيت كـ PWA  
-    let deferredPrompt;  
-      
-    window.addEventListener('beforeinstallprompt', (e) => {  
-        e.preventDefault();  
-        deferredPrompt = e;  
-    });  
-      
-    // إدارة الذاكرة  
-    window.addEventListener('load', () => {  
-        const now = new Date().getTime();  
-        const cacheData = JSON.parse(localStorage.getItem('zoona_cache_meta') || '{}');  
-          
-        for (const key in cacheData) {  
-            if (now - cacheData[key].timestamp > 7 * 24 * 60 * 60 * 1000) {  
-                localStorage.removeItem(key);  
-                delete cacheData[key];  
-            }  
-        }  
-          
-        localStorage.setItem('zoona_cache_meta', JSON.stringify(cacheData));  
-    });  
-      
-    // تحسين الأداء  
-    let isScrolling;  
-    window.addEventListener('scroll', () => {  
-        window.clearTimeout(isScrolling);  
-          
-        isScrolling = setTimeout(() => {  
-            backButton.style.opacity = '0.7';  
-            refreshButton.style.opacity = '0.7';  
-              
-            setTimeout(() => {  
-                backButton.style.opacity = '1';  
-                refreshButton.style.opacity = '1';  
-            }, 100);  
-        }, 66);  
-    }, false);  
-      
-    // تحديث تاريخ أول استخدام  
-    if (!localStorage.getItem('zoona_first_use')) {  
-        localStorage.setItem('zoona_first_use', new Date().toISOString());  
-    }  
-</script>
+<!-- ─── MAIN APP ─── -->
+<div id="app">
 
-<!-- صندوق تثبيت PWA مُحسّن -->
-<div style="  
-position: fixed;  
-right: 16px;  
-left: 16px;  
-bottom: 20px;  
-max-width: 420px;  
-margin: 0 auto;  
-border-radius: 20px;  
-padding: 24px;  
-background: #ffffff;  
-color: #333333;  
-box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.05);  
-display: none;  
-z-index: 100000;  
-font-family: 'Tajawal', 'Segoe UI', Tahoma, sans-serif;  
-direction: rtl;"  
-id="pwa-install-box" aria-hidden="true" role="dialog">  
-    <div id="pwa-close" title="إغلاق" style="  
-        position:absolute;top:12px;left:12px;color:#999;font-size:20px;  
-        cursor:pointer;width:32px;height:32px;display:flex;  
-        align-items:center;justify-content:center;border-radius:50%;  
-        transition: color 0.3s, background-color 0.3s;">  
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>  
-    </div>  
-    
-    <div style="display:flex;gap:16px;align-items:center;">  
-        <div style="  
-            width: 72px;  
-            height: 72px;  
-            border-radius: 18px;  
-            background: #f7f7f7;  
-            display:flex;align-items:center;justify-content:center;  
-            flex-shrink:0;box-shadow: 0 4px 12px rgba(0,0,0,0.1);  
-            overflow:hidden;">  
-            <img src="https://i.ibb.co/pvjQjT2V/icon-512x512.png"   
-                 style="width: 52px; height: 52px; border-radius: 10px; object-fit: cover;">  
-        </div>  
-    
-        <div style="flex:1;text-align:right;">  
-            <div style="font-weight: 800; font-size: 18px; margin-bottom: 4px; color: #c62828;">  
-                تثبيت تطبيق <span style="font-family:'Segoe UI', Tahoma, sans-serif;">ZOONA</span>  
-            </div>  
-            <div style="font-size: 14px; color: #555555; line-height: 1.5;">  
-                ✨ تجربة شراء أسرع — تثبيت مباشر بنقرة واحدة  
-            </div>  
-        </div>  
-    </div>  
-    
-    <button id="pwa-install-btn" style="  
-        width: 100%;  
-        margin-top: 20px;   
-        background: #c62828;  
-        color: #fff;  
-        border: none;  
-        padding: 14px 20px;  
-        border-radius: 14px;  
-        font-weight: 700;  
-        cursor: pointer;  
-        box-shadow: 0 8px 20px rgba(198, 40, 40, 0.3),  
-                    inset 0 1px 0 rgba(255, 255, 255, 0.3);  
-        text-align: center;  
-        font-size: 16px;  
-        letter-spacing: 0.5px;  
-        transition: background-color 0.3s ease;">  
-        تثبيت الآن وتجربة الأداء الفائق  
-    </button>  
-</div>  
-
-<script>  
-document.addEventListener('DOMContentLoaded', function() {  
-    let deferredPrompt = null;  
-    const box = document.getElementById('pwa-install-box');  
-    const btn = document.getElementById('pwa-install-btn');  
-    const close = document.getElementById('pwa-close');  
-  
-    // التحقق من تثبيت PWA بدقة أكبر
-    function isPWAInstalled() {
-        // الطرق المختلفة للتحقق من التثبيت
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-        const isFullscreen = window.matchMedia('(display-mode: fullscreen)').matches;
-        const isMinimalUI = window.matchMedia('(display-mode: minimal-ui)').matches;
-        
-        // للـ iOS
-        const isIOSStandalone = ('standalone' in window.navigator) && 
-                               (window.navigator.standalone === true);
-        
-        // للتحقق من تطبيقات pwabuilder.com أو أي PWA آخر
-        const hasPWALauncher = document.referrer.includes('android-app://') || 
-                              window.location.protocol === 'file:';
-        
-        // التحقق من وجود service worker نشط
-        let hasActiveServiceWorker = false;
-        if ('serviceWorker' in navigator) {
-            const registrations = navigator.serviceWorker.getRegistrations();
-            hasActiveServiceWorker = registrations.length > 0;
-        }
-        
-        return isStandalone || isFullscreen || isMinimalUI || isIOSStandalone || 
-               hasPWALauncher || hasActiveServiceWorker;
-    }  
-  
-    function hasShownBefore() {  
-        return localStorage.getItem('pwaInstallShown') === 'true';  
-    }  
-    
-    function markAsShown() {  
-        localStorage.setItem('pwaInstallShown', 'true');  
-    }  
-  
-    // التحقق من جميع المتصفحات
-    function isMobileBrowser() {
-        const userAgent = navigator.userAgent.toLowerCase();
-        return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
-    }
-    
-    // التحقق من متصفحات iOS
-    function isIOSBrowser() {
-        const userAgent = navigator.userAgent.toLowerCase();
-        return /iphone|ipad|ipod/.test(userAgent);
-    }
-    
-    // التحقق من متصفحات Android
-    function isAndroidBrowser() {
-        const userAgent = navigator.userAgent.toLowerCase();
-        return /android/.test(userAgent);
-    }
-  
-    window.addEventListener('beforeinstallprompt', (e) => {  
-        e.preventDefault();  
-        deferredPrompt = e;  
-  
-        if (isPWAInstalled()) {
-            console.log('PWA مثبت بالفعل');
-            return;
-        }  
-        
-        if (hasShownBefore()) {
-            console.log('تم عرض الرسالة من قبل');
-            return;
-        }  
-  
-        // تأخير العرض بحسب نوع الجهاز
-        const delay = isMobileBrowser() ? 3000 : 5000;
-        
-        setTimeout(() => {  
-            box.style.display = 'block';
-            console.log('عرض رسالة التثبيت');
-        }, delay);  
-    });  
-  
-    // معالجة المتصفحات التي لا تدعم beforeinstallprompt
-    if (!('beforeinstallprompt' in window)) {
-        setTimeout(() => {
-            if (!isPWAInstalled() && !hasShownBefore()) {
-                // عرض رسالة بديلة للمتصفحات القديمة
-                console.log('المتصفح لا يدعم التثبيت التلقائي');
-                
-                // يمكنك إضافة زر يدوي للتثبيت
-                // أو عرض تعليمات للمستخدم
-            }
-        }, 5000);
-    }
-  
-    btn.addEventListener('click', async () => {  
-        if (!deferredPrompt) {  
-            box.style.display = 'none';  
-            markAsShown();  
-            
-            // توجيه المستخدم للتعليمات حسب المتصفح
-            if (isIOSBrowser()) {
-                alert('لتثبيت التطبيق على iOS:\n1. اضغط على زر المشاركة\n2. اختر "إضافة إلى الشاشة الرئيسية"');
-            } else if (isAndroidBrowser()) {
-                alert('لتثبيت التطبيق على Android:\n1. اضغط على القائمة (النقاط الثلاث)\n2. اختر "إضافة إلى الشاشة الرئيسية"');
-            } else {
-                alert('لتثبيت التطبيق:\n1. اضغط على القائمة (النقاط الثلاث)\n2. اختر "تثبيت التطبيق" أو "إضافة إلى الشاشة الرئيسية"');
-            }
-            
-            return;  
-        }  
-  
-        try {
-            deferredPrompt.prompt();  
-            const choiceResult = await deferredPrompt.userChoice;
-            
-            if (choiceResult.outcome === 'accepted') {
-                console.log('قام المستخدم بتثبيت PWA');
-            } else {
-                console.log('رفض المستخدم تثبيت PWA');
-            }
-        } catch (error) {
-            console.error('خطأ في تثبيت PWA:', error);
-        }
-        
-        box.style.display = 'none';  
-        markAsShown();  
-        deferredPrompt = null;  
-    });  
-  
-    close.addEventListener('click', () => {  
-        box.style.display = 'none';  
-        markAsShown();  
-    });  
-  
-    close.addEventListener('mouseenter', () => {  
-        close.style.backgroundColor = '#f0f0f0';  
-        close.style.color = '#333';  
-    });  
-  
-    close.addEventListener('mouseleave', () => {  
-        close.style.backgroundColor = 'transparent';  
-        close.style.color = '#999';  
-    });  
-  
-    // إضافة تأثير hover للزر
-    btn.addEventListener('mouseenter', () => {  
-        btn.style.backgroundColor = '#b71c1c';  
-    });  
-    
-    btn.addEventListener('mouseleave', () => {  
-        btn.style.backgroundColor = '#c62828';  
-    });  
-  
-    // التحقق عند تحميل الصفحة
-    if (isPWAInstalled()) {  
-        box.style.display = 'none';  
-    }  
-    
-    // إخفاء الصندوق عند النقر خارجيه (اختياري)
-    document.addEventListener('click', (e) => {
-        if (box.style.display === 'block' && 
-            !box.contains(e.target) && 
-            e.target !== btn) {
-            box.style.display = 'none';
-            markAsShown();
-        }
-    });
-});  
-</script>
-
-<!-- زر يدوي لتفعيل الإشعارات (للإعدادات) -->
-<button id="manual-notification-btn" style="
-  position: fixed;
-  bottom: 100px;
-  right: 25px;
-  background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);
-  color: white;
-  width: 56px;
-  height: 56px;
-  border-radius: 28px;
-  display: none;
-  justify-content: center;
-  align-items: center;
-  box-shadow: 0 6px 20px rgba(211, 47, 47, 0.4);
-  z-index: 1000;
-  border: none;
-  cursor: pointer;
-  font-size: 22px;
-  transition: all 0.3s ease;
-  font-family: 'Tajawal', sans-serif;
-  z-index: 1004;
-"
-onclick="showNotificationSettings()">
-  🔔
-</button>
-
-<!-- نافذة تفعيل الإشعارات المحدثة -->
-<div id="custom-notification-prompt" style="display: none;">
-  <div style="
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 10010;
-    background: #ffffff;
-    border: 2px solid #D32F2F;
-    border-radius: 20px;
-    padding: 24px;
-    width: 90%;
-    max-width: 400px;
-    text-align: center;
-    font-family: 'Tajawal', sans-serif;
-    box-shadow: 0 20px 40px rgba(211, 47, 47, 0.25);
-    direction: rtl;
-    animation: fadeIn 0.3s ease-out;
-  ">
-    <div style="margin-bottom: 20px;">
-      <div style="
-        width: 80px;
-        height: 80px;
-        background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 20px;
-        font-size: 36px;
-        color: white;
-        box-shadow: 0 8px 20px rgba(211, 47, 47, 0.3);
-      ">
-        🔔
+  <!-- HEADER -->
+  <header class="store-header">
+    <div class="header-top">
+      <div class="header-logo-wrap">
+        <img src="assets/splash-logo.png" alt="ZOONA" class="header-logo-img">
+        <div>
+          <div class="header-logo-text">ZOONA</div>
+          <div class="header-logo-sub">متجر السودان الأول</div>
+        </div>
       </div>
-      
-      <h3 style="
-        margin: 0 0 10px;
-        color: #D32F2F;
-        font-size: 22px;
-        font-weight: 800;
-      ">
-        عروض زونا الحصرية 🎁
-      </h3>
-      
-      <p style="
-        margin: 0 0 20px;
-        font-size: 16px;
-        color: #555;
-        line-height: 1.5;
-      ">
-        تفعيل الإشعارات يعني:<br>
-        ✓ أولوية الوصول للعروض<br>
-        ✓ تنبيهات الخصومات الحصرية<br>
-        ✓ متابعة طلباتك لحظة بلحظة<br>
-        ✓ عروض خاصة للمشتركين
-      </p>
+      <div class="header-btns">
+        <a href="tel:+249918183521" class="hbtn">
+          <i class="fas fa-phone"></i> اتصال
+        </a>
+        <a href="p/afraa-market.html" class="hbtn">
+          <i class="fas fa-briefcase"></i> اعمل معنا
+        </a>
+      </div>
     </div>
-    
-    <div style="display: flex; gap: 12px; direction: rtl;">
-      <button id="activate-notifications" style="
-        flex: 1;
-        background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);
-        color: #fff;
-        border: none;
-        padding: 16px 20px;
-        border-radius: 14px;
-        font-weight: 800;
-        cursor: pointer;
-        font-size: 16px;
-        box-shadow: 0 8px 20px rgba(211, 47, 47, 0.3);
-        transition: all 0.3s ease;
-        font-family: 'Tajawal', sans-serif;
-      "
-      onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 12px 25px rgba(211, 47, 47, 0.4)';"
-      onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 8px 20px rgba(211, 47, 47, 0.3)';">
-        تفعيل الإشعارات
-      </button>
-      
-      <button id="decline-notifications" style="
-        flex: 1;
-        background: #fff;
-        color: #D32F2F;
-        border: 2px solid #D32F2F;
-        padding: 16px 20px;
-        border-radius: 14px;
-        font-weight: 800;
-        cursor: pointer;
-        font-size: 16px;
-        transition: all 0.3s ease;
-        font-family: 'Tajawal', sans-serif;
-      "
-      onmouseover="this.style.background='#f9f9f9'; this.style.transform='scale(1.02)';"
-      onmouseout="this.style.background='#fff'; this.style.transform='scale(1)';">
-        لاحقاً
-      </button>
+    <div class="header-search">
+      <i class="fas fa-search"></i>
+      <input type="text" id="searchInput" placeholder="ابحث عن منتج..." oninput="handleSearch(this.value)">
     </div>
-    
-    <p style="
-      margin: 15px 0 0;
-      font-size: 13px;
-      color: #888;
-      font-weight: 500;
-    ">
-      يمكنك تفعيلها لاحقاً من إعدادات التطبيق
-    </p>
+  </header>
+
+  <!-- LOCATION BAR -->
+  <div class="location-bar" id="locationBar">
+    <i class="fas fa-map-marker-alt"></i>
+    <span id="locationText">التوصيل إلى بورتسودان - أم القرى</span>
+    <span class="change-loc">تغيير</span>
+  </div>
+
+  <!-- ══════════════════ HOME PAGE ══════════════════ -->
+  <div class="page active" id="page-home">
+
+    <!-- Banner -->
+    <div class="zona-banner" style="margin-top:10px;">
+      <h2>❤️ أهلاً بك في <strong>زونا للتسوق</strong>!</h2>
+      <div class="rotating-msg" id="rotatingMsg"></div>
+      <a href="#" onclick="switchTab('cats'); return false;">تسوق الآن من زونا 🛒</a>
+    </div>
+
+    <!-- Category Filter -->
+    <div class="cat-filter" id="catFilter">
+      <button class="cat-btn active" onclick="filterCategory('الكل', this)">الكل</button>
+      <button class="cat-btn" onclick="filterCategory('موبايلات', this)">موبايلات</button>
+      <button class="cat-btn" onclick="filterCategory('أجهزة إلكترونية', this)">الإلكترونيات</button>
+      <button class="cat-btn" onclick="filterCategory('أجهزة كهربائية', this)">الكهربائيات</button>
+      <button class="cat-btn" onclick="filterCategory('ألعاب أطفال', this)">ألعاب أطفال</button>
+      <button class="cat-btn" onclick="filterCategory('إكسسوارات موبايلات', this)">إكسسوارات</button>
+      <button class="cat-btn" onclick="filterCategory('مستحضرات تجميل', this)">تجميل</button>
+    </div>
+
+    <div class="section-title" id="sectionTitle">🔥 المنتجات المميزة</div>
+
+    <!-- Products Grid -->
+    <div class="products-grid" id="productsGrid">
+      <!-- Rendered by JS -->
+    </div>
+
+  </div><!-- /page-home -->
+
+  <!-- ══════════════════ CATEGORIES PAGE ══════════════════ -->
+  <div class="page" id="page-cats">
+    <div class="categories-page">
+      <div class="cat-page-title">🛍️ أقسام المتجر</div>
+      <div class="cat-grid">
+        <div class="cat-item" onclick="filterCategory('موبايلات', null); switchTab('home');">
+          <div class="cat-icon"><i class="fas fa-mobile-screen-button"></i></div>
+          <div class="cat-name">موبايلات</div>
+          <p>أحدث الهواتف الذكية</p>
+        </div>
+        <div class="cat-item" onclick="filterCategory('إكسسوارات موبايلات', null); switchTab('home');">
+          <div class="cat-icon"><i class="fas fa-headphones"></i></div>
+          <div class="cat-name">إكسسوارات</div>
+          <p>سماعات وشواحن وكفرات</p>
+        </div>
+        <div class="cat-item" onclick="filterCategory('أجهزة إلكترونية', null); switchTab('home');">
+          <div class="cat-icon"><i class="fas fa-computer"></i></div>
+          <div class="cat-name">الإلكترونيات</div>
+          <p>أجهزة وجودة مضمونة</p>
+        </div>
+        <div class="cat-item" onclick="filterCategory('أجهزة كهربائية', null); switchTab('home');">
+          <div class="cat-icon"><i class="fas fa-plug"></i></div>
+          <div class="cat-name">الكهربائيات</div>
+          <p>أجهزة منزلية أصلية</p>
+        </div>
+        <div class="cat-item" onclick="filterCategory('ألعاب أطفال', null); switchTab('home');">
+          <div class="cat-icon"><i class="fas fa-puzzle-piece"></i></div>
+          <div class="cat-name">ألعاب أطفال</div>
+          <p>كل ما يسعد أطفالك</p>
+        </div>
+        <div class="cat-item" onclick="filterCategory('مستحضرات تجميل', null); switchTab('home');">
+          <div class="cat-icon"><i class="fas fa-magic-wand-sparkles"></i></div>
+          <div class="cat-name">التجميل</div>
+          <p>منتجات عناية أصلية</p>
+        </div>
+      </div>
+    </div>
+  </div><!-- /page-cats -->
+
+  <!-- ══════════════════ CART PAGE ══════════════════ -->
+  <div class="page" id="page-cart">
+    <div class="cart-page">
+      <div class="section-title">🛒 سلة التسوق</div>
+      <div id="cartContent">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </div><!-- /page-cart -->
+
+  <!-- ══════════════════ ORDERS PAGE ══════════════════ -->
+  <div class="page" id="page-orders">
+    <div class="orders-page">
+      <div class="section-title">📦 طلباتي</div>
+      <div id="ordersContent">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </div><!-- /page-orders -->
+
+  <!-- ══════════════════ MORE PAGE ══════════════════ -->
+  <div class="page" id="page-more">
+    <div class="more-page">
+      <div class="more-header">
+        <img src="assets/splash-logo.png" alt="ZOONA" class="more-logo">
+        <div class="more-logo-text">ZOONA</div>
+        <div class="more-logo-sub">متجر السودان الإلكتروني الأول</div>
+      </div>
+
+      <div class="more-menu">
+        <a class="more-item" href="p/afraa-market.html">
+          <div class="more-item-icon" style="background:#FFF3E0; color:#E65100;"><i class="fas fa-briefcase"></i></div>
+          <div class="more-item-text">
+            <div class="more-item-title">اعمل معنا</div>
+            <div class="more-item-sub">انضم كمسوق واكسب عمولة</div>
+          </div>
+          <i class="fas fa-chevron-left more-item-arrow"></i>
+        </a>
+        <a class="more-item" href="p/blog-page_57.html">
+          <div class="more-item-icon" style="background:#E8F5E9; color:#2E7D32;"><i class="fas fa-chart-line"></i></div>
+          <div class="more-item-text">
+            <div class="more-item-title">لوحة المسوق</div>
+            <div class="more-item-sub">متابعة عمولتك وطلباتك</div>
+          </div>
+          <i class="fas fa-chevron-left more-item-arrow"></i>
+        </a>
+        <a class="more-item" href="p/blog-page_27.html">
+          <div class="more-item-icon" style="background:#E3F2FD; color:#1565C0;"><i class="fas fa-clipboard-list"></i></div>
+          <div class="more-item-text">
+            <div class="more-item-title">إدارة الطلبات</div>
+            <div class="more-item-sub">لوحة تحكم الأدمن</div>
+          </div>
+          <i class="fas fa-chevron-left more-item-arrow"></i>
+        </a>
+        <div class="more-item" onclick="showPage('about')">
+          <div class="more-item-icon" style="background:#F3E5F5; color:#6A1B9A;"><i class="fas fa-store"></i></div>
+          <div class="more-item-text">
+            <div class="more-item-title">عن ZOONA</div>
+            <div class="more-item-sub">من نحن ورؤيتنا</div>
+          </div>
+          <i class="fas fa-chevron-left more-item-arrow"></i>
+        </div>
+        <a class="more-item" href="p/blog-page_24.html">
+          <div class="more-item-icon" style="background:#FFF8E1; color:#F57F17;"><i class="fas fa-headset"></i></div>
+          <div class="more-item-text">
+            <div class="more-item-title">تواصل معنا</div>
+            <div class="more-item-sub">خدمة العملاء والدعم</div>
+          </div>
+          <i class="fas fa-chevron-left more-item-arrow"></i>
+        </a>
+        <a class="more-item" href="p/blog-page_38.html">
+          <div class="more-item-icon" style="background:#FFEBEE; color:#C62828;"><i class="fas fa-comments"></i></div>
+          <div class="more-item-text">
+            <div class="more-item-title">الشكاوى والاقتراحات</div>
+            <div class="more-item-sub">شاركنا رأيك وتجربتك</div>
+          </div>
+          <i class="fas fa-chevron-left more-item-arrow"></i>
+        </a>
+        <div class="more-item" onclick="showPage('privacy')">
+          <div class="more-item-icon" style="background:#E0F2F1; color:#00695C;"><i class="fas fa-shield-halved"></i></div>
+          <div class="more-item-text">
+            <div class="more-item-title">سياسة الخصوصية</div>
+            <div class="more-item-sub">حماية بياناتك وأمانك</div>
+          </div>
+          <i class="fas fa-chevron-left more-item-arrow"></i>
+        </div>
+        <a class="more-item" href="tel:+249918183521">
+          <div class="more-item-icon" style="background:#FCE4EC; color:#AD1457;"><i class="fas fa-phone"></i></div>
+          <div class="more-item-text">
+            <div class="more-item-title">اتصل بنا</div>
+            <div class="more-item-sub">+249 918 183 521</div>
+          </div>
+          <i class="fas fa-chevron-left more-item-arrow"></i>
+        </a>
+      </div>
+
+      <div style="text-align:center; padding:16px 0; color:#bbb; font-size:13px;">
+        ZOONA © 2025 - جميع الحقوق محفوظة
+      </div>
+    </div>
+  </div><!-- /page-more -->
+
+  <!-- ══════════════════ INLINE PAGES ══════════════════ -->
+
+  <!-- About Page -->
+  <div class="inline-page" id="inlinePage-about">
+    <div class="inline-page-header">
+      <button class="back-btn" onclick="hidePage('about')"><i class="fas fa-arrow-right"></i></button>
+      <h2>عن ZOONA</h2>
+    </div>
+    <div class="inline-page-body">
+      <div class="about-container">
+        <h1>زونا للتسوق</h1>
+        <p><strong>ZOONA</strong> هو منصّة تسوّق إلكتروني رائدة تتبع لشركة <strong>سنيم للتجارة والاستثمار المحدودة</strong>، نقدّم من خلالها تجربة شراء موثوقة وسهلة داخل السودان، مع التزام تام بالجودة والمصداقية والشفافية.</p>
+        <h2>رؤيتنا</h2>
+        <p>نسعى لأن نكون <strong>أكبر منصة تسوق إلكتروني سودانية</strong>، ونوفّر تجربة آمنة وسريعة لكل عميل، مع بناء بيئة تجارة حديثة قائمة على الثقة والجودة وسهولة الوصول.</p>
+        <h2>رسالتنا</h2>
+        <p>توفير منصة تجمع بين <strong>المنتجات الأصلية، الأسعار الشفافة، وخدمة العملاء الفعّالة</strong>، مع ضمان تجربة شراء مريحة وسريعة.</p>
+        <h2>قيمنا</h2>
+        <ul>
+          <li><strong>المصداقية:</strong> شفافية كاملة في الأسعار والعروض.</li>
+          <li><strong>الجودة:</strong> منتجات أصلية من موردين موثوقين.</li>
+          <li><strong>الالتزام:</strong> احترام المواعيد وتقديم خدمة ما بعد البيع.</li>
+          <li><strong>الابتكار:</strong> تطوير مستمر للمنصة والخدمات.</li>
+          <li><strong>الراحة والأمان:</strong> خيارات دفع آمنة وعلى رأسها الدفع عند الاستلام.</li>
+        </ul>
+        <h2>ما يميزنا</h2>
+        <div class="highlight-box">
+          <ul>
+            <li>الدفع عند الاستلام لراحة وأمان العملاء.</li>
+            <li>توصيل سريع يغطي معظم ولايات ومدن السودان.</li>
+            <li>خدمة عملاء احترافية قبل وبعد الشراء.</li>
+            <li>منتجات أصلية ومضمونة الجودة.</li>
+            <li>أسعار شفافة وعروض حقيقية.</li>
+            <li>متجر موثوق يتبع لشركة مسجلة رسميًا.</li>
+          </ul>
+        </div>
+        <h2>التوصيل</h2>
+        <p>خدماتنا تشمل معظم مناطق السودان:<br>
+        <strong>كوستي / ربك / كنانة / الأبيض / سنار / سنجة / الدمازين / المناقل / مدني / الحصاحيصا / القضارف / كسلا / بورتسودان / حلفا الجديدة / عطبرة / الدامر / شندي / الدبة / كريمة / مروي / دنقلا / وادي حلفا / الخرطوم / أم درمان / بحري</strong></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Privacy Page -->
+  <div class="inline-page" id="inlinePage-privacy">
+    <div class="inline-page-header">
+      <button class="back-btn" onclick="hidePage('privacy')"><i class="fas fa-arrow-right"></i></button>
+      <h2>سياسة الخصوصية</h2>
+    </div>
+    <div class="inline-page-body" style="font-family:var(--font); line-height:1.8; color:#333; font-size:14px; direction:rtl;">
+      <h2 style="color:#D32F2F; text-align:center; margin-bottom:16px;">🔐 سياسة الخصوصية – ZOONA</h2>
+      <p>نشكرك على زيارتك لـ <strong>ZOONA</strong> ونؤكد لك أننا نلتزم كامل الالتزام بحماية خصوصيتك وبياناتك الشخصية.</p>
+      <h3 style="color:#16a085; margin:14px 0 6px;">✴️ المعلومات التي نجمعها</h3>
+      <ul style="margin-right:18px; margin-bottom:10px;">
+        <li>الاسم الكامل.</li>
+        <li>رقم الهاتف للتواصل والتوصيل.</li>
+        <li>المدينة والعنوان التفصيلي.</li>
+        <li>البريد الإلكتروني (في حال تم إدخاله).</li>
+      </ul>
+      <h3 style="color:#16a085; margin:14px 0 6px;">✴️ كيف نستخدم البيانات؟</h3>
+      <ul style="margin-right:18px; margin-bottom:10px;">
+        <li>تأكيد الطلبات والتواصل معك بشأنها.</li>
+        <li>تجهيز وتوصيل المنتجات لعنوانك الصحيح.</li>
+        <li>إرسال إشعارات عن العروض والخصومات (عند رغبتك فقط).</li>
+      </ul>
+      <h3 style="color:#16a085; margin:14px 0 6px;">✴️ هل نشارك بياناتك؟</h3>
+      <p>لا نقوم ببيع أو مشاركة بياناتك لأي طرف ثالث، فقط باستثناء شركات التوصيل الضرورية.</p>
+      <h3 style="color:#D32F2F; margin:14px 0 6px;">✴️ حقوق المستخدم</h3>
+      <ul style="margin-right:18px; margin-bottom:10px;">
+        <li>يحق لك طلب تعديل بياناتك الشخصية.</li>
+        <li>يحق لك طلب حذف بياناتك من النظام.</li>
+        <li>التحكم في استلامك للرسائل الإعلانية.</li>
+      </ul>
+      <p style="text-align:center; color:#2980b9; font-weight:700; margin-top:16px;">🔒 نحن نحترم خصوصيتك — وتسوقك معنا آمن 100%</p>
+    </div>
+  </div>
+
+  <!-- ─── BOTTOM NAVIGATION ─── -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" id="nav-home" onclick="switchTab('home')">
+      <i class="fas fa-home"></i>
+      <span>الرئيسية</span>
+    </button>
+    <button class="nav-item" id="nav-cats" onclick="switchTab('cats')">
+      <i class="fas fa-th-large"></i>
+      <span>الأقسام</span>
+    </button>
+    <button class="nav-item" id="nav-cart" onclick="switchTab('cart')">
+      <i class="fas fa-shopping-cart"></i>
+      <span>السلة</span>
+      <span class="cart-badge" id="cartBadge">0</span>
+    </button>
+    <button class="nav-item" id="nav-orders" onclick="switchTab('orders')">
+      <i class="fas fa-box"></i>
+      <span>طلباتي</span>
+    </button>
+    <button class="nav-item" id="nav-more" onclick="switchTab('more')">
+      <i class="fas fa-ellipsis-h"></i>
+      <span>المزيد</span>
+    </button>
+  </nav>
+
+</div><!-- /#app -->
+
+<!-- FLOATING BUTTONS -->
+<div class="float-btns" id="floatBtns">
+  <a href="tel:+249918183521" class="float-btn call"><i class="fas fa-phone"></i></a>
+  <a href="https://wa.me/+249918183521" class="float-btn whatsapp"><i class="fab fa-whatsapp"></i></a>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- PRODUCT DETAIL MODAL -->
+<div class="modal-overlay" id="productModal" onclick="closeModal(event)">
+  <div class="product-modal" id="modalContent">
+    <button class="modal-close" onclick="closeModal(null)"><i class="fas fa-times"></i></button>
+    <img src="" alt="" class="modal-img" id="modalImg">
+    <div class="modal-name" id="modalName"></div>
+    <div class="modal-price-wrap">
+      <div class="modal-price" id="modalPrice"></div>
+      <div class="modal-old" id="modalOld"></div>
+    </div>
+    <div class="modal-desc" id="modalDesc"></div>
+    <div class="modal-qty-wrap">
+      <span class="modal-qty-label">الكمية:</span>
+      <button class="qty-btn" onclick="changeModalQty(-1)">−</button>
+      <span class="qty-val" id="modalQty">1</span>
+      <button class="qty-btn" onclick="changeModalQty(1)">+</button>
+    </div>
+    <button class="modal-add-btn" id="modalAddBtn" onclick="addModalToCart()">
+      <i class="fas fa-cart-plus"></i> إضافة إلى السلة
+    </button>
   </div>
 </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-messaging.js";
+<!-- NOTIFICATION MODAL -->
+<div id="notifModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9000; display:none; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:20px; padding:24px; width:90%; max-width:380px; text-align:center; font-family:var(--font); direction:rtl; box-shadow:0 20px 40px rgba(211,47,47,.25);">
+    <div style="width:70px; height:70px; background:var(--red-gradient); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:32px; color:#fff;">🔔</div>
+    <h3 style="color:var(--red); font-size:20px; margin-bottom:8px;">عروض زونا الحصرية 🎁</h3>
+    <p style="font-size:14px; color:#555; margin-bottom:20px; line-height:1.6;">فعّل الإشعارات لتصلك أحدث العروض والخصومات أولاً بأول!</p>
+    <div style="display:flex; gap:10px;">
+      <button id="enableNotifBtn" style="flex:1; background:var(--red-gradient); color:#fff; border:none; padding:14px; border-radius:12px; font-family:var(--font); font-size:15px; font-weight:800; cursor:pointer;">تفعيل</button>
+      <button onclick="dismissNotif()" style="flex:1; background:#fff; color:var(--red); border:2px solid var(--red); padding:14px; border-radius:12px; font-family:var(--font); font-size:15px; font-weight:800; cursor:pointer;">لاحقاً</button>
+    </div>
+  </div>
+</div>
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBxQLDLqr4W3lApfYLPjSV5It7925a9Rr0",
-  authDomain: "double-carport-476915-j7.firebaseapp.com",
-  projectId: "double-carport-476915-j7",
-  storageBucket: "double-carport-476915-j7.firebasestorage.app",
-  messagingSenderId: "122641462099",
-  appId: "1:122641462099:web:345b777a88757d3ef7e7a6"
-};
+<!-- PWA INSTALL PROMPT -->
+<div id="pwaBox" style="display:none; position:fixed; bottom:calc(var(--bottom-nav-h)+10px); left:12px; right:12px; background:#fff; border-radius:16px; padding:16px; box-shadow:0 6px 24px rgba(0,0,0,.15); z-index:200; font-family:var(--font); direction:rtl; border:2px solid var(--red);">
+  <button onclick="document.getElementById('pwaBox').style.display='none'" style="position:absolute; top:10px; left:12px; background:none; border:none; font-size:20px; color:#999; cursor:pointer;">✕</button>
+  <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+    <img src="icon/icon-72x72.png" style="width:48px; height:48px; border-radius:10px;">
+    <div>
+      <div style="font-size:15px; font-weight:800; color:#222;">ثبّت تطبيق ZOONA</div>
+      <div style="font-size:12px; color:#888;">تسوق أسرع وأسهل من تطبيقنا</div>
+    </div>
+  </div>
+  <button id="installBtn" style="width:100%; background:var(--red-gradient); color:#fff; border:none; padding:12px; border-radius:10px; font-family:var(--font); font-size:15px; font-weight:800; cursor:pointer;">تثبيت التطبيق</button>
+</div>
 
-const VAPID_KEY = "BE2_9m83w2cu_fxhqV4eUowZQT7E8nm-FZZMWqN5DByd-Naykp52nWwA9uuW_L9x_3rPPsMNZzctsZD8j5YyaZw";
+<script>
+/* ══════════════════════════════════════════
+   ZOONA STORE - Main Script
+══════════════════════════════════════════ */
 
-// تهيئة Firebase
-const app = initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
+// ── State ──
+let allProducts = [];
+let filteredProducts = [];
+let cart = JSON.parse(localStorage.getItem('cartItems')) || [];
+let orders = JSON.parse(localStorage.getItem('zoonaOrders')) || [];
+let currentModalProduct = null;
+let modalQty = 1;
+let currentCategory = 'الكل';
+let deferredPrompt = null;
 
-// دالة لطلب وتخزين التوكن
-function requestAndSaveToken(registration) {
-  Notification.requestPermission().then(permission => {
-    if (permission === "granted") {
-      getToken(messaging, {
-        vapidKey: VAPID_KEY,
-        serviceWorkerRegistration: registration
-      }).then(token => {
-        if (token) {
-          console.log('FCM Token:', token);
-          
-          // حفظ التوكن في الخادم
-          fetch('/api/saveToken', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              token: token,
-              device: navigator.userAgent,
-              timestamp: new Date().toISOString(),
-              app: 'ZOONA'
-            })
-          })
-          .then(response => response.json())
-          .then(data => {
-            console.log('Token saved successfully:', data);
-            showToast('تم تفعيل الإشعارات بنجاح ✅');
-          })
-          .catch(error => {
-            console.error('Error saving token:', error);
-            // حفظ التوكن محلياً ريثما يتم الاتصال بالخادم
-            localStorage.setItem('fcm_token_pending', token);
-          });
-          
-          // تسجيل التوكن محلياً
-          localStorage.setItem('fcm_token', token);
-          localStorage.setItem('notifications_enabled', 'true');
-          localStorage.setItem('notifications_enabled_date', new Date().toISOString());
-          
-          // إخفاء زر الجرس لأن الإشعارات مفعلة الآن ✅
-          const bellBtn = document.getElementById('manual-notification-btn');
-          if (bellBtn) bellBtn.style.display = 'none';
-          
-          // إخفاء النافذة
-          const box = document.getElementById('custom-notification-prompt');
-          if (box) box.style.display = 'none';
-        }
-      }).catch(error => {
-        console.error('Error getting FCM token:', error);
-        showToast('حدث خطأ في تفعيل الإشعارات', 3000);
-      });
-    } else if (permission === "denied") {
-      localStorage.setItem('notifications_declined', 'true');
-      localStorage.setItem('notifications_declined_date', new Date().toISOString());
-      showToast('تم رفض تفعيل الإشعارات', 2000);
-      
-      // إخفاء النافذة
-      const box = document.getElementById('custom-notification-prompt');
-      if (box) box.style.display = 'none';
-    }
-  });
+// ── Init ──
+window.addEventListener('DOMContentLoaded', () => {
+  // Show splash then load app
+  setTimeout(() => {
+    loadProducts();
+    initRotatingMessages();
+    initPullToRefresh();
+  }, 100);
+
+  setTimeout(() => {
+    document.getElementById('splash').style.opacity = '0';
+    setTimeout(() => {
+      document.getElementById('splash').style.display = 'none';
+      document.getElementById('app').style.display = 'flex';
+      document.getElementById('floatBtns').style.display = 'flex';
+      registerServiceWorker();
+      setTimeout(maybeShowNotifPrompt, 4000);
+    }, 400);
+  }, 1800);
+});
+
+// ── Load Products ──
+async function loadProducts() {
+  try {
+    const res = await fetch('products.json');
+    allProducts = await res.json();
+    filteredProducts = [...allProducts];
+    renderProducts(filteredProducts);
+  } catch(e) {
+    console.error('Error loading products:', e);
+    document.getElementById('productsGrid').innerHTML = '<div style="padding:30px; text-align:center; color:#999; grid-column:1/-1;">تعذّر تحميل المنتجات</div>';
+  }
 }
 
-// دالة لعرض إشعار مخصص
-function showCustomNotification(notification) {
-  // إنشاء عنصر إشعار مخصص
-  const notificationElement = document.createElement('div');
-  notificationElement.className = 'custom-notification';
-  notificationElement.innerHTML = `
-    <div style="
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);
-      color: white;
-      padding: 16px 24px;
-      border-radius: 12px;
-      box-shadow: 0 8px 25px rgba(211, 47, 47, 0.3);
-      z-index: 10010;
-      max-width: 350px;
-      animation: slideInRight 0.3s ease-out;
-      font-family: 'Tajawal', sans-serif;
-      direction: rtl;
-      border-right: 4px solid #FFEB3B;
-    ">
-      <div style="display: flex; align-items: center; gap: 12px;">
-        <div style="font-size: 24px;">🔔</div>
-        <div style="flex: 1;">
-          <div style="font-weight: 800; font-size: 16px; margin-bottom: 4px;">
-            ${notification.title || 'ZOONA'}
-          </div>
-          <div style="font-size: 14px; opacity: 0.9;">
-            ${notification.body || 'إشعار جديد'}
-          </div>
+// ── Render Products ──
+function renderProducts(products) {
+  const grid = document.getElementById('productsGrid');
+  if (!products || products.length === 0) {
+    grid.innerHTML = '<div style="padding:40px 20px; text-align:center; color:#aaa; grid-column:1/-1;"><i class="fas fa-box-open" style="font-size:50px; display:block; margin-bottom:12px;"></i>لا توجد منتجات في هذا القسم</div>';
+    return;
+  }
+  grid.innerHTML = products.map(p => `
+    <div class="product-card" onclick="openModal(${p.id})">
+      <div class="product-img-wrap">
+        <img src="${p.image}" alt="${p.name}" loading="lazy" onerror="this.src='assets/splash-logo.png'">
+        ${p.discount ? `<div class="product-discount-badge">-${p.discount}%</div>` : ''}
+      </div>
+      <div class="product-info">
+        <div class="product-label">${p.category}</div>
+        <div class="product-name">${p.name}</div>
+        <div class="product-prices">
+          <span class="product-price">${p.price.toLocaleString()} SDG</span>
+          ${p.oldPrice ? `<span class="product-old-price">${p.oldPrice.toLocaleString()}</span>` : ''}
         </div>
-        <button onclick="this.parentElement.parentElement.remove()" 
-                style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">
-          ✕
+        <button class="add-to-cart-btn" id="cartBtn-${p.id}" onclick="addToCart(event, ${p.id})">
+          <i class="fas fa-cart-plus"></i> إضافة إلى السلة
         </button>
       </div>
     </div>
-  `;
-  
-  document.body.appendChild(notificationElement);
-  
-  // إزالة الإشعار تلقائياً بعد 5 ثواني
-  setTimeout(() => {
-    if (notificationElement.parentNode) {
-      notificationElement.remove();
-    }
-  }, 5000);
+  `).join('');
+
+  // Restore button states
+  cart.forEach(item => {
+    const btn = document.getElementById(`cartBtn-${item.id}`);
+    if (btn) { btn.classList.add('added'); btn.innerHTML = '<i class="fas fa-check"></i> تمت الإضافة'; }
+  });
 }
 
-// استقبال الرسائل أثناء استخدام التطبيق
-onMessage(messaging, (payload) => {
-  console.log('Message received:', payload);
-  
-  // إشعار مخصص للرسائل الواردة
-  if (payload.notification) {
-    showCustomNotification(payload.notification);
+// ── Category Filter ──
+function filterCategory(cat, btn) {
+  currentCategory = cat;
+
+  // Update buttons
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  if (cat === 'الكل') {
+    filteredProducts = [...allProducts];
+    document.getElementById('sectionTitle').textContent = '🔥 المنتجات المميزة';
+  } else {
+    filteredProducts = allProducts.filter(p => p.category === cat);
+    document.getElementById('sectionTitle').textContent = `📦 ${cat}`;
+  }
+
+  const searchVal = document.getElementById('searchInput').value.trim();
+  if (searchVal) {
+    filteredProducts = filteredProducts.filter(p => p.name.includes(searchVal) || p.description.includes(searchVal));
+  }
+
+  renderProducts(filteredProducts);
+  if (document.getElementById('page-home').classList.contains('active')) {
+    document.getElementById('page-home').scrollTop = 0;
+  }
+}
+
+// ── Search ──
+function handleSearch(val) {
+  const q = val.trim().toLowerCase();
+  let base = currentCategory === 'الكل' ? allProducts : allProducts.filter(p => p.category === currentCategory);
+  if (q) {
+    filteredProducts = base.filter(p => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || p.category.toLowerCase().includes(q));
+  } else {
+    filteredProducts = [...base];
+  }
+  renderProducts(filteredProducts);
+}
+
+// ── Product Modal ──
+function openModal(id) {
+  const p = allProducts.find(x => x.id === id);
+  if (!p) return;
+  currentModalProduct = p;
+  modalQty = 1;
+
+  document.getElementById('modalImg').src = p.image;
+  document.getElementById('modalName').textContent = p.name;
+  document.getElementById('modalPrice').textContent = p.price.toLocaleString() + ' SDG';
+  document.getElementById('modalOld').textContent = p.oldPrice ? p.oldPrice.toLocaleString() + ' SDG' : '';
+  document.getElementById('modalDesc').textContent = p.description;
+  document.getElementById('modalQty').textContent = modalQty;
+
+  const inCart = cart.find(x => x.id === id);
+  const addBtn = document.getElementById('modalAddBtn');
+  if (inCart) {
+    addBtn.innerHTML = '<i class="fas fa-check"></i> موجود في السلة';
+    addBtn.style.background = 'linear-gradient(135deg,#2e7d32,#1b5e20)';
+  } else {
+    addBtn.innerHTML = '<i class="fas fa-cart-plus"></i> إضافة إلى السلة';
+    addBtn.style.background = '';
+  }
+
+  document.getElementById('productModal').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('productModal')) return;
+  document.getElementById('productModal').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+function changeModalQty(d) {
+  modalQty = Math.max(1, modalQty + d);
+  document.getElementById('modalQty').textContent = modalQty;
+}
+
+function addModalToCart() {
+  if (!currentModalProduct) return;
+  const p = currentModalProduct;
+  addProductToCart(p, modalQty);
+  closeModal(null);
+}
+
+// ── Add to Cart ──
+function addToCart(e, id) {
+  e.stopPropagation();
+  const p = allProducts.find(x => x.id === id);
+  if (!p) return;
+  addProductToCart(p, 1);
+}
+
+function addProductToCart(p, qty) {
+  const existing = cart.find(x => x.id === p.id);
+  if (existing) {
+    existing.quantity += qty;
+  } else {
+    cart.push({
+      id: p.id,
+      name: p.name,
+      price: p.price,
+      image: p.image,
+      quantity: qty,
+      warehouse: p.warehouse || 'الخرطوم',
+      affiliateId: getAffiliateId()
+    });
+  }
+  saveCart();
+  showToast(`✅ تمت إضافة "${p.name}" إلى السلة`, 'green');
+
+  // Update button
+  const btn = document.getElementById(`cartBtn-${p.id}`);
+  if (btn) { btn.classList.add('added'); btn.innerHTML = '<i class="fas fa-check"></i> تمت الإضافة'; }
+}
+
+function saveCart() {
+  localStorage.setItem('cartItems', JSON.stringify(cart));
+  updateCartBadge();
+}
+
+function updateCartBadge() {
+  const total = cart.reduce((s, i) => s + i.quantity, 0);
+  const badge = document.getElementById('cartBadge');
+  badge.textContent = total;
+  badge.classList.toggle('show', total > 0);
+}
+
+// ── Render Cart ──
+function renderCart() {
+  const container = document.getElementById('cartContent');
+  if (cart.length === 0) {
+    container.innerHTML = `
+      <div class="cart-empty">
+        <i class="fas fa-shopping-cart"></i>
+        <h3>سلتك فارغة!</h3>
+        <p>أضف منتجات لتبدأ التسوق</p>
+        <button class="go-shop" onclick="switchTab('home')">تسوق الآن</button>
+      </div>`;
+    return;
+  }
+
+  const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+
+  const itemsHtml = cart.map((item, idx) => `
+    <div class="cart-item">
+      <img src="${item.image || 'assets/splash-logo.png'}" class="cart-item-img" alt="${item.name}" onerror="this.src='assets/splash-logo.png'">
+      <div class="cart-item-info">
+        <div class="cart-item-name">${item.name}</div>
+        <div class="cart-item-price">${(item.price * item.quantity).toLocaleString()} SDG</div>
+        <div class="cart-qty">
+          <button class="qty-btn" onclick="changeCartQty(${idx}, -1)">−</button>
+          <span class="qty-val">${item.quantity}</span>
+          <button class="qty-btn" onclick="changeCartQty(${idx}, 1)">+</button>
+          <button class="remove-item" onclick="removeFromCart(${idx})"><i class="fas fa-trash-alt"></i></button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  container.innerHTML = `
+    ${itemsHtml}
+    <div class="cart-summary">
+      <div class="cart-row"><span>إجمالي المنتجات (${cart.reduce((s,i)=>s+i.quantity,0)} قطعة)</span><span>${subtotal.toLocaleString()} SDG</span></div>
+      <div class="cart-row"><span>رسوم التوصيل</span><span style="color:#2E7D32;">مجاناً</span></div>
+      <div class="cart-row"><span>الإجمالي الكلي</span><span>${subtotal.toLocaleString()} SDG</span></div>
+    </div>
+    <button class="checkout-btn" onclick="goCheckout()">
+      <i class="fas fa-paper-plane"></i> إتمام الطلب
+    </button>
+  `;
+}
+
+function changeCartQty(idx, d) {
+  cart[idx].quantity = Math.max(1, cart[idx].quantity + d);
+  saveCart();
+  renderCart();
+}
+
+function removeFromCart(idx) {
+  const name = cart[idx].name;
+  cart.splice(idx, 1);
+  saveCart();
+  renderCart();
+  showToast(`🗑️ تم حذف "${name}" من السلة`);
+  // Reset product card button
+  renderProducts(filteredProducts);
+}
+
+function goCheckout() {
+  if (cart.length === 0) { showToast('السلة فارغة!'); return; }
+  window.location.href = 'p/e.html';
+}
+
+// ── Render Orders ──
+function renderOrders() {
+  const container = document.getElementById('ordersContent');
+  if (orders.length === 0) {
+    container.innerHTML = `
+      <div class="orders-empty">
+        <i class="fas fa-box-open"></i>
+        <h3 style="color:#888; font-size:18px;">لا توجد طلبات بعد</h3>
+        <p style="color:#aaa; font-size:14px; margin-bottom:20px;">سيظهر طلبك هنا بعد إتمامه</p>
+        <button class="go-shop" onclick="switchTab('home')">تسوق الآن</button>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = orders.map((o, i) => `
+    <div class="order-card">
+      <div class="order-status">${o.status || 'قيد المعالجة'}</div>
+      <div class="order-id">رقم الطلب: ${o.id || 'N/A'}</div>
+      <div class="order-items">${o.items ? o.items.map(x=>x.name).join('، ') : 'طلب'}</div>
+      <div class="order-total">${o.total ? o.total.toLocaleString() + ' SDG' : ''}</div>
+      <div class="order-date">${o.date || ''}</div>
+    </div>
+  `).join('') + `<button class="clear-orders-btn" onclick="clearOrders()">مسح السجل</button>`;
+}
+
+function clearOrders() {
+  if (confirm('هل تريد مسح سجل الطلبات؟')) {
+    orders = [];
+    localStorage.removeItem('zoonaOrders');
+    renderOrders();
+  }
+}
+
+// ── Navigation ──
+function switchTab(tab) {
+  // Hide all pages
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+  document.getElementById(`page-${tab}`).classList.add('active');
+  document.getElementById(`nav-${tab}`).classList.add('active');
+
+  if (tab === 'cart') renderCart();
+  if (tab === 'orders') renderOrders();
+}
+
+// ── Inline Pages (About, Privacy) ──
+function showPage(name) {
+  document.getElementById(`inlinePage-${name}`).classList.add('active');
+  document.getElementById(`inlinePage-${name}`).style.position = 'fixed';
+  document.getElementById(`inlinePage-${name}`).style.inset = '0';
+  document.getElementById(`inlinePage-${name}`).style.background = '#fff';
+  document.getElementById(`inlinePage-${name}`).style.zIndex = '200';
+  document.getElementById(`inlinePage-${name}`).style.overflowY = 'auto';
+  document.getElementById(`inlinePage-${name}`).style.paddingBottom = '20px';
+  document.getElementById(`inlinePage-${name}`).style.display = 'block';
+}
+
+function hidePage(name) {
+  document.getElementById(`inlinePage-${name}`).style.display = 'none';
+}
+
+// ── Rotating Banner Messages ──
+const bannerMessages = [
+  "🔥 عروض حصرية بأسعار مخفضة وجودة عالية في السودان",
+  "💻 أحدث الموبايلات والأجهزة الإلكترونية الأصلية.",
+  "🎮 أفضل ألعاب الأطفال لكل الأعمار بجودة عالية.",
+  "💄 أدوات التجميل العصرية لأناقة حديثة ومتميزة.",
+  "🚚 توصيل سريع وآمن لكل ولايات السودان الآمنة.",
+  "🎁 عروض خاصة للمشتركين الجدد."
+];
+let msgIdx = 0;
+function initRotatingMessages() {
+  const el = document.getElementById('rotatingMsg');
+  function show() {
+    el.style.opacity = '0';
+    setTimeout(() => {
+      el.textContent = bannerMessages[msgIdx];
+      el.style.opacity = '1';
+      msgIdx = (msgIdx + 1) % bannerMessages.length;
+    }, 500);
+  }
+  show();
+  setInterval(show, 5000);
+}
+
+// ── Toast ──
+let toastTimer;
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = type ? `red` : '';
+  if (type === 'green') t.style.background = '#2E7D32';
+  else if (type === 'red') t.style.background = '#D32F2F';
+  else t.style.background = '#333';
+  t.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3000);
+}
+
+// ── Affiliate ──
+function getAffiliateId() {
+  const p = new URLSearchParams(window.location.search);
+  const ref = p.get('ref');
+  if (ref) { localStorage.setItem('currentAffiliateId', ref); return ref; }
+  return localStorage.getItem('currentAffiliateId') || 'direct';
+}
+
+// ── Service Worker ──
+function registerServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js')
+      .then(r => { console.log('SW registered'); initFirebaseMessaging(r); })
+      .catch(e => console.error('SW error:', e));
+  }
+}
+
+// ── Firebase Notifications ──
+async function initFirebaseMessaging(registration) {
+  try {
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js");
+    const { getMessaging, getToken, onMessage } = await import("https://www.gstatic.com/firebasejs/12.6.0/firebase-messaging.js");
+    const app = initializeApp({
+      apiKey: "AIzaSyBxQLDLqr4W3lApfYLPjSV5It7925a9Rr0",
+      authDomain: "double-carport-476915-j7.firebaseapp.com",
+      projectId: "double-carport-476915-j7",
+      storageBucket: "double-carport-476915-j7.firebasestorage.app",
+      messagingSenderId: "122641462099",
+      appId: "1:122641462099:web:345b777a88757d3ef7e7a6"
+    });
+    const messaging = getMessaging(app);
+
+    document.getElementById('enableNotifBtn').onclick = async () => {
+      document.getElementById('notifModal').style.display = 'none';
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        const token = await getToken(messaging, {
+          vapidKey: "BE2_9m83w2cu_fxhqV4eUowZQT7E8nm-FZZMWqN5DByd-Naykp52nWwA9uuW_L9x_3rPPsMNZzctsZD8j5YyaZw",
+          serviceWorkerRegistration: registration
+        });
+        if (token) {
+          localStorage.setItem('fcm_token', token);
+          localStorage.setItem('notifications_enabled', 'true');
+          showToast('✅ تم تفعيل الإشعارات بنجاح', 'green');
+          fetch('/api/saveToken', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({token}) }).catch(()=>{});
+        }
+      }
+    };
+
+    onMessage(messaging, payload => {
+      if (payload.notification) showNotifBanner(payload.notification);
+    });
+  } catch(e) { console.log('Firebase messaging not available'); }
+}
+
+function showNotifBanner(n) {
+  const el = document.createElement('div');
+  el.innerHTML = `<div style="position:fixed;top:20px;right:16px;background:var(--red-gradient);color:#fff;padding:14px 18px;border-radius:12px;box-shadow:0 6px 20px rgba(211,47,47,.3);z-index:9999;max-width:320px;font-family:var(--font);direction:rtl;animation:slideInRight .3s ease">
+    <div style="display:flex;align-items:center;gap:10px"><span style="font-size:22px">🔔</span><div><div style="font-weight:800;font-size:15px">${n.title||'ZOONA'}</div><div style="font-size:13px;opacity:.9">${n.body||''}</div></div><button onclick="this.closest('div').parentNode.remove()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;margin-right:auto">✕</button></div></div>`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 6000);
+}
+
+function maybeShowNotifPrompt() {
+  if (localStorage.getItem('notifications_enabled') === 'true') return;
+  if (localStorage.getItem('notifications_declined') === 'true') return;
+  if (typeof Notification === 'undefined') return;
+  if (Notification.permission !== 'default') return;
+  document.getElementById('notifModal').style.display = 'flex';
+}
+
+function dismissNotif() {
+  document.getElementById('notifModal').style.display = 'none';
+  localStorage.setItem('notifications_declined', 'true');
+}
+
+// ── PWA Install ──
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  if (localStorage.getItem('pwaInstallShown') !== 'true') {
+    setTimeout(() => { document.getElementById('pwaBox').style.display = 'block'; }, 5000);
   }
 });
-
-// دالة لعرض إعدادات الإشعارات
-window.showNotificationSettings = function() {
-  const enabled = localStorage.getItem('notifications_enabled');
-  const declined = localStorage.getItem('notifications_declined');
-  
-  let message = 'حالة الإشعارات:\n\n';
-  
-  if (enabled) {
-    message += '✅ الإشعارات مفعلة\n';
-    const date = localStorage.getItem('notifications_enabled_date');
-    if (date) {
-      message += `تم التفعيل في: ${new Date(date).toLocaleDateString('ar-SA')}`;
-    }
-    
-    // إخفاء زر الجرس لأن الإشعارات مفعلة ✅
-    const bellBtn = document.getElementById('manual-notification-btn');
-    if (bellBtn) bellBtn.style.display = 'none';
-    
-    alert(message);
-    return;
-  } else if (declined) {
-    message += '❌ الإشعارات معطلة\n';
-    const date = localStorage.getItem('notifications_declined_date');
-    if (date) {
-      message += `تم التعطيل في: ${new Date(date).toLocaleDateString('ar-SA')}`;
-    }
-    message += '\nهل ترغب في تفعيلها الآن؟';
-    
-    if (confirm(message)) {
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.ready.then(registration => {
-          requestAndSaveToken(registration);
-        });
-      }
-      return;
-    }
-  } else {
-    message += '⚠️ لم يتم تحديد حالة الإشعارات\n';
-    message += 'هل ترغب في تفعيلها الآن؟';
-    
-    if (confirm(message)) {
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.ready.then(registration => {
-          requestAndSaveToken(registration);
-        });
-      }
-      return;
-    }
-  }
-  
-  if (!declined && !enabled) {
-    if (confirm(message)) {
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.ready.then(registration => {
-          requestAndSaveToken(registration);
-        });
-      }
-    }
-  } else if (enabled || declined) {
-    alert(message);
+document.getElementById('installBtn').onclick = async () => {
+  document.getElementById('pwaBox').style.display = 'none';
+  localStorage.setItem('pwaInstallShown', 'true');
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
   }
 };
 
-// تهيئة نظام الإشعارات بعد تحميل الصفحة بالكامل
-window.addEventListener('load', function() {
-  // انتظار إضافي لضمان تحميل كل شيء
-  setTimeout(() => {
-    // التحقق إذا كانت الإشعارات مفعلة وإخفاء زر الجرس ✅
-    const notificationsEnabled = localStorage.getItem('notifications_enabled');
-    if (notificationsEnabled === 'true') {
-      const bellBtn = document.getElementById('manual-notification-btn');
-      if (bellBtn) bellBtn.style.display = 'none';
+// ── Pull to Refresh ──
+function initPullToRefresh() {
+  let startY = 0, pulling = false;
+  const indicator = document.getElementById('pullIndicator');
+  const homePage = document.getElementById('page-home');
+
+  homePage.addEventListener('touchstart', e => {
+    if (homePage.scrollTop <= 0) { startY = e.touches[0].clientY; pulling = true; }
+  }, { passive: true });
+
+  homePage.addEventListener('touchmove', e => {
+    if (!pulling) return;
+    const dy = e.touches[0].clientY - startY;
+    if (dy > 0) {
+      const top = Math.min(dy, 120) - 70;
+      indicator.style.top = top + 'px';
+      document.getElementById('pullText').textContent = dy > 80 ? 'حرر للتحديث' : 'اسحب للتحديث';
     }
-    
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/service-worker.js')
-        .then(registration => {
-          console.log('Service Worker registered for notifications');
-          
-          // إعداد أزرار النافذة
-          const activateBtn = document.getElementById('activate-notifications');
-          const declineBtn = document.getElementById('decline-notifications');
-          
-          if (activateBtn) {
-            activateBtn.onclick = () => {
-              requestAndSaveToken(registration);
-            };
-          }
-          
-          if (declineBtn) {
-            declineBtn.onclick = () => {
-              const box = document.getElementById('custom-notification-prompt');
-              if (box) box.style.display = 'none';
-              localStorage.setItem('notifications_declined', 'true');
-              localStorage.setItem('notifications_declined_date', new Date().toISOString());
-              
-              // إظهار زر الجرس لأن المستخدم رفض الإشعارات وقد يرغب بتفعيلها لاحقاً ✅
-              const bellBtn = document.getElementById('manual-notification-btn');
-              if (bellBtn) {
-                bellBtn.style.display = 'flex';
-                // تأخير بسيط لضمان ظهور الزر
-                setTimeout(() => {
-                  bellBtn.style.display = 'flex';
-                }, 100);
-              }
-              
-              showToast('يمكنك تفعيل الإشعارات لاحقاً من الإعدادات', 3000);
-            };
-          }
-          
-          // محاولة استعادة التوكن المخزن
-          const savedToken = localStorage.getItem('fcm_token');
-          if (savedToken) {
-            console.log('Found saved FCM token');
-          }
-          
-          // التحقق من وجود توكن معلق
-          const pendingToken = localStorage.getItem('fcm_token_pending');
-          if (pendingToken && navigator.onLine) {
-            fetch('/api/saveToken', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ token: pendingToken })
-            }).then(() => {
-              localStorage.removeItem('fcm_token_pending');
-            });
-          }
-          
-          // عرض نافذة الإشعارات بعد 4 ثواني من تحميل الموقع
-          setTimeout(() => {
-            const box = document.getElementById('custom-notification-prompt');
-            const userDeclined = localStorage.getItem('notifications_declined');
-            const userEnabled = localStorage.getItem('notifications_enabled');
-            
-            // التحقق من الشروط قبل العرض
-            if (Notification.permission === 'default' && 
-                !userDeclined && 
-                !userEnabled && 
-                box &&
-                document.getElementById('splash').style.display === 'none') {
-              
-              box.style.display = 'block';
-              console.log('عرض نافذة الإشعارات بعد التأخير');
-            }
-          }, 4000); // انتظار 4 ثواني بعد تحميل الموقع
-          
-          // إظهار زر الإعدادات بعد 8 ثواني فقط إذا لم تكن الإشعارات مفعلة ✅
-          setTimeout(() => {
-            const manualBtn = document.getElementById('manual-notification-btn');
-            const notificationsEnabled = localStorage.getItem('notifications_enabled');
-            
-            if (manualBtn && notificationsEnabled !== 'true') {
-              manualBtn.style.display = 'flex';
-            }
-          }, 8000);
-          
-        })
-        .catch(error => {
-          console.error('Service Worker registration failed:', error);
-        });
+  }, { passive: true });
+
+  homePage.addEventListener('touchend', e => {
+    if (!pulling) return;
+    pulling = false;
+    const dy = e.changedTouches[0].clientY - startY;
+    indicator.style.top = '-70px';
+    if (dy > 80) {
+      showToast('جاري تحديث المنتجات...', '');
+      loadProducts();
     }
-    
-  }, 1000); // تأخير إضافي لضمان استقرار الصفحة
-});
+  }, { passive: true });
+}
+
+// ── Cart badge on load ──
+updateCartBadge();
+
+// ── Online/Offline ──
+window.addEventListener('offline', () => showToast('⚠️ أنت غير متصل بالإنترنت'));
+window.addEventListener('online', () => showToast('✅ تم استعادة الاتصال', 'green'));
 </script>
-</body>  
+
+</body>
 </html>
