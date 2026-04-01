@@ -1,0 +1,178 @@
+[
+  {
+    "id": 1,
+    "name": "آيباد الأطفال الذكي",
+    "price": 190000,
+    "oldPrice": 220000,
+    "discount": 14,
+    "image": "https://images.pexels.com/photos/1334597/pexels-photo-1334597.jpeg?auto=compress&cs=tinysrgb&w=400",
+    "category": "ألعاب أطفال",
+    "description": "آيباد تعليمي للأطفال بشاشة 10 بوصة، مناسب لجميع الأعمار، يدعم الألعاب التعليمية والترفيهية",
+    "warehouse": "الخرطوم"
+  },
+  {
+    "id": 2,
+    "name": "سامسونج A15 128GB",
+    "price": 380000,
+    "oldPrice": 420000,
+    "discount": 10,
+    "image": "https://images.pexels.com/photos/404280/pexels-photo-404280.jpeg?auto=compress&cs=tinysrgb&w=400",
+    "category": "موبايلات",
+    "description": "هاتف سامسونج جلاكسي A15 بذاكرة 128GB، شاشة 6.5 بوصة AMOLED، بطارية 5000 mAh",
+    "warehouse": "الخرطوم"
+  },
+  {
+    "id": 3,
+    "name": "سماعات لاسلكية بلوتوث",
+    "price": 45000,
+    "oldPrice": 65000,
+    "discount": 31,
+    "image": "https://images.pexels.com/photos/3394650/pexels-photo-3394650.jpeg?auto=compress&cs=tinysrgb&w=400",
+    "category": "إكسسوارات موبايلات",
+    "description": "سماعات TWS لاسلكية بجودة صوت عالية، عمر بطارية 24 ساعة، مقاومة للماء",
+    "warehouse": "الخرطوم"
+  },
+  {
+    "id": 4,
+    "name": "شاحن سريع 65W USB-C",
+    "price": 28000,
+    "oldPrice": 35000,
+    "discount": 20,
+    "image": "https://images.pexels.com/photos/4219654/pexels-photo-4219654.jpeg?auto=compress&cs=tinysrgb&w=400",
+    "category": "إكسسوارات موبايلات",
+    "description": "شاحن سريع 65 واط يدعم جميع الأجهزة، مع كابل USB-C متين",
+    "warehouse": "الخرطوم"
+  },
+  {
+    "id": 5,
+    "name": "لابتوب HP Core i5 جيل 12",
+    "price": 980000,
+    "oldPrice": 1100000,
+    "discount": 11,
+    "image": "https://images.pexels.com/photos/18105/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=400",
+    "category": "أجهزة إلكترونية",
+    "description": "لابتوب HP بمعالج Core i5 الجيل الثاني عشر، ذاكرة 8GB RAM، هارد 512GB SSD",
+    "warehouse": "الخرطوم"
+  },
+  {
+    "id": 6,
+    "name": "تلفزيون سامسونج 55 بوصة 4K",
+    "price": 850000,
+    "oldPrice": 950000,
+    "discount": 11,
+    "image": "https://images.pexels.com/photos/1571458/pexels-photo-1571458.jpeg?auto=compress&cs=tinysrgb&w=400",
+    "category": "أجهزة كهربائية",
+    "description": "تلفزيون سامسونج QLED 55 بوصة دقة 4K UHD، سمارت تي في، HDR 1000",
+    "warehouse": "الخرطوم"
+  },
+  {
+    "id": 7,
+    "name": "مكيف سبليت 1.5 طن",
+    "price": 650000,
+    "oldPrice": 720000,
+    "discount": 10,
+    "image": "https://images.pexels.com/photos/5622179/pexels-photo-5622179.jpeg?auto=compress&cs=tinysrgb&w=400",
+    "category": "أجهزة كهربائية",
+    "description": "مكيف هواء سبليت 18000 وحدة، توفير في الكهرباء 60%، ضمان سنتين",
+    "warehouse": "الخرطوم"
+  },
+  {
+    "id": 8,
+    "name": "سيارة أطفال كهربائية",
+    "price": 125000,
+    "oldPrice": 150000,
+    "discount": 17,
+    "image": "https://images.pexels.com/photos/3662664/pexels-photo-3662664.jpeg?auto=compress&cs=tinysrgb&w=400",
+    "category": "ألعاب أطفال",
+    "description": "سيارة كهربائية للأطفال بسرعتين، بطارية تدوم 2 ساعة، تحمل حتى 30 كيلو",
+    "warehouse": "الخرطوم"
+  },
+  {
+    "id": 9,
+    "name": "ساعة ذكية Smart Watch Pro",
+    "price": 85000,
+    "oldPrice": 110000,
+    "discount": 23,
+    "image": "https://images.pexels.com/photos/393047/pexels-photo-393047.jpeg?auto=compress&cs=tinysrgb&w=400",
+    "category": "إكسسوارات موبايلات",
+    "description": "ساعة ذكية مع قياس ضربات القلب والأوكسجين، مقاومة الماء IP68، شاشة AMOLED",
+    "warehouse": "الخرطوم"
+  },
+  {
+    "id": 10,
+    "name": "كريم تبييض بشرة فاخر",
+    "price": 18000,
+    "oldPrice": 25000,
+    "discount": 28,
+    "image": "https://images.pexels.com/photos/3621234/pexels-photo-3621234.jpeg?auto=compress&cs=tinysrgb&w=400",
+    "category": "مستحضرات تجميل",
+    "description": "كريم تبييض طبيعي للبشرة، خالٍ من المواد الضارة، نتائج خلال أسبوعين",
+    "warehouse": "الخرطوم"
+  },
+  {
+    "id": 11,
+    "name": "مجموعة عناية بالشعر",
+    "price": 32000,
+    "oldPrice": 45000,
+    "discount": 29,
+    "image": "https://images.pexels.com/photos/3735657/pexels-photo-3735657.jpeg?auto=compress&cs=tinysrgb&w=400",
+    "category": "مستحضرات تجميل",
+    "description": "مجموعة شامبو وبلسم وزيت أرغان طبيعي لتغذية وترطيب الشعر",
+    "warehouse": "الخرطوم"
+  },
+  {
+    "id": 12,
+    "name": "عطر أرابيان نايت للرجال",
+    "price": 55000,
+    "oldPrice": 70000,
+    "discount": 21,
+    "image": "https://images.pexels.com/photos/965989/pexels-photo-965989.jpeg?auto=compress&cs=tinysrgb&w=400",
+    "category": "مستحضرات تجميل",
+    "description": "عطر شرقي فاخر للرجال، تركيبة عود ومسك، يدوم 12 ساعة",
+    "warehouse": "الخرطوم"
+  },
+  {
+    "id": 13,
+    "name": "أيفون 14 128GB أصلي",
+    "price": 1250000,
+    "oldPrice": 1400000,
+    "discount": 11,
+    "image": "https://images.pexels.com/photos/5081386/pexels-photo-5081386.jpeg?auto=compress&cs=tinysrgb&w=400",
+    "category": "موبايلات",
+    "description": "أيفون 14 أصلي 128GB، ضمان سنة، نظام iOS 17، كاميرا 12 ميجابكسل",
+    "warehouse": "الخرطوم"
+  },
+  {
+    "id": 14,
+    "name": "هواوي Y9s 128GB",
+    "price": 290000,
+    "oldPrice": 330000,
+    "discount": 12,
+    "image": "https://images.pexels.com/photos/607812/pexels-photo-607812.jpeg?auto=compress&cs=tinysrgb&w=400",
+    "category": "موبايلات",
+    "description": "هواوي Y9s بذاكرة 128GB، شاشة 6.59 بوصة، كاميرا خلفية ثلاثية 48MP",
+    "warehouse": "الخرطوم"
+  },
+  {
+    "id": 15,
+    "name": "مروحة طاولة صامتة USB",
+    "price": 15000,
+    "oldPrice": 20000,
+    "discount": 25,
+    "image": "https://images.pexels.com/photos/4846353/pexels-photo-4846353.jpeg?auto=compress&cs=tinysrgb&w=400",
+    "category": "أجهزة كهربائية",
+    "description": "مروحة طاولة صغيرة USB، 3 سرعات، صوت هادئ جداً، مناسبة للمكتب والمنزل",
+    "warehouse": "الخرطوم"
+  },
+  {
+    "id": 16,
+    "name": "مكبر صوت بلوتوث JBL",
+    "price": 75000,
+    "oldPrice": 95000,
+    "discount": 21,
+    "image": "https://images.pexels.com/photos/1279107/pexels-photo-1279107.jpeg?auto=compress&cs=tinysrgb&w=400",
+    "category": "أجهزة إلكترونية",
+    "description": "سبيكر بلوتوث محمول، صوت عالي الجودة، مقاوم للماء، بطارية تدوم 20 ساعة",
+    "warehouse": "الخرطوم"
+  }
+]
