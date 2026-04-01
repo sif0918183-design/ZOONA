@@ -1,0 +1,191 @@
+<!-- إضافة مكتبة Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+
+<div class="store-page">
+  <h2 class="store-title">🛍️ أقسام المتجر</h2>
+  <div class="store-grid">
+    <a href="https://www.zoonasd.com/search/label/%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84%D8%A7%D8%AA?m=1" class="store-item">
+      <div class="icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
+      <div class="store-name">موبايلات</div>
+      <p>أحدث الهواتف الذكية بأفضل الأسعار.</p>
+    </a>
+
+    <a href="https://www.zoonasd.com/search/label/%D8%A5%D9%83%D8%B3%D8%B3%D9%88%D8%A7%D8%B1%D8%A7%D8%AA%20%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84%D8%A7%D8%AA?m=1" class="store-item">
+      <div class="icon"><i class="fa-solid fa-headphones"></i></div>
+      <div class="store-name">إكسسوارات موبايلات</div>
+      <p>سماعات وشواحن وكفرات أصلية.</p>
+    </a>
+
+    <a href="https://www.zoonasd.com/search/label/%D8%A3%D8%AC%D9%87%D8%B2%D8%A9%20%D8%A5%D9%84%D9%83%D8%AA%D8%B1%D9%88%D9%86%D9%8A%D8%A9?m=1" class="store-item">
+      <div class="icon"><i class="fa-solid fa-computer"></i></div>
+      <div class="store-name">الإلكترونيات</div>
+      <p>أجهزة حديثة وجودة مضمونة.</p>
+    </a>
+
+    <a href="https://www.zoonasd.com/search/label/%D8%A3%D9%84%D8%B9%D8%A7%D8%A8%20%D8%A3%D8%B7%D9%81%D8%A7%D9%84?m=1" class="store-item">
+      <div class="icon"><i class="fa-solid fa-puzzle-piece"></i></div>
+      <div class="store-name">ألعاب أطفال </div>
+      <p>كل ما يسعد أطفالك من ألعاب وهدايا.</p>
+    </a>
+
+    <a href="#home" class="store-item">
+      <div class="icon"><i class="fa-solid fa-house"></i></div>
+      <div class="store-name">المنزل والمطبخ</div>
+      <p>أدوات منزلية أنيقة وعملية.</p>
+    </a>
+
+    <a href="#beauty" class="store-item">
+      <div class="icon"><i class="fa-solid fa-magic-wand-sparkles"></i></div>
+      <div class="store-name">التجميل والعناية</div>
+      <p>منتجات عناية وجمال أصلية.</p>
+    </a>
+
+    <a href="https://www.zoonasd.com/search/label/%D8%A3%D8%B2%D9%8A%D8%A7%D8%A1%20%D9%86%D8%B3%D8%A7%D8%A6%D9%8A%D8%A9?m=1" class="store-item">
+      <div class="icon"><i class="fa-solid fa-shirt"></i></div>
+      <div class="store-name">الأزياء النسائية والموضة</div>
+      <p>تصاميم عصرية لكل المناسبات.</p>
+    </a>
+
+    <a href="#fashion-men" class="store-item">
+      <div class="icon"><i class="fa-solid fa-tshirt"></i></div>
+      <div class="store-name">أزياء رجالية</div>
+      <p>ملابس رجالية أنيقة ومريحة.</p>
+    </a>
+
+    <a href="#sports" class="store-item">
+      <div class="icon"><i class="fa-solid fa-football"></i></div>
+      <div class="store-name">الرياضة واللياقة</div>
+      <p>معدات وأدوات تساعدك في اللياقة.</p>
+    </a>
+  </div>
+</div>
+
+<style>
+.store-page {
+  text-align: center;
+  font-family: 'Tajawal', sans-serif;
+  margin: 30px auto;
+  max-width: 1000px;
+  padding: 10px;
+}
+
+.store-title {
+  font-size: 26px;
+  margin-bottom: 25px;
+  color: #fff;
+  font-weight: bold;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+
+/* ===== شبكة المتجر ===== */
+.store-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.store-item {
+  position: relative;
+  background: linear-gradient(120deg, #8b0000, #c20000, #ff3b3b);
+  background-size: 300% 300%;
+  animation: itemGradient 8s ease infinite;
+  border-radius: 16px;
+  padding: 20px 10px;
+  text-decoration: none;
+  color: #fff;
+  font-weight: bold;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.store-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -75%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(120deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0) 100%);
+  transform: skewX(-20deg);
+  animation: shineMove 6s linear infinite;
+}
+
+@keyframes itemGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes shineMove {
+  0% { left: -75%; }
+  50% { left: 125%; }
+  100% { left: 125%; }
+}
+
+.store-item:hover {
+  transform: scale(1.04);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+}
+
+/* ===== الأيقونات ===== */
+.store-item .icon {
+  width: 90px;
+  height: 90px;
+  margin: 0 auto 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #fff; /* دائرة بيضاء */
+  box-shadow: inset 0 0 6px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+}
+
+.store-item .icon i {
+  font-size: 30px;
+  transform: scale(2.5); /* تكبير بصري */
+  transition: transform 0.3s ease, color 0.3s ease;
+  color: #c20000;
+}
+
+.store-item:hover .icon i {
+  transform: scale(2.7);
+  color: #a10000;
+}
+
+/* ===== اسم القسم داخل مربع أبيض ===== */
+.store-name {
+  background: #fff;
+  color: #c20000;
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 6px;
+  margin: 5px 0;
+  font-weight: bold;
+  text-shadow: none;
+}
+
+.store-item:hover .store-name {
+  background: rgba(255,255,255,0.8);
+}
+
+/* ===== النصوص ===== */
+.store-item p {
+  font-size: 13px;
+  margin: 0;
+  color: #fff;
+  opacity: 0.9;
+  transition: opacity 0.3s ease;
+}
+
+.store-item:hover p {
+  opacity: 1;
+}
+
+/* ===== نسخة الموبايل: صف يحتوي قسمين ===== */
+@media (max-width: 600px) {
+  .store-grid { grid-template-columns: repeat(2, 1fr); }
+  .store-title { font-size: 22px; }
+}
+</style>
