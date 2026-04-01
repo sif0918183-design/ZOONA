@@ -20,14 +20,15 @@ const messaging = firebase.messaging();
 // =================================================================
 // 2️⃣ PWA Caching
 // =================================================================
-const CACHE_NAME = 'zoona-store-cache-v1.0.0';
-const API_CACHE_NAME = 'zoona-store-api-cache-v1.0.0';
-const IMAGE_CACHE_NAME = 'zoona-store-images-cache-v1.0.0';
+const CACHE_NAME = 'zoona-store-cache-v2.0.0';
+const API_CACHE_NAME = 'zoona-store-api-cache-v2.0.0';
+const IMAGE_CACHE_NAME = 'zoona-store-images-cache-v2.0.0';
 const OFFLINE_FALLBACK_URL = '/p/offline.html';
 
 const urlsToCache = [
   '/',
   '/index.html',
+  '/products.json',
   '/manifest.json',
   '/assets/splash-logo.png',
   OFFLINE_FALLBACK_URL,
