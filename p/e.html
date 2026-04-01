@@ -1,0 +1,1898 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>طلب جديد - ZOONA SD</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: linear-gradient(135deg, #f7f7f7 0%, #e9ecef 100%);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            direction: rtl;
+        }
+
+        .order-container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            max-width: 500px;
+            width: 100%;
+            margin: auto;
+            border: 1px solid #f0f0f0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .order-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, #e63946 0%, #457b9d 100%);
+        }
+
+        .order-container h2 {
+            text-align: center;
+            color: #2a4365;
+            margin-bottom: 25px;
+            font-size: 1.8rem;
+            font-weight: 700;
+            position: relative;
+            padding-bottom: 15px;
+        }
+
+        .order-container h2::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            right: 35%;
+            width: 30%;
+            height: 3px;
+            background: linear-gradient(90deg, #e63946 0%, #457b9d 100%);
+            border-radius: 3px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #4a5568;
+            font-size: 0.95rem;
+        }
+
+        .form-group i {
+            position: absolute;
+            left: 15px;
+            top: 42px;
+            color: #a0aec0;
+            font-size: 18px;
+        }
+
+        .order-container input, .order-container select, .order-container textarea {
+            width: 100%;
+            padding: 14px 15px 14px 45px;
+            border-radius: 10px;
+            border: 1.5px solid #e2e8f0;
+            font-size: 16px;
+            font-family: 'Tajawal', sans-serif;
+            transition: all 0.3s ease;
+            background-color: #fafafa;
+            color: #2d3748;
+        }
+
+        .order-container input:focus, .order-container select:focus, .order-container textarea:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+            background-color: #fff;
+        }
+
+        .order-container button {
+            width: 100%;
+            padding: 15px;
+            border-radius: 10px;
+            border: none;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: 'Tajawal', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        #submitBtn {
+            background: linear-gradient(135deg, #e63946 0%, #d62839 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(230, 57, 70, 0.3);
+        }
+
+        #submitBtn:hover {
+            background: linear-gradient(135deg, #d62839 0%, #c1121f 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(230, 57, 70, 0.4);
+        }
+
+        #downloadPDF {
+            background: linear-gradient(135deg, #457b9d 0%, #1d3557 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(69, 123, 157, 0.3);
+            opacity: 0;
+            height: 0;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+            transition: all 0.5s ease;
+        }
+
+        #downloadPDF.show {
+            opacity: 1;
+            height: auto;
+            padding: 15px;
+            margin-top: 10px;
+        }
+
+        #downloadPDF:hover {
+            background: linear-gradient(135deg, #1d3557 0%, #14213d 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(69, 123, 157, 0.4);
+        }
+
+        .success-message, .error-message {
+            text-align: center;
+            font-weight: bold;
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+
+        .success-message { 
+            color: #276749;
+            background-color: #f0fff4;
+            border: 1px solid #9ae6b4;
+        }
+
+        .error-message { 
+            color: #c53030;
+            background-color: #fff5f5;
+            border: 1px solid #fc8181;
+        }
+
+        .total-container {
+            background-color: #f7fafc;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .total-label {
+            color: #2d3748;
+        }
+
+        .total-amount {
+            color: #e63946;
+        }
+
+        .payment-type {
+            color: #e63946;
+            font-size: 0.9rem;
+            margin-top: 5px;
+            font-weight: 600;
+        }
+
+        .products-summary {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border: 1px solid #e2e8f0;
+        }
+
+        .products-summary h4 {
+            margin-bottom: 15px;
+            color: #2d4365;
+            border-bottom: 2px solid #e63946;
+            padding-bottom: 8px;
+        }
+
+        .product-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #e2e8f0;
+            margin-bottom: 8px;
+        }
+
+        .product-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .product-name {
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .product-details {
+            font-size: 0.85rem;
+            color: #718096;
+            margin-top: 4px;
+        }
+
+        .product-price {
+            font-weight: bold;
+            color: #e63946;
+            text-align: left;
+        }
+
+        .warehouse-section {
+            background: #e8f5e8;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-right: 4px solid #38a169;
+        }
+
+        .warehouse-title {
+            font-weight: bold;
+            color: #2d3748;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .shipping-cost {
+            background: #e63946;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .input-with-icon {
+            position: relative;
+        }
+
+        .required::after {
+            content: " *";
+            color: #e53e3e;
+        }
+
+        .form-note {
+            font-size: 0.85rem;
+            color: #718096;
+            margin-top: 5px;
+            text-align: right;
+        }
+
+        .order-id {
+            font-size: 0.9rem;
+            color: #457b9d;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 10px;
+            direction: ltr;
+        }
+
+        .auto-filled {
+            background-color: #f0fff4 !important;
+            border-color: #9ae6b4 !important;
+        }
+
+        .affiliate-notice {
+            background: #e6f7ff;
+            border: 1px solid #91d5ff;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #096dd9;
+            font-weight: 500;
+            display: none;
+        }
+
+        .location-btn {
+            background: #4299e1 !important;
+            color: white !important;
+            padding: 12px !important;
+            font-size: 14px !important;
+            margin-top: 10px !important;
+            width: 100% !important;
+            display: block !important;
+        }
+
+        .location-btn-saved {
+            background: #38a169 !important;
+        }
+
+        .location-btn-saved:hover {
+            background: #2f855a !important;
+        }
+
+        .summary-details {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .summary-total {
+            font-weight: bold;
+            font-size: 1rem;
+            color: #e63946;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 8px;
+            margin-top: 8px;
+        }
+
+        .shipping-container {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+
+        .shipping-container h3 {
+            color: #2a4365;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            border-bottom: 2px solid #e63946;
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .location-warning {
+            color: #e53e3e;
+            font-size: 0.85rem;
+            margin-top: 5px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .map-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            display: none;
+        }
+
+        .map-container {
+            background-color: white;
+            border-radius: 16px;
+            overflow: hidden;
+            width: 90%;
+            max-width: 600px;
+            height: 70%;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #locationMap {
+            height: 100%;
+            width: 100%;
+            flex-grow: 1;
+        }
+
+        .map-controls {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .map-control-btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Tajawal', sans-serif;
+            font-size: 16px;
+        }
+
+        #confirmLocation {
+            background-color: #38a169;
+            color: white;
+        }
+
+        #confirmLocation:hover {
+            background-color: #2f855a;
+        }
+
+        #cancelLocation {
+            background-color: #e53e3e;
+            color: white;
+        }
+
+        #cancelLocation:hover {
+            background-color: #c53030;
+        }
+
+        #locateMe {
+            background-color: #4299e1;
+            color: white;
+        }
+
+        #locateMe:hover {
+            background-color: #3182ce;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 15px;
+            }
+            .order-container {
+                padding: 20px;
+            }
+            .order-container h2 {
+                font-size: 1.5rem;
+            }
+            .order-container input, .order-container button, .order-container select {
+                padding: 12px 12px 12px 40px;
+                font-size: 15px;
+            }
+            .form-group i {
+                left: 12px;
+                top: 40px;
+                font-size: 16px;
+            }
+            .product-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+            .product-price {
+                text-align: right;
+                width: 100%;
+            }
+            .map-container {
+                width: 95%;
+                height: 80%;
+            }
+            .map-controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .map-control-btn {
+                width: 100%;
+            }
+        }
+
+        .pdf-template {
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
+            width: 210mm;
+            padding: 20mm;
+            background: white;
+            font-family: 'Tajawal', sans-serif;
+            direction: rtl;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .pdf-header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e63946;
+            position: relative;
+        }
+
+        .pdf-logo {
+            height: 60px;
+            margin-bottom: 10px;
+        }
+
+        .pdf-header h1 {
+            color: #2a4365;
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .pdf-header .date {
+            color: #718096;
+            font-size: 14px;
+            direction: ltr;
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }
+
+        .pdf-details {
+            margin-top: 20px;
+        }
+
+        .pdf-details div {
+            margin: 12px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+        }
+
+        .pdf-label {
+            font-weight: bold;
+            color: #2d3748;
+            width: 120px;
+            flex-shrink: 0;
+        }
+
+        .pdf-value {
+            color: #4a5568;
+            flex-grow: 1;
+        }
+
+        .pdf-products {
+            margin: 20px 0;
+        }
+
+        .pdf-product-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .pdf-footer {
+            margin-top: 30px;
+            text-align: center;
+            padding-top: 15px;
+            border-top: 1px solid #e2e8f0;
+            color: #718096;
+            font-style: italic;
+        }
+
+        .user-id-container {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 10px;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .user-id-label {
+            color: #0369a1;
+            font-weight: 600;
+        }
+
+        .user-id-value {
+            color: #0c4a6e;
+            font-weight: 700;
+            direction: ltr;
+            font-family: monospace;
+            background: #e0f2fe;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .auto-city-detection {
+            background: #f0fff4;
+            border: 1px solid #9ae6b4;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 0.85rem;
+            color: #276749;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="order-container">
+        <h2>طلب جديد</h2>
+        
+        <!-- قسم معرف المستخدم الفريد (مخفي) -->
+        <div class="user-id-container">
+            <span class="user-id-label">معرف المستخدم:</span>
+            <span class="user-id-value" id="userIdDisplay">جاري التحميل...</span>
+        </div>
+        
+        <!-- رسالة التعرف التلقائي على المدينة -->
+        <div id="autoCityDetection" class="auto-city-detection">
+            <i class="fas fa-check-circle"></i>
+            <span id="autoCityMessage"></span>
+        </div>
+        
+        <!-- تم إخفاء رسالة المسوق نهائياً -->
+        <div id="affiliateNotice" class="affiliate-notice"></div>
+        
+        <form id="orderForm">
+            <div class="form-group">
+                <label for="name" class="required">الاسم الكامل</label>
+                <div class="input-with-icon">
+                    <i class="fas fa-user"></i>
+                    <input id="name" placeholder="أدخل اسمك الكامل" required type="text" />
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="phone" class="required">رقم الهاتف</label>
+                <div class="input-with-icon">
+                    <i class="fas fa-phone"></i>
+                    <input id="phone" placeholder="09xxxxxxxx" required type="tel" pattern="[0-9]{10}" />
+                </div>
+                <div class="form-note">يجب أن يتكون الرقم من 10 أرقام</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="phone2">رقم هاتف إضافي (اختياري)</label>
+                <div class="input-with-icon">
+                    <i class="fas fa-phone-alt"></i>
+                    <input id="phone2" placeholder="01xxxxxxxx" type="tel" pattern="[0-9]{10}" />
+                </div>
+            </div>
+            
+            <!-- ملخص المنتجات -->
+            <div class="products-summary" id="productsSummary">
+                <h4><i class="fas fa-shopping-cart"></i> المنتجات المطلوبة</h4>
+                <div id="productsList"></div>
+                <div class="summary-details" id="summaryDetails"></div>
+            </div>
+            
+            <!-- إطار معلومات التوصيل الموحد -->
+            <div class="shipping-container">
+                <h3><i class="fas fa-truck"></i> معلومات التوصيل</h3>
+                
+                <!-- (1) زر تحديد/تغيير الموقع -->
+                <button type="button" class="location-btn" id="locationMainBtn">
+                    <i class="fas fa-map-marker-alt"></i> 
+                    <span id="locationBtnText">تحديد موقع التوصيل</span>
+                </button>
+                
+                <!-- (2) حقل المدينة -->
+                <div class="form-group">
+                    <label for="deliveryCity" class="required">مدينة التوصيل</label>
+                    <div class="input-with-icon">
+                        <i class="fas fa-city"></i>
+                        <select id="deliveryCity" required>
+                            <option value="">اختر مدينة التوصيل</option>
+                        </select>
+                    </div>
+                    <div id="cityWarning" class="location-warning" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>لا يوجد توصيل إلى هذا العنوان</span>
+                    </div>
+                </div>
+                
+                <!-- (3) حقل وصف العنوان -->
+                <div class="form-group">
+                    <label for="address" class="required">وصف العنوان(ضيف وصف مختصر) </label>
+                    <div class="input-with-icon">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <textarea id="address" placeholder="اكتب وصفًا موجزًا (الحي، الشارع، رقم المنزل، معلم بارز...)" required rows="3"></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- المجموع الكلي -->
+            <div class="total-container">
+                <div>
+                    <div class="total-label">المجموع الكلي</div>
+                    <div class="payment-type" id="paymentType"></div>
+                </div>
+                <div class="total-amount" id="totalAmount">0 SDG</div>
+            </div>
+            
+            <button type="submit" id="submitBtn">
+                <i class="fas fa-paper-plane"></i> إرسال الطلب
+            </button>
+        </form>
+        
+        <div class="order-id" id="orderId"></div>
+        
+        <button id="downloadPDF">
+            <i class="fas fa-download"></i> تحميل نسخة PDF من إيصال الطلب
+        </button>
+        
+        <div class="success-message" id="successMsg"></div>
+        <div class="error-message" id="errorMsg"></div>
+    </div>
+    
+    <!-- خريطة تحديد الموقع -->
+    <div id="mapOverlay" class="map-overlay">
+        <div class="map-container">
+            <div id="locationMap"></div>
+            <div class="map-controls">
+                <button type="button" id="locateMe" class="map-control-btn">
+                    <i class="fas fa-location-arrow"></i> تحديد موقعي الحالي
+                </button>
+                <div>
+                    <button type="button" id="cancelLocation" class="map-control-btn">
+                        <i class="fas fa-times"></i> إلغاء
+                    </button>
+                    <button type="button" id="confirmLocation" class="map-control-btn">
+                        <i class="fas fa-check"></i> تأكيد الموقع
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- قالب PDF -->
+    <div id="pdfTemplate" class="pdf-template">
+        <div class="pdf-header">
+            <h1>طلب جديد - Zoona mall</h1>
+            <div class="date" id="pdfDate"></div>
+            <div class="date" id="pdfOrderId"></div>
+        </div>
+        
+        <div class="pdf-details">
+            <div><span class="pdf-label">معرف المستخدم:</span> <span id="pdfUserId"></span></div>
+            <div><span class="pdf-label">الاسم الكامل:</span> <span id="pdfName"></span></div>
+            <div><span class="pdf-label">رقم الهاتف:</span> <span id="pdfPhone"></span></div>
+            <div><span class="pdf-label">رقم إضافي:</span> <span id="pdfPhone2"></span></div>
+            <div><span class="pdf-label">مدينة التوصيل:</span> <span id="pdfCity"></span></div>
+            <div><span class="pdf-label">عنوان التوصيل:</span> <span id="pdfAddress"></span></div>
+            <div><span class="pdf-label">موقع الخريطة:</span> <span id="pdfLocation"></span></div>
+            <div><span class="pdf-label">نوع الدفع:</span> <span id="pdfPaymentType"></span></div>
+        </div>
+        
+        <div class="pdf-products" id="pdfProductsList"></div>
+        
+        <div class="pdf-details">
+            <div><span class="pdf-label">المجموع الكلي:</span> <span id="pdfTotal"></span></div>
+        </div>
+        
+        <div class="pdf-footer">
+            شكراً لثقتكم بنا - للاستفسار يرجى الاتصال بفريق الدعم
+        </div>
+    </div>
+
+    <script>
+        // ========== دوال API للعمل مع Vercel ==========
+        
+        // متغيرات النظام
+        let cartItems = JSON.parse(localStorage.getItem('cartItems')) || [];
+        let userAddress = '';
+        let userLocation = null;
+        let userInfo = JSON.parse(localStorage.getItem('userInfo')) || {};
+        let citiesData = { cashOnDelivery: [], prepaid: [] };
+        let selectedCity = null;
+        let userId = null;
+        
+        // بيانات المدن السودانية بالإحداثيات
+        const sudanCities = {
+            "بورتسودان": { lat: 19.6158, lng: 37.2164 },
+            "كسلا": { lat: 15.4500, lng: 36.4000 },
+            "عطبرة": { lat: 17.7000, lng: 33.9833 },
+            "القضارف": { lat: 14.0333, lng: 35.3833 },
+            "مدني": { lat: 14.4000, lng: 33.5167 },
+            "سنار": { lat: 13.5500, lng: 33.6000 },
+            "سنجة": { lat: 13.1500, lng: 33.9333 },
+            "الدمازين": { lat: 11.7833, lng: 34.3500 },
+            "كوستي": { lat: 13.1667, lng: 32.6667 },
+            "الأبيض": { lat: 13.1833, lng: 30.2167 },
+            "الخرطوم": { lat: 15.5007, lng: 32.5599 },
+            "بحري": { lat: 15.6333, lng: 32.5333 },
+            "امدرمان": { lat: 15.6500, lng: 32.4833 },
+            "دنقلا": { lat: 19.1667, lng: 30.4833 },
+            "مروي": { lat: 18.4833, lng: 31.8167 },
+            "الدبة": { lat: 18.0500, lng: 30.9500 },
+            "شندي": { lat: 16.7000, lng: 33.4333 },
+            "الدامر": { lat: 17.5833, lng: 33.9667 }
+        };
+        
+        // ========== نظام معرف المستخدم الفريد ==========
+        
+        function generateUserId() {
+            const timestamp = Date.now().toString(36);
+            const random = Math.random().toString(36).substr(2, 9);
+            return `USER-${timestamp}-${random}`.toUpperCase();
+        }
+        
+        function getOrCreateUserId() {
+            let userId = localStorage.getItem('zoonaUserId');
+            if (!userId) {
+                userId = generateUserId();
+                localStorage.setItem('zoonaUserId', userId);
+                console.log('✅ تم إنشاء معرف مستخدم جديد:', userId);
+            } else {
+                console.log('✅ تم تحميل معرف المستخدم الموجود:', userId);
+            }
+            return userId;
+        }
+        
+        function displayUserId() {
+            const userIdDisplay = document.getElementById('userIdDisplay');
+            if (userIdDisplay && userId) {
+                userIdDisplay.textContent = userId;
+            }
+        }
+        
+        // ========== دوال إدارة معرف المسوق ==========
+        
+        function getAffiliateId() {
+            const urlParams = new URLSearchParams(window.location.search);
+            let affiliateId = urlParams.get('ref');
+            
+            if (!affiliateId || affiliateId === 'direct') {
+                affiliateId = localStorage.getItem('currentAffiliateId');
+            }
+            
+            if ((!affiliateId || affiliateId === 'direct') && cartItems.length > 0) {
+                const productWithAffiliate = cartItems.find(item => item.affiliateId && item.affiliateId !== 'direct');
+                if (productWithAffiliate) {
+                    affiliateId = productWithAffiliate.affiliateId;
+                }
+            }
+            
+            if (affiliateId && affiliateId !== 'direct' && affiliateId !== 'null' && affiliateId !== 'undefined') {
+                console.log('✅ تم العثور على معرف المسوق:', affiliateId);
+                return affiliateId;
+            }
+            
+            console.log('ℹ️ لم يتم العثور على معرف مسوق - استخدام direct');
+            return 'direct';
+        }
+        
+        async function trackAffiliateClick() {
+            const currentAffiliateId = getAffiliateId();
+            
+            if (currentAffiliateId !== 'direct') {
+                try {
+                    const response = await fetch('https://orders-9vxn.vercel.app/api/orders', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ 
+                            action: 'track_click',
+                            affiliateId: currentAffiliateId 
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('فشل في تتبع النقرة');
+                    }
+
+                    const result = await response.json();
+                    console.log('✅ تم تتبع نقرة المسوق:', result.message);
+                } catch (error) {
+                    console.error('❌ خطأ في تتبع النقرة:', error);
+                }
+            }
+        }
+        
+        async function createNewOrder(orderData) {
+            try {
+                const response = await fetch('https://orders-9vxn.vercel.app/api/orders', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'create_order',
+                        orderId: orderData.orderId,
+                        userId: orderData.userId,
+                        name: orderData.name,
+                        phone: orderData.phone,
+                        phone2: orderData.phone2,
+                        city: orderData.city,
+                        cityType: orderData.cityType,
+                        shippingCost: orderData.shippingCost,
+                        total: orderData.total,
+                        address: orderData.address,
+                        location: orderData.location,
+                        products: orderData.products,
+                        affiliateId: getAffiliateId()
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'فشل في إنشاء الطلب');
+                }
+
+                const result = await response.json();
+                console.log('✅ تم إنشاء الطلب عبر API:', result.message);
+                return result;
+
+            } catch (error) {
+                console.error('❌ Error in createNewOrder:', error);
+                throw error;
+            }
+        }
+        
+        function clearAffiliateIdFromStorage() {
+            // مسح قوي لجميع مفاتيح المسوق
+            const affiliateKeys = ['currentAffiliateId', 'affiliateId', 'ref'];
+            affiliateKeys.forEach(key => {
+                if (localStorage.getItem(key)) {
+                    localStorage.removeItem(key);
+                    console.log(`🗑️ تم مسح المفتاح: ${key}`);
+                }
+            });
+            
+            // مسح إضافي لأي مفاتيح مرتبطة بالمسوقين
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && (key.includes('affiliate') || key.includes('ref'))) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(key => {
+                localStorage.removeItem(key);
+                console.log('🗑️ تم حذف المفتاح:', key);
+            });
+            
+            // تحديث العناصر في السلة
+            cartItems.forEach(item => {
+                if (item.affiliateId) {
+                    delete item.affiliateId;
+                }
+            });
+            localStorage.setItem('cartItems', JSON.stringify(cartItems));
+            
+            // إزالة معرف المسوق من الرابط إذا كان موجوداً
+            if (window.history.replaceState && window.location.search.includes('ref=')) {
+                const url = new URL(window.location);
+                url.searchParams.delete('ref');
+                window.history.replaceState({}, '', url);
+                console.log('🔗 تم إزالة معرف المسوق من الرابط');
+            }
+            
+            console.log('✅ تم تنظيف جميع بيانات المسوق بنجاح');
+            
+            // فحص نهائي للتأكد من المسح
+            setTimeout(() => {
+                checkRemainingAffiliateData();
+            }, 100);
+        }
+        
+        function checkRemainingAffiliateData() {
+            console.log('🔍 فحص المفاتيح المتبقية في localStorage:');
+            const remainingKeys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && (key.includes('affiliate') || key.includes('ref'))) {
+                    remainingKeys.push({key, value: localStorage.getItem(key)});
+                }
+            }
+            if (remainingKeys.length > 0) {
+                console.warn('⚠️ المفاتيح المتبقية:', remainingKeys);
+                return false;
+            } else {
+                console.log('✅ لا توجد مفاتيح متبقية للمسوق');
+                return true;
+            }
+        }
+        
+        // ========== دوال التكامل مع الشريط العلوي ==========
+        
+        function loadSavedLocationFromTopbar() {
+            // تحميل البيانات من المفتاح الصحيح deliveryLocationData
+            const savedLocationData = localStorage.getItem('deliveryLocationData');
+            if (savedLocationData) {
+                try {
+                    const locationData = JSON.parse(savedLocationData);
+                    console.log('📍 تم تحميل بيانات الموقع من deliveryLocationData:', locationData);
+                    
+                    if (locationData.city && locationData.address) {
+                        userAddress = locationData.address;
+                        document.getElementById('address').value = userAddress;
+                        
+                        // تحديث بيانات الموقع
+                        if (locationData.lat && locationData.lon) {
+                            userLocation = {
+                                lat: locationData.lat,
+                                lng: locationData.lon,
+                                link: `https://www.google.com/maps?q=${locationData.lat},${locationData.lon}`
+                            };
+                            
+                            updateLocationButton(true);
+                        }
+                        
+                        // تحديد المدينة تلقائياً
+                        autoSelectCityFromDeliveryData(locationData.city);
+                    }
+                    return locationData;
+                } catch (e) {
+                    console.error('❌ خطأ في تحميل بيانات deliveryLocationData:', e);
+                }
+            }
+            return null;
+        }
+        
+        function updateLocationButton(isSaved) {
+            const locationBtn = document.getElementById('locationMainBtn');
+            const locationBtnText = document.getElementById('locationBtnText');
+            
+            if (isSaved) {
+                locationBtn.classList.add('location-btn-saved');
+                locationBtnText.innerHTML = '✅ تم تحديد موقعك – <small>تغيير؟</small>';
+            } else {
+                locationBtn.classList.remove('location-btn-saved');
+                locationBtnText.innerHTML = '📍 تحديد موقع التوصيل';
+            }
+        }
+        
+        // ========== دوال تحديد المدينة تلقائياً ==========
+        
+        function calculateDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = 
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                Math.sin(dLng/2) * Math.sin(dLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+        
+        function findNearestCity(lat, lng) {
+            let closestCity = null;
+            let minDistance = Infinity;
+            
+            for (const [cityName, coords] of Object.entries(sudanCities)) {
+                const distance = calculateDistance(lat, lng, coords.lat, coords.lng);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestCity = cityName;
+                }
+            }
+            
+            return { name: closestCity, distance: minDistance };
+        }
+        
+        function autoSelectCityFromCoordinates(lat, lng) {
+            if (!lat || !lng) return;
+            
+            console.log('📍 البحث عن المدينة بناءً على الإحداثيات:', lat, lng);
+            
+            const nearestCity = findNearestCity(lat, lng);
+            
+            if (nearestCity.distance < 50) {
+                const citySelect = document.getElementById('deliveryCity');
+                if (citySelect) {
+                    let cityFound = false;
+                    for (let i = 0; i < citySelect.options.length; i++) {
+                        const option = citySelect.options[i];
+                        if (option.text.includes(nearestCity.name)) {
+                            citySelect.value = option.value;
+                            const [type, name] = option.value.split('_');
+                            const cities = type === 'cod' ? citiesData.cashOnDelivery : citiesData.prepaid;
+                            const city = cities.find(c => c.name === name);
+                            
+                            if (city) {
+                                selectedCity = { type, ...city };
+                                hideCityWarning();
+                                cityFound = true;
+                                console.log('✅ تم تحديد المدينة تلقائيا:', nearestCity.name);
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (!cityFound) {
+                        console.log('❌ المدينة غير متاحة في قائمة التوصيل:', nearestCity.name);
+                        showCityWarning();
+                    }
+                }
+            } else {
+                console.log('❌ لا توجد مدينة قريبة ضمن نطاق التوصيل');
+                showCityWarning();
+            }
+            
+            calculateTotal();
+        }
+        
+        // ========== دوال التعرف التلقائي على المدينة من deliveryLocationData ==========
+        
+        function autoSelectCityFromDeliveryData(cityName) {
+            if (!cityName) {
+                console.log('❌ اسم المدينة فارغ');
+                return false;
+            }
+            
+            console.log('🚀 بدء التعرف التلقائي على المدينة من deliveryLocationData:', cityName);
+            
+            // الانتظار حتى يتم تحميل خيارات المدن
+            const citySelect = document.getElementById('deliveryCity');
+            if (!citySelect || citySelect.options.length <= 1) {
+                console.log('⏳ خيارات المدن لم تحمل بعد، إعادة المحاولة...');
+                setTimeout(() => autoSelectCityFromDeliveryData(cityName), 500);
+                return false;
+            }
+            
+            // مطابقة المدينة مع الخيارات المتاحة
+            const matchedCity = matchCityWithAvailableOptions(cityName);
+            if (!matchedCity) {
+                console.log('❌ فشل مطابقة المدينة مع الخيارات المتاحة');
+                return false;
+            }
+            
+            // تحديد المدينة في القائمة المنسدلة
+            citySelect.value = matchedCity.value;
+            
+            // تحديث بيانات المدينة المحددة
+            const [type, name] = matchedCity.value.split('_');
+            const cities = type === 'cod' ? citiesData.cashOnDelivery : citiesData.prepaid;
+            const city = cities.find(c => c.name === name);
+            
+            if (city) {
+                selectedCity = { type, ...city };
+                hideCityWarning();
+                calculateTotal();
+                
+                console.log('✅ تم تحديد المدينة تلقائياً بنجاح:', name);
+                console.log('💰 نوع الدفع:', type === 'cod' ? 'دفع عند الاستلام' : 'دفع مقدم');
+                console.log('💵 تكلفة الشحن:', city.price.toLocaleString(), 'SDG');
+                
+                // إظهار رسالة نجاح للمستخدم
+                showAutoCityDetectionMessage(name);
+                
+                return true;
+            }
+            
+            console.log('❌ فشل في تحديث بيانات المدينة المحددة');
+            return false;
+        }
+        
+        function matchCityWithAvailableOptions(cityName) {
+            if (!cityName) {
+                console.log('❌ اسم المدينة فارغ');
+                return null;
+            }
+            
+            console.log('🔄 جاري مطابقة المدينة مع الخيارات المتاحة:', cityName);
+            
+            const citySelect = document.getElementById('deliveryCity');
+            if (!citySelect) {
+                console.log('❌ عنصر اختيار المدينة غير موجود');
+                return null;
+            }
+            
+            // تطبيع اسم المدينة للبحث (إزالة المسافات الزائدة وتحويل لحالة صغيرة)
+            const normalizedCityName = cityName.trim().toLowerCase();
+            
+            // البحث في جميع خيارات المدينة
+            for (let i = 0; i < citySelect.options.length; i++) {
+                const option = citySelect.options[i];
+                const optionText = option.textContent;
+                const normalizedOptionText = optionText.toLowerCase();
+                
+                console.log(`🔍 فحص الخيار: ${optionText}`);
+                
+                // التحقق إذا كان اسم المدينة موجود في نص الخيار
+                if (normalizedOptionText.includes(normalizedCityName)) {
+                    console.log('✅ تم العثور على تطابق:', option.value);
+                    return {
+                        element: option,
+                        value: option.value,
+                        text: optionText
+                    };
+                }
+                
+                // البحث أيضًا في أسماء المدن المعرفة
+                for (const knownCity of Object.keys(sudanCities)) {
+                    if (normalizedOptionText.includes(knownCity.toLowerCase()) && 
+                        knownCity.toLowerCase().includes(normalizedCityName)) {
+                        console.log('✅ تم العثور على تطابق عبر المدينة المعرفة:', option.value);
+                        return {
+                            element: option,
+                            value: option.value,
+                            text: optionText
+                        };
+                    }
+                }
+            }
+            
+            console.log('❌ لا يوجد تطابق للمدينة في الخيارات المتاحة');
+            console.log('📋 الخيارات المتاحة:', Array.from(citySelect.options).map(opt => opt.textContent));
+            return null;
+        }
+        
+        function showAutoCityDetectionMessage(cityName) {
+            const autoCityElement = document.getElementById('autoCityDetection');
+            const autoCityMessage = document.getElementById('autoCityMessage');
+            
+            if (autoCityElement && autoCityMessage) {
+                autoCityMessage.textContent = `تم التعرف تلقائيا على مدينة التوصيل: ${cityName}`;
+                autoCityElement.style.display = 'block';
+                
+                // إخفاء الرسالة بعد 5 ثواني
+                setTimeout(() => {
+                    autoCityElement.style.display = 'none';
+                }, 5000);
+            }
+        }
+        
+        function waitForCityOptions(maxAttempts = 10) {
+            return new Promise((resolve, reject) => {
+                let attempts = 0;
+                
+                function checkCityOptions() {
+                    attempts++;
+                    const citySelect = document.getElementById('deliveryCity');
+                    
+                    if (citySelect && citySelect.options.length > 1) {
+                        console.log('✅ خيارات المدن جاهزة');
+                        resolve(true);
+                    } else if (attempts >= maxAttempts) {
+                        console.log('❌ فشل تحميل خيارات المدن بعد عدة محاولات');
+                        resolve(false);
+                    } else {
+                        console.log(`⏳ انتظار تحميل خيارات المدن... (المحاولة ${attempts})`);
+                        setTimeout(checkCityOptions, 500);
+                    }
+                }
+                
+                checkCityOptions();
+            });
+        }
+        
+        function showCityWarning() {
+            document.getElementById('cityWarning').style.display = 'flex';
+        }
+        
+        function hideCityWarning() {
+            document.getElementById('cityWarning').style.display = 'none';
+        }
+        
+        // ========== دوال الخريطة ==========
+        let map, marker, selectedLocation;
+        
+        function initMap() {
+            const khartoumCenter = [15.5007, 32.5599];
+            
+            map = L.map('locationMap').setView(khartoumCenter, 12);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            
+            map.on('click', function(e) {
+                if (marker) {
+                    map.removeLayer(marker);
+                }
+                
+                marker = L.marker(e.latlng).addTo(map)
+                    .bindPopup('الموقع المحدد للتوصيل')
+                    .openPopup();
+                
+                selectedLocation = e.latlng;
+            });
+        }
+        
+        function openMap() {
+            document.getElementById('mapOverlay').style.display = 'flex';
+            
+            if (!map) {
+                initMap();
+            } else {
+                setTimeout(() => {
+                    map.invalidateSize();
+                }, 100);
+            }
+        }
+        
+        function closeMap() {
+            document.getElementById('mapOverlay').style.display = 'none';
+            selectedLocation = null;
+            
+            if (marker) {
+                map.removeLayer(marker);
+                marker = null;
+            }
+        }
+        
+        function locateMe() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        
+                        map.setView([lat, lng], 15);
+                        
+                        if (marker) {
+                            map.removeLayer(marker);
+                        }
+                        
+                        marker = L.marker([lat, lng]).addTo(map)
+                            .bindPopup('موقعك الحالي')
+                            .openPopup();
+                        
+                        selectedLocation = { lat, lng };
+                    },
+                    function(error) {
+                        console.error('خطأ في الحصول على الموقع:', error);
+                        alert('تعذر الحصول على موقعك الحالي. يرجى تحديد الموقع يدوياً على الخريطة.');
+                    }
+                );
+            } else {
+                alert('متصفحك لا يدعم خاصية تحديد الموقع. يرجى تحديد الموقع يدوياً على الخريطة.');
+            }
+        }
+        
+        function confirmLocation() {
+            if (selectedLocation) {
+                userLocation = {
+                    lat: selectedLocation.lat,
+                    lng: selectedLocation.lng,
+                    link: `https://www.google.com/maps?q=${selectedLocation.lat},${selectedLocation.lng}`
+                };
+                
+                localStorage.setItem('userLocation', JSON.stringify(userLocation));
+                updateLocationButton(true);
+                autoSelectCityFromCoordinates(selectedLocation.lat, selectedLocation.lng);
+                closeMap();
+                
+                console.log('📍 تم تحديد موقع جديد:', userLocation);
+                alert('✅ تم تحديد موقعك بنجاح! تم تحديد المدينة تلقائيا');
+            } else {
+                alert('يرجى تحديد موقع على الخريطة أولاً');
+            }
+        }
+        
+        function setupMapButton() {
+            document.getElementById('locationMainBtn').addEventListener('click', openMap);
+            document.getElementById('cancelLocation').addEventListener('click', closeMap);
+            document.getElementById('confirmLocation').addEventListener('click', confirmLocation);
+            document.getElementById('locateMe').addEventListener('click', locateMe);
+        }
+        
+        // ========== دوال إدارة البيانات المحلية ==========
+        
+        async function loadSavedData() {
+            // تحميل بيانات المستخدم
+            if (userInfo.name) {
+                document.getElementById('name').value = userInfo.name;
+                document.getElementById('name').classList.add('auto-filled');
+            }
+            
+            if (userInfo.phone) {
+                document.getElementById('phone').value = userInfo.phone;
+                document.getElementById('phone').classList.add('auto-filled');
+            }
+            
+            if (userInfo.phone2) {
+                document.getElementById('phone2').value = userInfo.phone2;
+                document.getElementById('phone2').classList.add('auto-filled');
+            }
+            
+            // تحديث زر الموقع بناءً على البيانات المحفوظة
+            if (userLocation && userLocation.lat && userLocation.lng) {
+                updateLocationButton(true);
+            } else {
+                updateLocationButton(false);
+            }
+        }
+        
+        function saveUserInfo() {
+            const userInfo = {
+                name: document.getElementById('name').value,
+                phone: document.getElementById('phone').value,
+                phone2: document.getElementById('phone2').value
+            };
+            
+            localStorage.setItem('userInfo', JSON.stringify(userInfo));
+            console.log('✅ تم حفظ بيانات المستخدم للمستقبل');
+        }
+        
+        // ========== دوال عرض المنتجات ==========
+        
+        function displayProductsSummary() {
+            const productsList = document.getElementById('productsList');
+            const summaryDetails = document.getElementById('summaryDetails');
+            
+            if (cartItems.length === 0) {
+                productsList.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">لا توجد منتجات في السلة</p>';
+                summaryDetails.innerHTML = '';
+                return;
+            }
+            
+            let productsHTML = '';
+            let totalProducts = 0;
+            let totalAmount = 0;
+            
+            const warehouses = {};
+            
+            cartItems.forEach(item => {
+                const simplifiedItem = {
+                    id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    quantity: item.quantity,
+                    warehouse: item.warehouse
+                };
+                
+                if (!warehouses[simplifiedItem.warehouse]) {
+                    warehouses[simplifiedItem.warehouse] = [];
+                }
+                
+                warehouses[simplifiedItem.warehouse].push(simplifiedItem);
+            });
+            
+            Object.keys(warehouses).forEach(warehouse => {
+                productsHTML += `<div class="warehouse-section">`;
+                productsHTML += `<div class="warehouse-title"><i class="fas fa-warehouse"></i> ${warehouse}</div>`;
+                
+                warehouses[warehouse].forEach(item => {
+                    const itemTotal = item.price * item.quantity;
+                    totalProducts += item.quantity;
+                    totalAmount += itemTotal;
+                    
+                    productsHTML += `
+                        <div class="product-item">
+                            <div>
+                                <div class="product-name">${item.name}</div>
+                                <div class="product-details">الكمية: ${item.quantity} | السعر: ${item.price.toLocaleString()} SDG</div>
+                            </div>
+                            <div class="product-price">${itemTotal.toLocaleString()} SDG</div>
+                        </div>
+                    `;
+                });
+                
+                productsHTML += `</div>`;
+            });
+            
+            productsList.innerHTML = productsHTML;
+            
+            let summaryHTML = '';
+            summaryHTML += `<div class="summary-row"><span>عدد المنتجات:</span><span>${totalProducts}</span></div>`;
+            summaryHTML += `<div class="summary-row"><span>المجموع الجزئي:</span><span>${totalAmount.toLocaleString()} SDG</span></div>`;
+            
+            if (selectedCity) {
+                const shippingCost = calculateShippingCost();
+                summaryHTML += `<div class="summary-row"><span>تكاليف الشحن:</span><span>${shippingCost.toLocaleString()} SDG</span></div>`;
+                
+                const grandTotal = totalAmount + shippingCost;
+                summaryHTML += `<div class="summary-total summary-row"><span>الإجمالي الكلي:</span><span>${grandTotal.toLocaleString()} SDG</span></div>`;
+            } else {
+                summaryHTML += `<div class="summary-total summary-row"><span>المجموع الكلي:</span><span>${totalAmount.toLocaleString()} SDG</span></div>`;
+            }
+            
+            summaryDetails.innerHTML = summaryHTML;
+        }
+        
+        // ========== دوال المدن والتكلفة ==========
+        
+        function calculateShippingCost() {
+            if (!selectedCity) return 0;
+            
+            const uniqueWarehouses = [...new Set(cartItems.map(item => item.warehouse))];
+            return selectedCity.price * uniqueWarehouses.length;
+        }
+        
+        function calculateTotal() {
+            if (cartItems.length === 0) {
+                document.getElementById('totalAmount').textContent = '0 SDG';
+                return 0;
+            }
+            
+            let productsTotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            let shippingTotal = calculateShippingCost();
+            let grandTotal = productsTotal + shippingTotal;
+            
+            document.getElementById('totalAmount').textContent = `${grandTotal.toLocaleString()} SDG`;
+            
+            if (selectedCity) {
+                document.getElementById('paymentType').textContent = 
+                    selectedCity.type === 'cod' ? 'دفع عند الاستلام' : 'دفع مقدم';
+            }
+            
+            displayProductsSummary();
+            
+            return grandTotal;
+        }
+        
+        function loadCitiesData() {
+            citiesData.cashOnDelivery = [];
+            citiesData.prepaid = [];
+            
+            cartItems.forEach(item => {
+                if (item.cashOnDelivery) {
+                    item.cashOnDelivery.forEach(city => {
+                        if (!citiesData.cashOnDelivery.find(c => c.name === city.name)) {
+                            citiesData.cashOnDelivery.push(city);
+                        }
+                    });
+                }
+                
+                if (item.prepaid) {
+                    item.prepaid.forEach(city => {
+                        if (!citiesData.prepaid.find(c => c.name === city.name)) {
+                            citiesData.prepaid.push(city);
+                        }
+                    });
+                }
+            });
+            
+            renderCityOptions();
+        }
+        
+        function renderCityOptions() {
+            const citySelect = document.getElementById('deliveryCity');
+            if (!citySelect) {
+                console.log('❌ عنصر اختيار المدينة غير موجود');
+                return;
+            }
+            
+            citySelect.innerHTML = '<option value="">اختر مدينة التوصيل</option>';
+            
+            if (citiesData.cashOnDelivery.length === 0 && citiesData.prepaid.length === 0) {
+                citySelect.innerHTML = '<option value="">لا توجد مدن متاحة</option>';
+                console.log('⚠️ لا توجد مدن متاحة للعرض');
+                return;
+            }
+            
+            console.log('🏗️ جاري تحميل خيارات المدن...');
+            
+            // تحميل مدن الدفع عند الاستلام
+            citiesData.cashOnDelivery.forEach(city => {
+                const option = document.createElement('option');
+                option.value = `cod_${city.name}`;
+                option.textContent = `${city.name} - ${city.price.toLocaleString()} SDG (دفع عند الاستلام)`;
+                option.setAttribute('data-city-name', city.name);
+                citySelect.appendChild(option);
+            });
+            
+            // تحميل مدن الدفع المقدم
+            citiesData.prepaid.forEach(city => {
+                const option = document.createElement('option');
+                option.value = `prepaid_${city.name}`;
+                option.textContent = `${city.name} - ${city.price.toLocaleString()} SDG (دفع مقدم)`;
+                option.setAttribute('data-city-name', city.name);
+                citySelect.appendChild(option);
+            });
+            
+            console.log(`✅ تم تحميل ${citySelect.options.length - 1} خيار مدينة`);
+            
+            // إضافة مستمع الحدث للتغيير
+            citySelect.addEventListener('change', function() {
+                if (this.value) {
+                    const [type, name] = this.value.split('_');
+                    const cities = type === 'cod' ? citiesData.cashOnDelivery : citiesData.prepaid;
+                    const city = cities.find(c => c.name === name);
+                    
+                    if (city) {
+                        selectedCity = { type, ...city };
+                        hideCityWarning();
+                        calculateTotal();
+                        
+                        console.log('✅ تم اختيار المدينة يدوياً:', name);
+                        console.log('💰 نوع الدفع:', type === 'cod' ? 'دفع عند الاستلام' : 'دفع مقدم');
+                        console.log('💵 تكلفة الشحن:', city.price.toLocaleString(), 'SDG');
+                    }
+                } else {
+                    selectedCity = null;
+                    calculateTotal();
+                    console.log('❌ لم يتم اختيار مدينة');
+                }
+            });
+            
+            // محاولة التعرف التلقائي على المدينة بعد تحميل الخيارات
+            const deliveryLocationData = localStorage.getItem('deliveryLocationData');
+            if (deliveryLocationData) {
+                try {
+                    const locationData = JSON.parse(deliveryLocationData);
+                    if (locationData.city) {
+                        console.log('🔄 محاولة التعرف التلقائي بعد تحميل الخيارات...');
+                        setTimeout(() => {
+                            autoSelectCityFromDeliveryData(locationData.city);
+                        }, 300);
+                    }
+                } catch (e) {
+                    console.error('❌ خطأ في تحميل deliveryLocationData:', e);
+                }
+            }
+        }
+        
+        // ========== دوال المساعدة ==========
+        
+        function generateOrderId() {
+            const timestamp = Date.now().toString(36);
+            const random = Math.random().toString(36).substr(2, 5);
+            return `ORDER-${timestamp}-${random}`.toUpperCase();
+        }
+        
+        function getFormattedDate() {
+            const now = new Date();
+            const options = { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                weekday: 'long',
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'Africa/Khartoum'
+            };
+            return now.toLocaleDateString('en-US', options);
+        }
+        
+        function validateForm() {
+            const name = document.getElementById('name').value;
+            const phone = document.getElementById('phone').value;
+            const address = document.getElementById('address').value;
+            const city = document.getElementById('deliveryCity').value;
+            
+            if (!name.trim()) {
+                return 'يرجى إدخال الاسم الكامل';
+            }
+            
+            if (!phone.match(/^[0-9]{10}$/)) {
+                return 'يرجى إدخال رقم هاتف صحيح (10 أرقام)';
+            }
+            
+            if (cartItems.length === 0) {
+                return 'السلة فارغة. أضف منتجات أولاً';
+            }
+            
+            if (!city) {
+                return 'يرجى اختيار مدينة التوصيل';
+            }
+            
+            if (!address.trim()) {
+                return 'يرجى إدخال وصف عنوان التوصيل';
+            }
+            
+            return null;
+        }
+        
+        // ========== دوال PDF ==========
+        
+        function setupPDFDownload() {
+            const downloadBtn = document.getElementById('downloadPDF');
+            downloadBtn.addEventListener('click', async () => {
+                let orderData;
+                if (downloadBtn.hasAttribute('data-order')) {
+                    orderData = JSON.parse(downloadBtn.getAttribute('data-order'));
+                } else {
+                    document.getElementById('errorMsg').textContent = "لا توجد بيانات طلب متاحة لإنشاء PDF.";
+                    return;
+                }
+                
+                document.getElementById('pdfUserId').textContent = orderData.userId || '';
+                document.getElementById('pdfName').textContent = orderData.name || '';
+                document.getElementById('pdfPhone').textContent = orderData.phone || '';
+                document.getElementById('pdfPhone2').textContent = orderData.phone2 || 'غير متوفر';
+                document.getElementById('pdfCity').textContent = orderData.city || '';
+                document.getElementById('pdfAddress').textContent = orderData.address || '';
+                document.getElementById('pdfLocation').textContent = orderData.location ? 
+                    `(${orderData.location.lat.toFixed(6)}, ${orderData.location.lng.toFixed(6)})` : 'لم يتم التحديد';
+                document.getElementById('pdfPaymentType').textContent = orderData.cityType === 'cod' ? 'دفع عند الاستلام' : 'دفع مقدم';
+                document.getElementById('pdfTotal').textContent = `${orderData.total.toLocaleString()} SDG`;
+                document.getElementById('pdfDate').textContent = getFormattedDate();
+                document.getElementById('pdfOrderId').textContent = `رقم الطلب: ${orderData.orderId || ''}`;
+                
+                const pdfProductsList = document.getElementById('pdfProductsList');
+                pdfProductsList.innerHTML = '<div style="margin: 15px 0; font-weight: bold;">المنتجات المطلوبة:</div>';
+                
+                orderData.products.forEach(item => {
+                    const productElement = document.createElement('div');
+                    productElement.className = 'pdf-product-item';
+                    productElement.innerHTML = `
+                        <span>${item.name} (${item.quantity})</span>
+                        <span>${(item.price * item.quantity).toLocaleString()} SDG</span>
+                    `;
+                    pdfProductsList.appendChild(productElement);
+                });
+                
+                const template = document.getElementById('pdfTemplate');
+                
+                try {
+                    downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري إنشاء PDF...';
+                    downloadBtn.disabled = true;
+                    
+                    const canvas = await html2canvas(template, {
+                        scale: 2,
+                        useCORS: true,
+                        logging: false,
+                        backgroundColor: '#ffffff'
+                    });
+                    
+                    const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF('p', 'mm', 'a4');
+                    const pageWidth = doc.internal.pageSize.getWidth();
+                    const pageHeight = doc.internal.pageSize.getHeight();
+                    
+                    doc.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight);
+                    doc.save(`Zoona-mall_Order_${orderData.orderId || ''}.pdf`);
+                    
+                    downloadBtn.innerHTML = '<i class="fas fa-download"></i> تحميل نسخة PDF من الطلب';
+                    downloadBtn.disabled = false;
+                    
+                } catch (error) {
+                    console.error('❌ خطأ في إنشاء PDF:', error);
+                    document.getElementById('errorMsg').textContent = 'حدث خطأ أثناء إنشاء PDF. يرجى المحاولة مرة أخرى.';
+                    downloadBtn.innerHTML = '<i class="fas fa-download"></i> تحميل نسخة PDF من الطلب';
+                    downloadBtn.disabled = false;
+                }
+            });
+        }
+        
+        // ========== تهيئة الصفحة ==========
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // إنشاء/تحميل معرف المستخدم الفريد
+            userId = getOrCreateUserId();
+            displayUserId();
+            
+            // تتبع المسوقين
+            trackAffiliateClick();
+            
+            // تحميل البيانات
+            loadSavedData();
+            displayProductsSummary();
+            loadCitiesData();
+            setupMapButton();
+            
+            // تحميل البيانات من deliveryLocationData تلقائياً
+            setTimeout(() => {
+                loadSavedLocationFromTopbar();
+            }, 1000);
+            
+            // إعداد أحداث النموذج
+            const form = document.getElementById('orderForm');
+            const successMsg = document.getElementById('successMsg');
+            const errorMsg = document.getElementById('errorMsg');
+            const downloadBtn = document.getElementById('downloadPDF');
+            const submitBtn = document.getElementById('submitBtn');
+            const orderIdElement = document.getElementById('orderId');
+            
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                successMsg.textContent = '';
+                errorMsg.textContent = '';
+                orderIdElement.textContent = '';
+                
+                const validationError = validateForm();
+                if (validationError) {
+                    errorMsg.textContent = validationError;
+                    return;
+                }
+                
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
+                
+                const orderId = generateOrderId();
+                const total = calculateTotal();
+                
+                const formData = {
+                    orderId: orderId,
+                    userId: userId,
+                    name: document.getElementById('name').value,
+                    phone: document.getElementById('phone').value,
+                    phone2: document.getElementById('phone2').value,
+                    products: cartItems,
+                    city: selectedCity.name,
+                    cityType: selectedCity.type,
+                    shippingCost: calculateShippingCost(),
+                    total: total,
+                    address: document.getElementById('address').value,
+                    location: userLocation,
+                    date: new Date().toISOString(),
+                    timestamp: Date.now(),
+                    status: 'new'
+                };
+                
+                try {
+                    // فحص معرف المسوق قبل المسح
+                    console.log('🔍 فحص معرف المسوق قبل المسح:', getAffiliateId());
+                    
+                    // حفظ الطلب عبر Vercel API
+                    await createNewOrder(formData);
+                    
+                    // بعد الحفظ، تأكد من وجود البيانات في DB ثم امسح localStorage
+                    console.log('✅ تم حفظ بيانات المسوق في قاعدة البيانات');
+                    
+                    // حفظ بيانات المستخدم
+                    saveUserInfo();
+                    
+                    // الآن يمكن مسح localStorage بأمان
+                    clearAffiliateIdFromStorage();
+                    
+                    successMsg.textContent = "تم إرسال طلبك بنجاح! يمكنك الآن تحميل نسخة PDF من إيصال الطلب.";
+                    orderIdElement.textContent = `رقم الطلب: ${orderId}`;
+                    downloadBtn.classList.add('show');
+                    downloadBtn.setAttribute('data-order', JSON.stringify(formData));
+                    
+                    localStorage.removeItem('cartItems');
+                    cartItems = [];
+                    
+                    console.log('✅ تم إرسال الطلب بنجاح:', orderId);
+                    console.log('👤 معرف المستخدم المرتبط بالطلب:', userId);
+                    
+                    // فحص نهائي للتأكد من عدم وجود بيانات مسوق متبقية
+                    setTimeout(() => {
+                        const isClean = checkRemainingAffiliateData();
+                        if (!isClean) {
+                            console.warn('⚠️ لا يزال هناك بيانات مسوق متبقية، إجراء تنظيف إضافي...');
+                            clearAffiliateIdFromStorage();
+                        }
+                    }, 500);
+                    
+                } catch (err) {
+                    console.error('❌ خطأ في إرسال الطلب:', err);
+                    errorMsg.textContent = "حدث خطأ أثناء إرسال الطلب. يرجى المحاولة مرة أخرى.";
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال الطلب';
+                }
+            });
+            
+            setupPDFDownload();
+            
+            if (cartItems.length === 0) {
+                errorMsg.textContent = "السلة فارغة. يرجى إضافة منتجات أولا.";
+            }
+            
+            console.log('🛒 عدد المنتجات في السلة:', cartItems.length);
+            console.log('📍 بيانات الموقع:', userLocation);
+            console.log('👤 معرف المستخدم الفريد:', userId);
+            console.log('👤 معرف المسوق الحالي:', getAffiliateId());
+        });
+    </script>
+</body>
+</html>
