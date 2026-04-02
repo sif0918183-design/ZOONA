@@ -1168,7 +1168,7 @@ function renderCart() {
     ${itemsHtml}
     <div class="cart-summary">
       <div class="cart-row"><span>إجمالي المنتجات (${cart.reduce((s,i)=>s+i.quantity,0)} قطعة)</span><span>${subtotal.toLocaleString()} SDG</span></div>
-      <div class="cart-row"><span>رسوم التوصيل</span><span style="color:#2E7D32;">مجاناً</span></div>
+      <div class="cart-row"><span>رسوم التوصيل</span><span style="color:#2E7D32;">سيتم الإضافة في صفحة إتمام الطب</span></div>
       <div class="cart-row"><span>الإجمالي الكلي</span><span>${subtotal.toLocaleString()} SDG</span></div>
     </div>
     <button class="checkout-btn" onclick="goCheckout()">
