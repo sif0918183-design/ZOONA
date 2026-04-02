@@ -2,80 +2,89 @@
 
 <style>
     :root {
-        --zoona-red: #d32f2f; /* اللون الأحمر المستوحى من الشعار */
-        --zoona-bg: #f8f9fa;
+        --zoona-red: #d32f2f; 
+        --zoona-bg: #f4f4f4; /* خلفية أغمق قليلاً لإبراز البطاقة */
         --text-dark: #2d3436;
         --white: #ffffff;
     }
 
+    * {
+        box-sizing: border-box;
+    }
+
     body {
         margin: 0;
-        padding: 10px;
+        padding: 0; /* إلغاء الهوامش التي تضغط المحتوى */
         background-color: var(--zoona-bg);
+        display: flex;
+        justify-content: center;
     }
 
     .container {
         direction: rtl;
         text-align: right;
         font-family: 'Tajawal', sans-serif;
-        max-width: 600px; /* ليناسب عرض شاشات الجوال بشكل مثالي */
-        margin: 0 auto;
+        width: 100%; /* تمدد كامل العرض على الموبايل */
+        max-width: 550px; /* العرض الأقصى للشاشات الكبيرة */
         background: var(--white);
-        border-radius: 20px; /* زوايا منحنية مثل تصميم المتجر */
-        overflow: hidden;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        min-height: 100vh;
+        box-shadow: 0 0 20px rgba(0,0,0,0.05);
+        display: flex;
+        flex-direction: column;
     }
 
     /* الهيدر العلوي */
     .header-banner {
         background-color: var(--zoona-red);
         color: white;
-        padding: 30px 20px;
+        padding: 40px 20px;
         text-align: center;
+        border-bottom-left-radius: 0px;
+        border-bottom-right-radius: 0px;
     }
 
     .header-banner h2 {
         margin: 0;
-        font-size: 24px;
+        font-size: 22px;
         font-weight: 700;
+        line-height: 1.4;
     }
 
     .content-padding {
-        padding: 20px;
+        padding: 25px 15px; /* تقليل الهوامش الجانبية لزيادة مساحة النص */
+        flex-grow: 1;
     }
 
-    /* تحسين حجم الخط للمقالات */
     p {
         line-height: 1.8;
-        font-size: 18px; /* حجم أكبر للقراءة السهلة */
+        font-size: 17px; 
         color: var(--text-dark);
         margin-bottom: 20px;
     }
 
     h3 {
         color: var(--zoona-red);
-        font-size: 20px;
+        font-size: 19px;
         border-right: 4px solid var(--zoona-red);
         padding-right: 10px;
         margin-top: 30px;
+        margin-bottom: 15px;
     }
 
-    /* تنسيق القوائم */
     ul, ol {
-        padding-right: 20px;
+        padding-right: 25px;
         margin-bottom: 25px;
     }
 
     li {
-        font-size: 17px;
+        font-size: 16px;
         margin-bottom: 12px;
         color: #444;
     }
 
-    /* تنسيق البطاقات الصغيرة للمعلومات */
     .info-card {
         background: #fff5f5;
-        border: 1px solid #ffe3e3;
+        border: 1px dashed var(--zoona-red); /* شكل جمالي للملاحظات */
         padding: 15px;
         border-radius: 12px;
         margin: 20px 0;
@@ -87,90 +96,90 @@
         margin: 30px 0;
     }
 
-    /* زر الانضمام المستوحى من أزرار المتجر */
     .btn-container {
         text-align: center;
-        padding: 30px 20px;
-        background: #fff;
+        padding: 20px 15px 40px 15px;
+        position: sticky;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(5px); /* تأثير زجاجي خلف الزر */
     }
 
     .join-btn {
         background-color: var(--zoona-red);
-        color: #fff;
-        padding: 16px 40px;
-        border-radius: 50px;
+        color: #fff !important;
+        padding: 18px 20px;
+        border-radius: 12px; /* زوايا تشبه أزرار المتجر في الصورة */
         text-decoration: none;
-        font-size: 20px;
+        font-size: 18px;
         font-weight: bold;
-        display: block; /* ليكون عرض الزر كامل على الجوال */
-        transition: transform 0.2s;
-        box-shadow: 0 5px 15px rgba(211, 47, 47, 0.3);
+        display: block;
+        transition: all 0.2s;
+        box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
     }
 
     .join-btn:active {
-        transform: scale(0.95);
+        transform: scale(0.97);
     }
 
     .privacy-link {
         color: var(--zoona-red);
         font-weight: bold;
-        text-decoration: underline;
+        text-decoration: none;
+        border-bottom: 1px solid var(--zoona-red);
     }
 
-    /* لضمان التجاوب الكامل */
+    /* تحسينات إضافية للموبايل */
     @media (max-width: 480px) {
+        .header-banner { padding: 30px 15px; }
         .header-banner h2 { font-size: 20px; }
         p { font-size: 16px; }
         li { font-size: 15px; }
-        .join-btn { font-size: 18px; }
     }
 </style>
 
 <div class="container">
     <div class="header-banner">
         <h2>👋 أهلاً بك في برنامج التسويق بالعمولة</h2>
-        <p style="color: #ffeaea; font-size: 16px; margin-top: 10px; margin-bottom: 0;">شراكة نجاح مع متجر السودان الأول - ZOONA</p>
+        <p style="color: #ffeaea; font-size: 15px; margin-top: 10px; margin-bottom: 0;">شراكة نجاح مع متجر السودان الأول - ZOONA</p>
     </div>
 
     <div class="content-padding">
-        <p>تخيل أنك تمتلك شراكة مع أشهر المتاجر التي يزورها آلاف الأشخاص يوميًا، وأن كل عملية بيع تتم عبرك تحصل على نسبة أرباحك أسبوعيًا. 😍</p>
+        <p>تخيل أنك تمتلك شراكة مع أشهر المتاجر التي يزورها آلاف الأشخاص يومياً، وتحصل على أرباحك أسبوعياً. 😍</p>
 
         <div class="info-card">
-            <p style="margin: 0;">هذا هو نظام التسويق بالعمولة في <strong>Zoona</strong>. يمكنك التسويق لمنتجاتنا وأنت في منزلك، وستحصل على عمولة عن كل طلب يتم شراؤه عبر رابطك الخاص.</p>
+            <p style="margin: 0; font-size: 15px;">هذا هو نظام التسويق بالعمولة في <strong>Zoona</strong>. يمكنك العمل من منزلك والحصول على عمولة عن كل طلب يتم عبر رابطك الخاص.</p>
         </div>
 
         <h3>✴️ ما هو التسويق بالعمولة؟</h3>
-        <p>هو عملية ترويج منتجاتنا والحصول على عمولة مجزية مقابل كل عملية بيع مكتملة تتم عبر رابطك الخاص.</p>
+        <p>هو عملية ترويج منتجاتنا والحصول على عمولة مجزية مقابل كل عملية بيع مكتملة.</p>
 
         <h3>✴️ من يمكنه الانضمام؟</h3>
         <ul>
-            <li>أي شخص طموح يستطيع نشر منتجاتنا.</li>
-            <li>العملاء الحاليون لـ <strong>Zoona</strong>.</li>
-            <li>أصحاب المواقع والمدونات والصفحات.</li>
-            <li>المسوقون عبر (فيسبوك، واتساب، تيك توك، إنستغرام).</li>
+            <li>أي شخص طموح يسعى لزيادة دخله.</li>
+            <li>العملاء الحاليون وأصحاب الصفحات.</li>
+            <li>المسوقون عبر واتساب، تيك توك، وفيسبوك.</li>
         </ul>
 
-        <h3>✴️ طريقة العمل (ببساطة)</h3>
+        <h3>✴️ طريقة العمل</h3>
         <ol>
-            <li>سجّل دخولك إلى حسابك التسويقي.</li>
-            <li>أنشئ "رابط تتبع" للمنتج الذي تود ترويجه.</li>
-            <li>انشر الرابط على حساباتك في وسائل التواصل.</li>
-            <li>تتبع طلباتك وعمولاتك مباشرة من لوحة التحكم.</li>
-            <li>حوّل أرباحك لحسابك البنكي عبر التواصل معنا واتساب.</li>
+            <li>سجّل دخولك لحسابك التسويقي.</li>
+            <li>أنشئ رابط تتبع للمنتج المفضل لديك.</li>
+            <li>انشر الرابط وتابع عمولاتك لحظة بلحظة.</li>
+            <li>استلم أرباحك عبر حسابك البنكي أو وسيلتك المفضلة.</li>
         </ol>
 
         <hr>
 
         <h3 style="color: #555; border-right-color: #555;">✴️ شروط البرنامج</h3>
-        <ul style="font-size: 15px;">
+        <ul style="font-size: 14px; color: #666;">
             <li>يُمنع استخدام أساليب الإزعاج (Spam).</li>
-            <li>العمولة تُستحق فقط للطلبات المؤكدة والمسلمة.</li>
-            <li>التسجيل مجاني بالكامل 100%.</li>
-            <li>يحق للإدارة إيقاف أي حساب يثبت قيامه بنشاط احتيالي.</li>
+            <li>العمولة تُستحق فقط للطلبات المؤكدة.</li>
+            <li>التسجيل مجاني بالكامل.</li>
         </ul>
 
-        <p style="text-align: center; font-size: 15px;">
-            يمكنك الإطلاع على <a href="https://zoonasd.com/p/blog-page_99.html" class="privacy-link">سياسة الخصوصية</a>.
+        <p style="text-align: center; font-size: 14px;">
+            للمزيد راجع <a href="https://zoonasd.com/p/blog-page_99.html" class="privacy-link">سياسة الخصوصية</a>.
         </p>
     </div>
 
