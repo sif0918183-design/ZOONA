@@ -497,13 +497,44 @@ let deleteTargetId = null;
 let imgTabMode = 'upload';
 let uploadedImageUrl = '';
 
+// Session configuration - 30 days persistence
+const SESSION_KEY = 'admin_auth';
+const SESSION_EXPIRY_DAYS = 30;
+
+function setSession() {
+  const expiry = new Date();
+  expiry.setDate(expiry.getDate() + SESSION_EXPIRY_DAYS);
+  localStorage.setItem(SESSION_KEY, JSON.stringify({
+    auth: '1',
+    expiry: expiry.getTime()
+  }));
+}
+
+function checkSession() {
+  const session = localStorage.getItem(SESSION_KEY);
+  if (!session) return false;
+  try {
+    const data = JSON.parse(session);
+    if (data.auth === '1' && data.expiry > Date.now()) {
+      return true;
+    }
+    // Clear expired session
+    localStorage.removeItem(SESSION_KEY);
+  } catch {}
+  return false;
+}
+
+function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+}
+
 // ── Login ──
 function doLogin() {
   const pass = document.getElementById('passInput').value;
   if (pass === ADMIN_PASS) {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('adminApp').style.display = 'block';
-    sessionStorage.setItem('admin_auth', '1');
+    setSession();
     loadProducts();
   } else {
     document.getElementById('loginErr').style.display = 'block';
@@ -514,12 +545,12 @@ function doLogin() {
 }
 
 function logout() {
-  sessionStorage.removeItem('admin_auth');
+  clearSession();
   location.reload();
 }
 
 // Auto-login if session exists
-if (sessionStorage.getItem('admin_auth') === '1') {
+if (checkSession()) {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('adminApp').style.display = 'block';
   window.addEventListener('DOMContentLoaded', loadProducts);
@@ -725,6 +756,15 @@ async function uploadImage(file) {
     const formData = new FormData();
     formData.append('image', file);
     const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
+    
+    // Check if response is JSON
+    const contentType = res.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      // Server returned non-JSON response (probably an error page)
+      const text = await res.text();
+      throw new Error('الخادم أعاد استجابة غير متوقعة. يرجى التأكد من أن الخادم يعمل.');
+    }
+    
     const data = await res.json();
     if (data.url) {
       uploadedImageUrl = data.url;
@@ -737,7 +777,7 @@ async function uploadImage(file) {
     }
   } catch(e) {
     document.getElementById('uploadStatus').textContent = '❌ فشل الرفع - ' + e.message;
-    showToast('❌ فشل رفع الصورة', 'red');
+    showToast('❌ فشل رفع الصورة: ' + e.message, 'red');
   }
 }
 
