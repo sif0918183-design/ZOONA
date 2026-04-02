@@ -1546,7 +1546,6 @@
         }
         
         function loadCitiesData() {
-            console.log('🛒 Cart items:', JSON.stringify(cartItems));
             citiesData.cashOnDelivery = [];
             citiesData.prepaid = [];
             
@@ -1568,7 +1567,6 @@
                 }
             });
             
-            console.log('📍 citiesData after processing:', JSON.stringify(citiesData));
             renderCityOptions();
         }
         
