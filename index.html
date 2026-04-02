@@ -307,6 +307,17 @@ html, body {
   .products-grid { grid-template-columns:repeat(3,1fr); }
   .cat-grid { grid-template-columns:repeat(3,1fr); }
 }
+
+/* Delivery Cities in Modal */
+.modal-delivery-section{margin-top:16px;padding:12px;background:#f8f9fa;border-radius:10px}
+.modal-delivery-title{font-size:13px;font-weight:700;color:#333;margin-bottom:10px}
+.modal-delivery-type{font-size:11px;font-weight:600;color:#666;margin:8px 0 6px}
+.modal-delivery-city{display:inline-block;background:#fff;border:1px solid #e0e0e0;padding:4px 8px;border-radius:6px;font-size:11px;margin:2px}
+.modal-delivery-city.free{background:#e8f5e9;border-color:#4caf50;color:#2e7d32}
+.modal-delivery-city .price{font-weight:700;color:var(--red)}
+.modal-delivery-city.free .price{color:#2e7d32}
+.modal-no-cities{color:#888;font-size:12px;font-style:italic}
+
 </style>
 </head>
 <body>
@@ -653,6 +664,13 @@ html, body {
       <div class="modal-old" id="modalOld"></div>
     </div>
     <div class="modal-desc" id="modalDesc"></div>
+    <div class="modal-delivery-section" id="modalDeliverySection" style="display:none">
+      <div class="modal-delivery-title"><i class="fas fa-shipping-fast"></i> مدن التوصيل المتاحة</div>
+      <div class="modal-delivery-type">دفع عند الاستلام:</div>
+      <div class="modal-delivery-cod" id="modalDeliveryCOD"></div>
+      <div class="modal-delivery-type">دفع مقدم:</div>
+      <div class="modal-delivery-prepaid" id="modalDeliveryPrepaid"></div>
+    </div>
     <div class="modal-qty-wrap">
       <span class="modal-qty-label">الكمية:</span>
       <button class="qty-btn" onclick="changeModalQty(-1)">−</button>
