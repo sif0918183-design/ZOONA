@@ -853,7 +853,7 @@ function renderProducts(products) {
         <div class="product-name">${p.name}</div>
         <div class="product-prices">
           <span class="product-price">${p.price.toLocaleString()} SDG</span>
-          ${p.oldPrice ? `<span class="product-old-price">${p.oldPrice.toLocaleString()}</span>` : ''}
+          ${(p.oldPrice || p.old_price) ? `<span class="product-old-price">${(p.oldPrice || p.old_price).toLocaleString()} SDG</span>` : ''}
         </div>
         <button class="add-to-cart-btn" id="cartBtn-${p.id}" onclick="addToCart(event, ${p.id})">
           <i class="fas fa-cart-plus"></i> إضافة إلى السلة
@@ -971,7 +971,7 @@ function openModal(id, fromPopState = false) {
   document.getElementById('modalImg').src = p.image;
   document.getElementById('modalName').textContent = p.name;
   document.getElementById('modalPrice').textContent = p.price.toLocaleString() + ' SDG';
-  document.getElementById('modalOld').textContent = p.oldPrice ? p.oldPrice.toLocaleString() + ' SDG' : '';
+  document.getElementById('modalOld').textContent = (p.oldPrice || p.old_price) ? (p.oldPrice || p.old_price).toLocaleString() + ' SDG' : '';
   document.getElementById('modalDesc').textContent = p.description;
   document.getElementById('modalQty').textContent = modalQty;
 
