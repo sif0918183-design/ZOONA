@@ -789,7 +789,28 @@ async function loadProducts() {
       products: allProducts,
       timestamp: Date.now()
     }));
-    
+
+    // Refresh delivery cities in existing cart items using fresh product data
+    let cartUpdated = false;
+    cart = cart.map(item => {
+      const freshProduct = allProducts.find(p => p.id === item.id);
+      if (freshProduct && freshProduct.delivery_cities) {
+        let dc = freshProduct.delivery_cities;
+        if (typeof dc === 'string') { try { dc = JSON.parse(dc); } catch(e) { dc = []; } }
+        if (Array.isArray(dc) && dc.length > 0) {
+          cartUpdated = true;
+          return {
+            ...item,
+            delivery_cities: dc,
+            cashOnDelivery: dc.filter(c => c.type === 'cod'),
+            prepaid: dc.filter(c => c.type === 'prepaid')
+          };
+        }
+      }
+      return item;
+    });
+    if (cartUpdated) saveCart();
+
     filteredProducts = [...allProducts];
     renderProducts(filteredProducts);
   } catch(e) {
@@ -1045,6 +1066,32 @@ function updateCartBadge() {
   badge.classList.toggle('show', total > 0);
 }
 
+// ── Cart Item Delivery Cities HTML ──
+function cartItemDeliveryCitiesHtml(item) {
+  let cities = [];
+  if (Array.isArray(item.delivery_cities) && item.delivery_cities.length > 0) {
+    cities = item.delivery_cities;
+  } else if (Array.isArray(item.cashOnDelivery) && item.cashOnDelivery.length > 0) {
+    cities = item.cashOnDelivery.map(c => ({...c, type:'cod'})).concat(
+      (Array.isArray(item.prepaid) ? item.prepaid : []).map(c => ({...c, type:'prepaid'}))
+    );
+  }
+  if (typeof cities[0] === 'object' && cities[0] && !cities[0].type) {
+    const cod = Array.isArray(item.cashOnDelivery) ? item.cashOnDelivery : [];
+    const pre = Array.isArray(item.prepaid) ? item.prepaid : [];
+    cities = cod.map(c => ({...c, type:'cod'})).concat(pre.map(c => ({...c, type:'prepaid'})));
+  }
+  if (cities.length === 0) return '';
+  const tags = cities.map(c => {
+    const isFree = c.price === 0;
+    const cls = isFree ? 'modal-delivery-city free' : 'modal-delivery-city';
+    const payLabel = c.type === 'prepaid' ? ' (مقدم)' : '';
+    const priceText = isFree ? '<span class="price">مجاني</span>' : `<span class="price">${Number(c.price).toLocaleString()} SDG</span>`;
+    return `<span class="${cls}">${c.name}${payLabel} ${priceText}</span>`;
+  }).join('');
+  return `<div style="margin-top:6px"><span style="font-size:11px;color:#888;"><i class="fas fa-truck" style="margin-left:3px"></i>مدن التوصيل:</span><div style="margin-top:3px">${tags}</div></div>`;
+}
+
 // ── Render Cart ──
 function renderCart() {
   const container = document.getElementById('cartContent');
@@ -1067,6 +1114,7 @@ function renderCart() {
       <div class="cart-item-info">
         <div class="cart-item-name">${item.name}</div>
         <div class="cart-item-price">${(item.price * item.quantity).toLocaleString()} SDG</div>
+        ${cartItemDeliveryCitiesHtml(item)}
         <div class="cart-qty">
           <button class="qty-btn" onclick="changeCartQty(${idx}, -1)">−</button>
           <span class="qty-val">${item.quantity}</span>
