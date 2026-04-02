@@ -307,6 +307,17 @@ html, body {
   .products-grid { grid-template-columns:repeat(3,1fr); }
   .cat-grid { grid-template-columns:repeat(3,1fr); }
 }
+
+/* Delivery Cities in Modal */
+.modal-delivery-section{margin-top:16px;padding:12px;background:#f8f9fa;border-radius:10px}
+.modal-delivery-title{font-size:13px;font-weight:700;color:#333;margin-bottom:10px}
+.modal-delivery-type{font-size:11px;font-weight:600;color:#666;margin:8px 0 6px}
+.modal-delivery-city{display:inline-block;background:#fff;border:1px solid #e0e0e0;padding:4px 8px;border-radius:6px;font-size:11px;margin:2px}
+.modal-delivery-city.free{background:#e8f5e9;border-color:#4caf50;color:#2e7d32}
+.modal-delivery-city .price{font-weight:700;color:var(--red)}
+.modal-delivery-city.free .price{color:#2e7d32}
+.modal-no-cities{color:#888;font-size:12px;font-style:italic}
+
 </style>
 </head>
 <body>
@@ -653,6 +664,13 @@ html, body {
       <div class="modal-old" id="modalOld"></div>
     </div>
     <div class="modal-desc" id="modalDesc"></div>
+    <div class="modal-delivery-section" id="modalDeliverySection" style="display:none">
+      <div class="modal-delivery-title"><i class="fas fa-shipping-fast"></i> مدن التوصيل المتاحة</div>
+      <div class="modal-delivery-type">دفع عند الاستلام:</div>
+      <div class="modal-delivery-cod" id="modalDeliveryCOD"></div>
+      <div class="modal-delivery-type">دفع مقدم:</div>
+      <div class="modal-delivery-prepaid" id="modalDeliveryPrepaid"></div>
+    </div>
     <div class="modal-qty-wrap">
       <span class="modal-qty-label">الكمية:</span>
       <button class="qty-btn" onclick="changeModalQty(-1)">−</button>
@@ -727,17 +745,73 @@ window.addEventListener('DOMContentLoaded', () => {
   }, 1800);
 });
 
-// ── Load Products ──
+// ── Supabase Configuration ──
+const SUPABASE_URL = 'https://yhujvalqfmnlyffvejbh.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlodWp2YWxxZm1ubHlmZnZlamJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNTc3OTcsImV4cCI6MjA3ODYzMzc5N30.mMG55moG7HdM-vDzT5R5HiD7kKdE_Jr9BkRio4MJGqw';
+
+// Cache key and timeout
+const PRODUCTS_CACHE_KEY = 'zoona_products_cache';
+const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+
+// Supabase fetch helper
+async function supabaseFetch(endpoint, options = {}) {
+  const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
+  const headers = {
+    'Content-Type': 'application/json',
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`
+  };
+  const response = await fetch(url, { ...options, headers });
+  if (!response.ok) throw new Error('Request failed');
+  return response.json();
+}
+
+// ── Load Products from Supabase with Caching ──
 async function loadProducts() {
   try {
-    const res = await fetch('products.json');
-    allProducts = await res.json();
+    // Check localStorage cache first
+    const cached = localStorage.getItem(PRODUCTS_CACHE_KEY);
+    if (cached) {
+      const cacheData = JSON.parse(cached);
+      if (Date.now() - cacheData.timestamp < CACHE_DURATION) {
+        allProducts = cacheData.products;
+        filteredProducts = [...allProducts];
+        renderProducts(filteredProducts);
+        return;
+      }
+    }
+    
+    // Fetch from Supabase
+    allProducts = await supabaseFetch('products?select=*&order=id.desc');
+    
+    // Cache the products
+    localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify({
+      products: allProducts,
+      timestamp: Date.now()
+    }));
+    
     filteredProducts = [...allProducts];
     renderProducts(filteredProducts);
   } catch(e) {
     console.error('Error loading products:', e);
-    document.getElementById('productsGrid').innerHTML = '<div style="padding:30px; text-align:center; color:#999; grid-column:1/-1;">تعذّر تحميل المنتجات</div>';
+    // Try to use stale cache
+    const cached = localStorage.getItem(PRODUCTS_CACHE_KEY);
+    if (cached) {
+      const cacheData = JSON.parse(cached);
+      allProducts = cacheData.products;
+      filteredProducts = [...allProducts];
+      renderProducts(filteredProducts);
+    } else {
+      document.getElementById('productsGrid').innerHTML = '<div style="padding:30px; text-align:center; color:#999; grid-column:1/-1;">تعذّر تحميل المنتجات</div>';
+    }
   }
+}
+
+// ── Get product delivery cities ──
+function getProductDeliveryCities(productId) {
+  const product = allProducts.find(p => p.id === productId);
+  if (!product || !product.delivery_cities) return [];
+  return product.delivery_cities;
 }
 
 // ── Render Products ──
@@ -814,6 +888,59 @@ function handleSearch(val) {
 }
 
 // ── Product Modal ──
+// Render delivery cities in modal
+function renderDeliveryCitiesInModal(product) {
+  const section = document.getElementById('modalDeliverySection');
+  const codDiv = document.getElementById('modalDeliveryCOD');
+  const prepaidDiv = document.getElementById('modalDeliveryPrepaid');
+
+  if (!section || !codDiv || !prepaidDiv) return;
+  
+  // Get delivery cities from product
+  let cities = [];
+  if (product.delivery_cities) {
+    if (typeof product.delivery_cities === 'string') {
+      try { cities = JSON.parse(product.delivery_cities); } catch(e) { cities = []; }
+    } else {
+      cities = product.delivery_cities || [];
+    }
+  }
+  
+  const codCities = cities.filter(c => c.type === 'cod');
+  const prepaidCities = cities.filter(c => c.type === 'prepaid');
+  
+  if (cities.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  
+  section.style.display = 'block';
+  
+  // Render COD cities
+  if (codCities.length === 0) {
+    codDiv.innerHTML = '<span class="modal-no-cities">لا توجد مدن</span>';
+  } else {
+    codDiv.innerHTML = codCities.map(c => {
+      const isFree = c.price === 0;
+      const cls = isFree ? 'modal-delivery-city free' : 'modal-delivery-city';
+      const priceText = isFree ? 'مجاني' : c.price.toLocaleString() + ' SDG';
+      return '<span class="' + cls + '">' + c.name + ' - <span class="price">' + priceText + '</span></span>';
+    }).join('');
+  }
+  
+  // Render prepaid cities
+  if (prepaidCities.length === 0) {
+    prepaidDiv.innerHTML = '<span class="modal-no-cities">لا توجد مدن</span>';
+  } else {
+    prepaidDiv.innerHTML = prepaidCities.map(c => {
+      const isFree = c.price === 0;
+      const cls = isFree ? 'modal-delivery-city free' : 'modal-delivery-city';
+      const priceText = isFree ? 'مجاني' : c.price.toLocaleString() + ' SDG';
+      return '<span class="' + cls + '">' + c.name + ' - <span class="price">' + priceText + '</span></span>';
+    }).join('');
+  }
+}
+
 function openModal(id) {
   const p = allProducts.find(x => x.id === id);
   if (!p) return;
@@ -826,6 +953,9 @@ function openModal(id) {
   document.getElementById('modalOld').textContent = p.oldPrice ? p.oldPrice.toLocaleString() + ' SDG' : '';
   document.getElementById('modalDesc').textContent = p.description;
   document.getElementById('modalQty').textContent = modalQty;
+
+  // Render delivery cities
+  renderDeliveryCitiesInModal(p);
 
   const inCart = cart.find(x => x.id === id);
   const addBtn = document.getElementById('modalAddBtn');
@@ -868,6 +998,16 @@ function addToCart(e, id) {
 }
 
 function addProductToCart(p, qty) {
+  // Get delivery cities from product
+  let deliveryCities = [];
+  if (p.delivery_cities) {
+    if (typeof p.delivery_cities === 'string') {
+      try { deliveryCities = JSON.parse(p.delivery_cities); } catch(e) { deliveryCities = []; }
+    } else {
+      deliveryCities = p.delivery_cities || [];
+    }
+  }
+
   const existing = cart.find(x => x.id === p.id);
   if (existing) {
     existing.quantity += qty;
@@ -879,7 +1019,10 @@ function addProductToCart(p, qty) {
       image: p.image,
       quantity: qty,
       warehouse: p.warehouse || 'الخرطوم',
-      affiliateId: getAffiliateId()
+      affiliateId: getAffiliateId(),
+      delivery_cities: deliveryCities,
+      cashOnDelivery: deliveryCities.filter(c => c.type === 'cod'),
+      prepaid: deliveryCities.filter(c => c.type === 'prepaid')
     });
   }
   saveCart();
