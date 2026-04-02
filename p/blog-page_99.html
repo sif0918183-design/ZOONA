@@ -1,75 +1,181 @@
-<!-- استدعاء خط Tajawal -->
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 
-<div style="direction: rtl; text-align: right; font-family: 'Tajawal', sans-serif; line-height: 1.9; font-size: 16px; color: #333; background: #fff; padding: 20px; border-radius: 10px;">
+<style>
+    :root {
+        --zoona-red: #d32f2f; 
+        --zoona-bg: #f8f9fa;
+        --text-dark: #2d3436;
+        --white: #ffffff;
+    }
 
-<h2 style="color: #c0392b; text-align: center;">🔐 سياسة الخصوصية – ZOONA</h2>
+    body {
+        margin: 0;
+        padding: 10px;
+        background-color: var(--zoona-bg);
+    }
 
-<p>نشكرك على زيارتك لـ <strong>ZOONA </strong> ونؤكد لك أننا نلتزم كامل الالتزام بحماية خصوصيتك وبياناتك الشخصية. تهدف هذه السياسة إلى توضيح كيفية جمع واستخدام وحماية معلوماتك أثناء استخدامك لموقعنا أو عند تواصلك معنا.</p>
+    .container {
+        direction: rtl;
+        text-align: right;
+        font-family: 'Tajawal', sans-serif;
+        max-width: 600px; 
+        margin: 0 auto;
+        background: var(--white);
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
 
-<hr style="border: 1px solid #eee; margin: 25px 0;">
+    .header-banner {
+        background-color: var(--zoona-red);
+        color: white;
+        padding: 30px 20px;
+        text-align: center;
+    }
 
-<h3 style="color: #16a085;">✴️ المعلومات التي نقوم بجمعها</h3>
-<ul style="list-style-type: square; margin-right: 25px;">
-  <li>الاسم الكامل.</li>
-  <li>رقم الهاتف للتواصل والتوصيل.</li>
-  <li>المدينة والعنوان التفصيلي.</li>
-  <li>البريد الإلكتروني (في حال تم إدخاله).</li>
-  <li>بيانات الاستخدام مثل زيارات الصفحات وسلوك التصفح (لتحسين تجربة المستخدم).</li>
-</ul>
+    .header-banner h2 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 700;
+    }
 
-<h3 style="color: #16a085;">✴️ كيف نستخدم البيانات؟</h3>
-<p>نستخدم بياناتك للأغراض التالية فقط:</p>
-<ul style="list-style-type: square; margin-right: 25px;">
-  <li>تأكيد الطلبات والتواصل معك بشأنها.</li>
-  <li>تجهيز وتوصيل المنتجات لعنوانك الصحيح.</li>
-  <li>تقديم دعم فني أفضل وحل أي مشكلة تواجهك.</li>
-  <li>إرسال إشعارات عن العروض والخصومات (عند رغبتك فقط).</li>
-  <li>تحسين أداء الموقع وتجربة التسوق.</li>
-</ul>
+    .content-padding {
+        padding: 20px;
+    }
 
-<h3 style="color: #16a085;">✴️ هل نشارك بياناتك مع أطراف أخرى؟</h3>
-<p>نحن لا نقوم ببيع أو مشاركة بياناتك لأي طرف ثالث، فقط باستثناء حالات ضرورية، مثل:</p>
-<ul style="list-style-type: square; margin-right: 25px;">
-  <li>شركات التوصيل وفريق الدليفري لتسليم الطلب.</li>
-  <li>فريق الدعم الفني في حال احتجت لمتابعة طلبك.</li>
-</ul>
+    p {
+        line-height: 1.8;
+        font-size: 17px; 
+        color: var(--text-dark);
+        margin-bottom: 20px;
+    }
 
-<h3 style="color: #16a085;">✴️ حماية المعلومات</h3>
-<p>نستخدم إجراءات أمان متقدمة لحماية بيانات المستخدمين، من بينها:</p>
-<ul style="list-style-type: square; margin-right: 25px;">
-  <li>تشفير الاتصالات بين العميل والموقع.</li>
-  <li>أنظمة تمنع الوصول غير المصرح به إلى البيانات.</li>
-  <li>تخزين البيانات في بيئة آمنة.</li>
-</ul>
+    h3 {
+        color: var(--zoona-red);
+        font-size: 19px;
+        border-right: 4px solid var(--zoona-red);
+        padding-right: 10px;
+        margin-top: 30px;
+        margin-bottom: 15px;
+    }
 
-<h3 style="color: #c0392b;">✴️ حقوق المستخدم</h3>
-<ul style="list-style-type: square; margin-right: 25px;">
-  <li>يحق لك طلب تعديل بياناتك الشخصية.</li>
-  <li>يحق لك طلب حذف بياناتك من النظام (ما لم تكن مرتبطة بطلبات قيد التنفيذ).</li>
-  <li>التحكم في استلامك للرسائل الإعلانية.</li>
-</ul>
+    ul {
+        padding-right: 20px;
+        margin-bottom: 25px;
+        list-style-type: none;
+    }
 
-<h3 style="color: #16a085;">✴️ ملفات تعريف الارتباط (Cookies)</h3>
-<p>قد نستخدم بعض ملفات الكوكيز لتحسين تجربة استخدام الموقع، مثل:</p>
-<ul style="list-style-type: square; margin-right: 25px;">
-  <li>تسريع التصفح.</li>
-  <li>تذكّر المنتجات التي شاهدتها.</li>
-  <li>تقديم تجربة مخصصة لكل مستخدم.</li>
-</ul>
+    li {
+        font-size: 16px;
+        margin-bottom: 10px;
+        color: #444;
+        position: relative;
+    }
 
-<h3 style="color: #16a085;">✴️ موافقتك على السياسة</h3>
-<p>باستخدامك لموقع <strong>ZOONA</strong> فإنك توافق على سياسة الخصوصية هذه. يتم تحديث هذه السياسة عند الضرورة، وسيتم عرض آخر تحديث في هذه الصفحة.</p>
+    li::before {
+        content: "•";
+        color: var(--zoona-red);
+        font-weight: bold;
+        display: inline-block; 
+        width: 1em;
+        margin-right: -1em;
+    }
 
-<h3 style="color: #c0392b;">✴️ كيفية التواصل معنا</h3>
-<p>في حال وجود أي استفسارات أو رغبتك في تعديل بياناتك، يسعدنا تواصلك عبر:</p>
+    .info-card {
+        background: #fff5f5;
+        border: 1px solid #ffe3e3;
+        padding: 15px;
+        border-radius: 12px;
+        margin: 20px 0;
+    }
 
-<ul style="list-style-type: square; margin-right: 25px;">
-  <li><strong>واتساب الدعم الفني:</strong> +249918183521</li>
-  <li><strong>البريد الإلكتروني:</strong> info@zoonasd.com</li>
-  <li><strong>الموقع الإلكتروني:</strong> zoonasd.com</li>
-</ul>
+    .contact-box {
+        background: #f1f2f6;
+        padding: 15px;
+        border-radius: 12px;
+        border-right: 5px solid #2980b9;
+    }
 
-<h3 style="color: #2980b9; text-align: center;">🔒 نحن نحترم خصوصيتك — وتسوقك معنا آمن 100%</h3>
+    hr {
+        border: 0;
+        border-top: 1px solid #eee;
+        margin: 30px 0;
+    }
 
+    .footer-note {
+        text-align: center;
+        background: #f8f9fa;
+        padding: 20px;
+        color: var(--zoona-red);
+        font-weight: bold;
+        font-size: 16px;
+    }
+
+    @media (max-width: 480px) {
+        .header-banner h2 { font-size: 20px; }
+        p { font-size: 16px; }
+        li { font-size: 15px; }
+    }
+</style>
+
+<div class="container">
+    <div class="header-banner">
+        <h2>🔐 سياسة الخصوصية – ZOONA</h2>
+        <p style="color: #ffeaea; font-size: 15px; margin-top: 10px; margin-bottom: 0;">نحن نهتم بحماية بياناتك وخصوصيتك</p>
+    </div>
+
+    <div class="content-padding">
+        <p>نشكرك على زيارتك لـ <strong>ZOONA</strong> ونؤكد لك التزامنا الكامل بحماية خصوصيتك. توضح هذه السياسة كيف نتعامل مع معلوماتك لضمان تجربة تسوق آمنة وموثوقة.</p>
+
+        <div class="info-card">
+            <p style="margin: 0; font-size: 15px; color: #666;">باستخدامك للموقع، فإنك توافق على البنود المذكورة أدناه، والتي يتم تحديثها دورياً لضمان أفضل حماية ممكنة.</p>
+        </div>
+
+        <h3>✴️ المعلومات التي نجمعها</h3>
+        <ul>
+            <li>الاسم الكامل لضمان دقة الطلب.</li>
+            <li>رقم الهاتف للتواصل وسرعة التوصيل.</li>
+            <li>المدينة والعنوان التفصيلي لوجهة الشحن.</li>
+            <li>البريد الإلكتروني (اختياري) للتواصل المستقبلي.</li>
+            <li>بيانات التصفح لتحسين واجهة المتجر وتجربتكم.</li>
+        </ul>
+
+        <h3>✴️ كيف نستخدم بياناتك؟</h3>
+        <p>بياناتك تُستخدم فقط لخدمتك عبر:</p>
+        <ul>
+            <li>تأكيد الطلبات وتجهيزها للشحن.</li>
+            <li>تحسين الدعم الفني وحل المشكلات بسرعة.</li>
+            <li>إرسال العروض الحصرية (بناءً على رغبتك).</li>
+        </ul>
+
+        <h3>✴️ مشاركة البيانات</h3>
+        <p>نحن لا نبيع بياناتك. نشارك فقط المعلومات الضرورية مع:</p>
+        <ul>
+            <li><strong>شركاء التوصيل:</strong> لتسليم المنتج ليدك.</li>
+            <li><strong>الدعم الفني:</strong> لمتابعة حالة طلبك بدقة.</li>
+        </ul>
+
+        <h3>✴️ حماية المعلومات</h3>
+        <p>نعتمد بروتوكولات أمان متقدمة تشمل تشفير الاتصالات ومنع الوصول غير المصرح به، لضمان بقاء معلوماتك الشخصية في بيئة رقمية مشفرة وآمنة.</p>
+
+        <hr>
+
+        <h3>✴️ حقوقك كمستخدم</h3>
+        <ul>
+            <li>تعديل أو تحديث بياناتك الشخصية في أي وقت.</li>
+            <li>طلب حذف البيانات (ما لم تكن مرتبطة بطلب نشط).</li>
+            <li>التحكم في الإشعارات والرسائل الترويجية.</li>
+        </ul>
+
+        <h3>✴️ تواصل معنا</h3>
+        <div class="contact-box">
+            <p style="margin-bottom: 10px;">لأي استفسار بخصوص خصوصيتك:</p>
+            <li style="list-style:none;"><strong>واتساب:</strong> +249918183521</li>
+            <li style="list-style:none;"><strong>البريد:</strong> info@zoonasd.com</li>
+        </div>
+    </div>
+
+    <div class="footer-note">
+        🔒 نحن نحترم خصوصيتك — وتسوقك معنا آمن 100%
+    </div>
 </div>
