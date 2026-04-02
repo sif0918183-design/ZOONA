@@ -157,18 +157,38 @@ const server = http.createServer(async (req, res) => {
   if (urlPath === '/api/upload-image' && method === 'POST') {
     try {
       const contentType = req.headers['content-type'] || '';
+      if (!contentType.includes('multipart/form-data')) {
+        return sendJSON(res, 400, { error: 'Content-Type must be multipart/form-data' });
+      }
+      
       const boundary = contentType.split('boundary=')[1];
-      if (!boundary) return sendJSON(res, 400, { error: 'No boundary found' });
+      if (!boundary) return sendJSON(res, 400, { error: 'No boundary found in multipart data' });
 
       const rawBody = await readRawBody(req);
       const boundaryBuf = Buffer.from('--' + boundary);
 
       // Parse multipart
       let start = rawBody.indexOf(boundaryBuf) + boundaryBuf.length;
+      if (start === boundaryBuf.length - 1) {
+        return sendJSON(res, 400, { error: 'Invalid multipart data format' });
+      }
+      
       const next = rawBody.indexOf(boundaryBuf, start);
+      if (next === -1) {
+        return sendJSON(res, 400, { error: 'Could not find boundary in multipart data' });
+      }
+      
       const part = rawBody.slice(start, next - 2); // remove trailing \r\n
+      
+      if (part.length === 0) {
+        return sendJSON(res, 400, { error: 'Empty multipart part' });
+      }
 
       const headerEnd = part.indexOf(Buffer.from('\r\n\r\n'));
+      if (headerEnd === -1) {
+        return sendJSON(res, 400, { error: 'Invalid multipart headers' });
+      }
+      
       const headers = part.slice(0, headerEnd).toString();
       const fileData = part.slice(headerEnd + 4);
 
@@ -176,6 +196,13 @@ const server = http.createServer(async (req, res) => {
       const nameMatch = headers.match(/filename="([^"]+)"/);
       const origName = nameMatch ? nameMatch[1] : 'image.jpg';
       const ext = path.extname(origName).toLowerCase() || '.jpg';
+      
+      // Validate file extension
+      const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+      if (!allowedExts.includes(ext)) {
+        return sendJSON(res, 400, { error: 'Invalid file type. Allowed: jpg, jpeg, png, gif, webp, svg' });
+      }
+      
       const fileName = `product_${Date.now()}${ext}`;
       const filePath = path.join(PRODUCTS_IMAGES_DIR, fileName);
 
