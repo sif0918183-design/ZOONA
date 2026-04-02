@@ -659,6 +659,15 @@ function resetForm() {
   document.getElementById('discountHint').style.display = 'none';
   uploadedImageUrl = '';
   switchImgTab('upload');
+  
+  // Reset delivery cities
+  deliveryCitiesData = { cod: [], prepaid: [] };
+  document.getElementById('newCodCity').value = '';
+  document.getElementById('newCodPrice').value = '';
+  document.getElementById('newPrepaidCity').value = '';
+  document.getElementById('newPrepaidPrice').value = '';
+  renderDeliveryCities('cod');
+  renderDeliveryCities('prepaid');
 }
 
 // ── Discount Calculator ──
@@ -860,12 +869,12 @@ let deliveryCitiesData = { cod: [], prepaid: [] };
 // Default cities (for new products)
 deliveryCitiesData = { 
   cod: [
-    { name: 'الخرطم', price: 0, type: 'cod' },
+    { name: 'الخرطن', price: 0, type: 'cod' },
     { name: 'أم درمان', price: 0, type: 'cod' },
     { name: 'بحري', price: 0, type: 'cod' }
   ], 
   prepaid: [
-    { name: 'الخرطم', price: 0, type: 'prepaid' },
+    { name: 'الخرطن', price: 0, type: 'prepaid' },
     { name: 'أم درمان', price: 0, type: 'prepaid' },
     { name: 'بحري', price: 0, type: 'prepaid' }
   ] 
@@ -896,10 +905,14 @@ function removeDeliveryCity(type, index) {
 
 function renderDeliveryCities(type) {
   const listEl = document.getElementById(type === 'cod' ? 'codCitiesList' : 'prepaidCitiesList');
-  listEl.innerHTML = deliveryCitiesData[type].map((city, i) =>
-    '<div class="city-tag">' + city.name + ' - ' + city.price.toLocaleString() + ' SDG ' +
-    '<button type="button" class="city-remove" onclick="removeDeliveryCity(\'' + type + '\',' + i + ')">✕</button></div>'
-  ).join('');
+  if (deliveryCitiesData[type].length === 0) {
+    listEl.innerHTML = '<span style="color:#999;font-size:12px;">لا توجد مدن مضافة</span>';
+  } else {
+    listEl.innerHTML = deliveryCitiesData[type].map((city, i) =>
+      '<div class="city-tag">' + city.name + ' - ' + city.price.toLocaleString() + ' SDG ' +
+      '<button type="button" class="city-remove" onclick="removeDeliveryCity(\'' + type + '\',' + i + ')">✕</button></div>'
+    ).join('');
+  }
 }
 
 function getDeliveryCitiesFromForm() {
@@ -908,10 +921,26 @@ function getDeliveryCitiesFromForm() {
 
 function setDeliveryCitiesToForm(cities) {
   deliveryCitiesData = { cod: [], prepaid: [] };
-  if (cities && Array.isArray(cities)) {
-    cities.forEach(city => {
-      const type = city.type === 'cod' ? 'cod' : 'prepaid';
-      deliveryCitiesData[type].push({ name: city.name, price: city.price, type: type });
+  // Handle both array and string formats from Supabase
+  let citiesArray = [];
+  if (typeof cities === 'string') {
+    try {
+      citiesArray = JSON.parse(cities);
+    } catch (e) {
+      citiesArray = [];
+    }
+  } else if (Array.isArray(cities)) {
+    citiesArray = cities;
+  }
+  
+  if (citiesArray.length > 0) {
+    citiesArray.forEach(city => {
+      const cityType = city.type === 'cod' ? 'cod' : 'prepaid';
+      deliveryCitiesData[cityType].push({ 
+        name: city.name, 
+        price: Number(city.price) || 0, 
+        type: cityType 
+      });
     });
   }
   renderDeliveryCities('cod');
