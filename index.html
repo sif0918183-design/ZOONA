@@ -1035,7 +1035,11 @@ function checkUrlForProduct() {
   if (path === '/' || path === '/index.html' || path === '') return;
 
   const decodedPath = decodeURIComponent(path);
-  const slug = decodedPath.startsWith('/') ? decodedPath.substring(1) : decodedPath;
+  // Remove leading/trailing slashes and get the last part of the path
+  const parts = decodedPath.split('/').filter(p => p.length > 0);
+  if (parts.length === 0) return;
+
+  const slug = parts[parts.length - 1];
   if (slug) {
     const product = allProducts.find(p => slugify(p.name) === slug);
     if (product) {
