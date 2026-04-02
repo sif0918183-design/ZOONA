@@ -1019,7 +1019,10 @@ function addProductToCart(p, qty) {
       image: p.image,
       quantity: qty,
       warehouse: p.warehouse || 'الخرطوم',
-      affiliateId: getAffiliateId()
+      affiliateId: getAffiliateId(),
+      delivery_cities: deliveryCities,
+      cashOnDelivery: deliveryCities.filter(c => c.type === 'cod'),
+      prepaid: deliveryCities.filter(c => c.type === 'prepaid')
     });
   }
   saveCart();
