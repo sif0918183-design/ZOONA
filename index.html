@@ -998,6 +998,16 @@ function addToCart(e, id) {
 }
 
 function addProductToCart(p, qty) {
+  // Get delivery cities from product
+  let deliveryCities = [];
+  if (p.delivery_cities) {
+    if (typeof p.delivery_cities === 'string') {
+      try { deliveryCities = JSON.parse(p.delivery_cities); } catch(e) { deliveryCities = []; }
+    } else {
+      deliveryCities = p.delivery_cities || [];
+    }
+  }
+
   const existing = cart.find(x => x.id === p.id);
   if (existing) {
     existing.quantity += qty;
