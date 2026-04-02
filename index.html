@@ -707,6 +707,17 @@ html, body {
    ZOONA STORE - Main Script
 ══════════════════════════════════════════ */
 
+// ── Helpers ──
+function slugify(text) {
+  if (!text) return "";
+  return text.toString().toLowerCase().trim()
+    .replace(/\s+/g, '-')           // Replace spaces with -
+    .replace(/[^\u0621-\u064A\u0660-\u0669a-zA-Z0-9-]+/g, '') // Remove non-Arabic, non-English alphanumeric except -
+    .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+    .replace(/^-+/, '')             // Trim - from start
+    .replace(/-+$/, '');            // Trim - from end
+}
+
 // ── State ──
 let allProducts = [];
 let filteredProducts = [];
@@ -770,6 +781,7 @@ async function loadProducts() {
         allProducts = cacheData.products;
         filteredProducts = [...allProducts];
         renderProducts(filteredProducts);
+        checkUrlForProduct();
         return;
       }
     }
@@ -806,6 +818,7 @@ async function loadProducts() {
 
     filteredProducts = [...allProducts];
     renderProducts(filteredProducts);
+    checkUrlForProduct();
   } catch(e) {
     console.error('Error loading products:', e);
     // Try to use stale cache
@@ -815,6 +828,7 @@ async function loadProducts() {
       allProducts = cacheData.products;
       filteredProducts = [...allProducts];
       renderProducts(filteredProducts);
+      checkUrlForProduct();
     } else {
       document.getElementById('productsGrid').innerHTML = '<div style="padding:30px; text-align:center; color:#999; grid-column:1/-1;">تعذّر تحميل المنتجات</div>';
     }
@@ -955,7 +969,7 @@ function renderDeliveryCitiesInModal(product) {
   }
 }
 
-function openModal(id) {
+function openModal(id, fromPopState = false) {
   const p = allProducts.find(x => x.id === id);
   if (!p) return;
   currentModalProduct = p;
@@ -981,14 +995,26 @@ function openModal(id) {
     addBtn.style.background = '';
   }
 
+  if (!fromPopState) {
+    const slug = slugify(p.name);
+    window.history.pushState({ productId: id }, p.name, '/' + slug);
+    document.title = p.name + ' | ZOONA';
+  }
+
   document.getElementById('productModal').classList.add('show');
   document.body.style.overflow = 'hidden';
 }
 
-function closeModal(e) {
+function closeModal(e, fromPopState = false) {
   if (e && e.target !== document.getElementById('productModal')) return;
+  const wasOpen = document.getElementById('productModal').classList.contains('show');
   document.getElementById('productModal').classList.remove('show');
   document.body.style.overflow = '';
+
+  if (wasOpen && !fromPopState) {
+    window.history.pushState({}, 'ZOONA - متجر إلكتروني', '/');
+    document.title = 'ZOONA - متجر إلكتروني';
+  }
 }
 
 function changeModalQty(d) {
@@ -1002,6 +1028,33 @@ function addModalToCart() {
   addProductToCart(p, modalQty);
   closeModal(null);
 }
+
+// ── URL Handling ──
+function checkUrlForProduct() {
+  const path = window.location.pathname;
+  if (path === '/' || path === '/index.html' || path === '') return;
+
+  const decodedPath = decodeURIComponent(path);
+  // Remove leading/trailing slashes and get the last part of the path
+  const parts = decodedPath.split('/').filter(p => p.length > 0);
+  if (parts.length === 0) return;
+
+  const slug = parts[parts.length - 1];
+  if (slug) {
+    const product = allProducts.find(p => slugify(p.name) === slug);
+    if (product) {
+      openModal(product.id, true);
+    }
+  }
+}
+
+window.addEventListener('popstate', (event) => {
+  if (event.state && event.state.productId) {
+    openModal(event.state.productId, true);
+  } else {
+    closeModal(null, true);
+  }
+});
 
 // ── Add to Cart ──
 function addToCart(e, id) {
