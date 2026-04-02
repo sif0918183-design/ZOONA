@@ -968,6 +968,9 @@ function openModal(id) {
   document.getElementById('modalDesc').textContent = p.description;
   document.getElementById('modalQty').textContent = modalQty;
 
+  // تحديث عنوان الصفحة باسم المنتج
+  document.title = p.name + ' - ZOONA';
+
   // Render delivery cities
   renderDeliveryCitiesInModal(p);
 
@@ -989,6 +992,8 @@ function closeModal(e) {
   if (e && e.target !== document.getElementById('productModal')) return;
   document.getElementById('productModal').classList.remove('show');
   document.body.style.overflow = '';
+  // إعادة عنوان الصفحة للوضع الافتراضي
+  document.title = 'ZOONA - متجر إلكتروني';
 }
 
 function changeModalQty(d) {
