@@ -888,6 +888,59 @@ function handleSearch(val) {
 }
 
 // ── Product Modal ──
+// Render delivery cities in modal
+function renderDeliveryCitiesInModal(product) {
+  const section = document.getElementById('modalDeliverySection');
+  const codDiv = document.getElementById('modalDeliveryCOD');
+  const prepaidDiv = document.getElementById('modalDeliveryPrepaid');
+
+  if (!section || !codDiv || !prepaidDiv) return;
+  
+  // Get delivery cities from product
+  let cities = [];
+  if (product.delivery_cities) {
+    if (typeof product.delivery_cities === 'string') {
+      try { cities = JSON.parse(product.delivery_cities); } catch(e) { cities = []; }
+    } else {
+      cities = product.delivery_cities || [];
+    }
+  }
+  
+  const codCities = cities.filter(c => c.type === 'cod');
+  const prepaidCities = cities.filter(c => c.type === 'prepaid');
+  
+  if (cities.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  
+  section.style.display = 'block';
+  
+  // Render COD cities
+  if (codCities.length === 0) {
+    codDiv.innerHTML = '<span class="modal-no-cities">لا توجد مدن</span>';
+  } else {
+    codDiv.innerHTML = codCities.map(c => {
+      const isFree = c.price === 0;
+      const cls = isFree ? 'modal-delivery-city free' : 'modal-delivery-city';
+      const priceText = isFree ? 'مجاني' : c.price.toLocaleString() + ' SDG';
+      return '<span class="' + cls + '">' + c.name + ' - <span class="price">' + priceText + '</span></span>';
+    }).join('');
+  }
+  
+  // Render prepaid cities
+  if (prepaidCities.length === 0) {
+    prepaidDiv.innerHTML = '<span class="modal-no-cities">لا توجد مدن</span>';
+  } else {
+    prepaidDiv.innerHTML = prepaidCities.map(c => {
+      const isFree = c.price === 0;
+      const cls = isFree ? 'modal-delivery-city free' : 'modal-delivery-city';
+      const priceText = isFree ? 'مجاني' : c.price.toLocaleString() + ' SDG';
+      return '<span class="' + cls + '">' + c.name + ' - <span class="price">' + priceText + '</span></span>';
+    }).join('');
+  }
+}
+
 function openModal(id) {
   const p = allProducts.find(x => x.id === id);
   if (!p) return;
@@ -900,6 +953,9 @@ function openModal(id) {
   document.getElementById('modalOld').textContent = p.oldPrice ? p.oldPrice.toLocaleString() + ' SDG' : '';
   document.getElementById('modalDesc').textContent = p.description;
   document.getElementById('modalQty').textContent = modalQty;
+
+  // Render delivery cities
+  renderDeliveryCitiesInModal(p);
 
   const inCart = cart.find(x => x.id === id);
   const addBtn = document.getElementById('modalAddBtn');
