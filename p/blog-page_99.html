@@ -1,181 +1,208 @@
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>سياسة الخصوصية - ZOONA</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --zoona-red: #d32f2f;
+            --zoona-bg: #f8f9fa;
+            --text-dark: #2d3436;
+            --white: #ffffff;
+        }
 
-<style>
-    :root {
-        --zoona-red: #d32f2f; 
-        --zoona-bg: #f8f9fa;
-        --text-dark: #2d3436;
-        --white: #ffffff;
-    }
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-    body {
-        margin: 0;
-        padding: 10px;
-        background-color: var(--zoona-bg);
-    }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--zoona-bg);
+            font-family: 'Tajawal', sans-serif;
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
 
-    .container {
-        direction: rtl;
-        text-align: right;
-        font-family: 'Tajawal', sans-serif;
-        max-width: 600px; 
-        margin: 0 auto;
-        background: var(--white);
-        border-radius: 20px;
-        overflow: hidden;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-    }
+        .app-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            background: var(--white);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 15px rgba(0,0,0,0.05);
+        }
 
-    .header-banner {
-        background-color: var(--zoona-red);
-        color: white;
-        padding: 30px 20px;
-        text-align: center;
-    }
+        /* هيدر الصفحة */
+        .app-header {
+            background-color: var(--zoona-red);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            border-bottom-left-radius: 30px;
+            border-bottom-right-radius: 30px;
+        }
 
-    .header-banner h2 {
-        margin: 0;
-        font-size: 24px;
-        font-weight: 700;
-    }
+        .app-header h1 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 700;
+        }
 
-    .content-padding {
-        padding: 20px;
-    }
+        .app-header p {
+            margin: 10px 0 0;
+            font-size: 15px;
+            opacity: 0.9;
+        }
 
-    p {
-        line-height: 1.8;
-        font-size: 17px; 
-        color: var(--text-dark);
-        margin-bottom: 20px;
-    }
+        /* منطقة المحتوى */
+        .content-section {
+            padding: 25px 20px 40px 20px;
+        }
 
-    h3 {
-        color: var(--zoona-red);
-        font-size: 19px;
-        border-right: 4px solid var(--zoona-red);
-        padding-right: 10px;
-        margin-top: 30px;
-        margin-bottom: 15px;
-    }
+        p {
+            font-size: 17px;
+            margin-bottom: 20px;
+            line-height: 1.8;
+        }
 
-    ul {
-        padding-right: 20px;
-        margin-bottom: 25px;
-        list-style-type: none;
-    }
+        .info-card {
+            background: #fff5f5;
+            border: 1px dashed var(--zoona-red);
+            padding: 15px;
+            border-radius: 15px;
+            margin: 20px 0;
+            font-size: 15px;
+            color: #666;
+        }
 
-    li {
-        font-size: 16px;
-        margin-bottom: 10px;
-        color: #444;
-        position: relative;
-    }
+        h2 {
+            color: var(--zoona-red);
+            font-size: 19px;
+            border-right: 5px solid var(--zoona-red);
+            padding-right: 12px;
+            margin: 35px 0 15px;
+        }
 
-    li::before {
-        content: "•";
-        color: var(--zoona-red);
-        font-weight: bold;
-        display: inline-block; 
-        width: 1em;
-        margin-right: -1em;
-    }
+        ul {
+            padding-right: 20px;
+            margin-bottom: 25px;
+            list-style-type: none;
+        }
 
-    .info-card {
-        background: #fff5f5;
-        border: 1px solid #ffe3e3;
-        padding: 15px;
-        border-radius: 12px;
-        margin: 20px 0;
-    }
+        li {
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: #444;
+            position: relative;
+        }
 
-    .contact-box {
-        background: #f1f2f6;
-        padding: 15px;
-        border-radius: 12px;
-        border-right: 5px solid #2980b9;
-    }
+        li::before {
+            content: "•";
+            color: var(--zoona-red);
+            font-weight: bold;
+            display: inline-block; 
+            width: 1em;
+            margin-right: -1em;
+        }
 
-    hr {
-        border: 0;
-        border-top: 1px solid #eee;
-        margin: 30px 0;
-    }
+        .contact-box {
+            background: #f1f2f6;
+            padding: 20px;
+            border-radius: 15px;
+            border-right: 5px solid #2980b9;
+            margin-top: 20px;
+        }
 
-    .footer-note {
-        text-align: center;
-        background: #f8f9fa;
-        padding: 20px;
-        color: var(--zoona-red);
-        font-weight: bold;
-        font-size: 16px;
-    }
+        .footer-note {
+            text-align: center;
+            background: #f8f9fa;
+            padding: 25px 20px;
+            color: var(--zoona-red);
+            font-weight: bold;
+            font-size: 16px;
+            border-top: 1px solid #eee;
+            margin-top: auto;
+        }
 
-    @media (max-width: 480px) {
-        .header-banner h2 { font-size: 20px; }
-        p { font-size: 16px; }
-        li { font-size: 15px; }
-    }
-</style>
+        /* تحسينات الشاشات الصغيرة */
+        @media (max-width: 480px) {
+            .app-header h1 { font-size: 20px; }
+            p { font-size: 16px; }
+            li { font-size: 15px; }
+        }
+    </style>
+</head>
+<body>
 
-<div class="container">
-    <div class="header-banner">
-        <h2>🔐 سياسة الخصوصية – ZOONA</h2>
-        <p style="color: #ffeaea; font-size: 15px; margin-top: 10px; margin-bottom: 0;">نحن نهتم بحماية بياناتك وخصوصيتك</p>
-    </div>
+<div class="app-container">
+    <header class="app-header">
+        <h1>🔐 سياسة الخصوصية – ZOONA</h1>
+        <p>نحن نهتم بحماية بياناتك وخصوصيتك</p>
+    </header>
 
-    <div class="content-padding">
+    <main class="content-section">
         <p>نشكرك على زيارتك لـ <strong>ZOONA</strong> ونؤكد لك التزامنا الكامل بحماية خصوصيتك. توضح هذه السياسة كيف نتعامل مع معلوماتك لضمان تجربة تسوق آمنة وموثوقة.</p>
 
         <div class="info-card">
-            <p style="margin: 0; font-size: 15px; color: #666;">باستخدامك للموقع، فإنك توافق على البنود المذكورة أدناه، والتي يتم تحديثها دورياً لضمان أفضل حماية ممكنة.</p>
+            باستخدامك للموقع، فإنك توافق على البنود المذكورة أدناه، والتي يتم تحديثها دورياً لضمان أفضل حماية ممكنة لبياناتك الشخصية.
         </div>
 
-        <h3>✴️ المعلومات التي نجمعها</h3>
+        <h2>✴️ المعلومات التي نجمعها</h2>
         <ul>
-            <li>الاسم الكامل لضمان دقة الطلب.</li>
+            <li>الاسم الكامل لضمان دقة الطلبات.</li>
             <li>رقم الهاتف للتواصل وسرعة التوصيل.</li>
             <li>المدينة والعنوان التفصيلي لوجهة الشحن.</li>
-            <li>البريد الإلكتروني (اختياري) للتواصل المستقبلي.</li>
-            <li>بيانات التصفح لتحسين واجهة المتجر وتجربتكم.</li>
+            <li>بيانات التصفح لتحسين واجهة المتجر.</li>
         </ul>
 
-        <h3>✴️ كيف نستخدم بياناتك؟</h3>
+        <h2>✴️ كيف نستخدم بياناتك؟</h2>
         <p>بياناتك تُستخدم فقط لخدمتك عبر:</p>
         <ul>
-            <li>تأكيد الطلبات وتجهيزها للشحن.</li>
+            <li>تأكيد الطلبات وتجهيزها للشحن الفوري.</li>
             <li>تحسين الدعم الفني وحل المشكلات بسرعة.</li>
             <li>إرسال العروض الحصرية (بناءً على رغبتك).</li>
         </ul>
 
-        <h3>✴️ مشاركة البيانات</h3>
-        <p>نحن لا نبيع بياناتك. نشارك فقط المعلومات الضرورية مع:</p>
+        <h2>✴️ مشاركة البيانات</h2>
+        <p>نحن لا نبيع بياناتك أبداً. نشارك فقط المعلومات الضرورية مع:</p>
         <ul>
-            <li><strong>شركاء التوصيل:</strong> لتسليم المنتج ليدك.</li>
-            <li><strong>الدعم الفني:</strong> لمتابعة حالة طلبك بدقة.</li>
+            <li><strong>شركاء التوصيل:</strong> لتسليم المنتج إلى باب منزلك.</li>
+            <li><strong>فريق الدعم:</strong> لمتابعة حالة طلبك بدقة.</li>
         </ul>
 
-        <h3>✴️ حماية المعلومات</h3>
-        <p>نعتمد بروتوكولات أمان متقدمة تشمل تشفير الاتصالات ومنع الوصول غير المصرح به، لضمان بقاء معلوماتك الشخصية في بيئة رقمية مشفرة وآمنة.</p>
+        <h2>✴️ حماية المعلومات</h2>
+        <p>نعتمد بروتوكولات أمان متقدمة تشمل تشفير الاتصالات ومنع الوصول غير المصرح به، لضمان بقاء معلوماتك الشخصية في بيئة رقمية مشفرة وآمنة تماماً.</p>
 
-        <hr>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
 
-        <h3>✴️ حقوقك كمستخدم</h3>
+        <h2>✴️ حقوقك كمستخدم</h2>
         <ul>
             <li>تعديل أو تحديث بياناتك الشخصية في أي وقت.</li>
             <li>طلب حذف البيانات (ما لم تكن مرتبطة بطلب نشط).</li>
             <li>التحكم في الإشعارات والرسائل الترويجية.</li>
         </ul>
 
-        <h3>✴️ تواصل معنا</h3>
+        <h2>✴️ تواصل معنا</h2>
         <div class="contact-box">
-            <p style="margin-bottom: 10px;">لأي استفسار بخصوص خصوصيتك:</p>
-            <li style="list-style:none;"><strong>واتساب:</strong> +249918183521</li>
-            <li style="list-style:none;"><strong>البريد:</strong> info@zoonasd.com</li>
+            <p style="margin-bottom: 10px; font-weight: bold;">لأي استفسار بخصوص خصوصيتك:</p>
+            <div style="font-size: 15px; line-height: 2;">
+                📍 <strong>واتساب:</strong> +249918183521<br>
+                📧 <strong>البريد:</strong> info@zoonasd.com
+            </div>
         </div>
-    </div>
+    </main>
 
-    <div class="footer-note">
+    <footer class="footer-note">
         🔒 نحن نحترم خصوصيتك — وتسوقك معنا آمن 100%
-    </div>
+    </footer>
 </div>
+
+</body>
+</html>
