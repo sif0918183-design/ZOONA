@@ -1550,21 +1550,31 @@
             citiesData.prepaid = [];
             
             cartItems.forEach(item => {
-                if (item.cashOnDelivery) {
-                    item.cashOnDelivery.forEach(city => {
-                        if (!citiesData.cashOnDelivery.find(c => c.name === city.name)) {
-                            citiesData.cashOnDelivery.push(city);
-                        }
-                    });
+                let cod = Array.isArray(item.cashOnDelivery) ? item.cashOnDelivery : [];
+                let pre = Array.isArray(item.prepaid) ? item.prepaid : [];
+
+                if (cod.length === 0 && pre.length === 0 && item.delivery_cities) {
+                    let dc = item.delivery_cities;
+                    if (typeof dc === 'string') {
+                        try { dc = JSON.parse(dc); } catch(e) { dc = []; }
+                    }
+                    if (Array.isArray(dc)) {
+                        cod = dc.filter(c => c.type === 'cod');
+                        pre = dc.filter(c => c.type === 'prepaid');
+                    }
                 }
+
+                cod.forEach(city => {
+                    if (!citiesData.cashOnDelivery.find(c => c.name === city.name)) {
+                        citiesData.cashOnDelivery.push(city);
+                    }
+                });
                 
-                if (item.prepaid) {
-                    item.prepaid.forEach(city => {
-                        if (!citiesData.prepaid.find(c => c.name === city.name)) {
-                            citiesData.prepaid.push(city);
-                        }
-                    });
-                }
+                pre.forEach(city => {
+                    if (!citiesData.prepaid.find(c => c.name === city.name)) {
+                        citiesData.prepaid.push(city);
+                    }
+                });
             });
             
             renderCityOptions();
