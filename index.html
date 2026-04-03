@@ -219,6 +219,46 @@ html, body {
 .order-status.done { background:#E8F5E9; color:#2E7D32; }
 .clear-orders-btn { background:none; border:2px solid #ddd; color:#888; padding:10px 20px; border-radius:25px; font-family:var(--font); font-size:14px; font-weight:700; cursor:pointer; margin-top:8px; }
 
+/* ─── ORDERS POPUP STYLES ─── */
+.orders-popup { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.5); z-index:100000; justify-content:center; align-items:center; padding:10px; }
+.orders-popup.show { display:flex; }
+.orders-popup-content { background:#fff; width:100%; max-width:500px; max-height:85vh; border-radius:15px; overflow:hidden; box-shadow:0 5px 20px rgba(0,0,0,.2); animation:popupAppear .3s ease-out; display:flex; flex-direction:column; }
+.orders-popup-header { background:var(--red-gradient); color:#fff; padding:15px 20px; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:10; }
+.orders-popup-header h3 { margin:0; font-size:18px; display:flex; align-items:center; gap:8px; }
+.orders-popup-close { background:none; border:none; color:#fff; font-size:20px; cursor:pointer; padding:5px; width:35px; height:35px; display:flex; align-items:center; justify-content:center; border-radius:50%; transition:background .3s; }
+.orders-popup-close:hover { background:rgba(255,255,255,.2); }
+.orders-popup-body { padding:15px; overflow-y:auto; flex:1; }
+.orders-loading { text-align:center; padding:30px; color:#666; }
+.orders-loading i { font-size:24px; color:var(--red); margin-bottom:10px; display:block; }
+.orders-empty { text-align:center; padding:30px; }
+.orders-empty i { font-size:50px; color:#ccc; margin-bottom:15px; display:block; }
+.orders-empty h3 { font-size:16px; margin-bottom:10px; }
+.orders-empty p { font-size:13px; color:#666; }
+.orders-refresh-btn { background:var(--red); color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-family:var(--font); font-size:13px; display:flex; align-items:center; gap:6px; margin-bottom:15px; }
+.orders-refresh-btn:hover { background:var(--red-dark); }
+.orders-table-wrap { overflow-x:auto; }
+.orders-table { width:100%; border-collapse:collapse; font-size:11px; }
+.orders-table th, .orders-table td { padding:8px 6px; text-align:right; border-bottom:1px solid #eee; word-wrap:break-word; }
+.orders-table th { background:#f8f9fa; font-weight:700; color:#333; font-size:10px; }
+.orders-table tr:hover { background:#f5f5f5; }
+.orders-table td { color:#444; }
+.orders-status-badge { padding:3px 6px; border-radius:8px; font-size:9px; font-weight:700; display:inline-block; }
+.orders-status-new { background:#e3f2fd; color:#1976d2; }
+.orders-status-processing { background:#fff3e0; color:#f57c00; }
+.orders-status-shipped { background:#e8f5e8; color:#388e3c; }
+.orders-status-delivered { background:#e8f5e8; color:#2e7d32; }
+.orders-status-cancelled { background:#ffebee; color:#d32f2f; }
+.orders-status-completed { background:#e8f5e8; color:#2e7d32; }
+
+@keyframes popupAppear { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+
+/* Responsive adjustments */
+@media (max-width:480px) {
+  .orders-table { font-size:9px; }
+  .orders-table th, .orders-table td { padding:6px 4px; font-size:8px; }
+  .orders-status-badge { font-size:7px; padding:2px 4px; }
+}
+
 /* ─── MORE PAGE ─── */
 .more-page { padding:12px; }
 .more-header { text-align:center; padding:20px 0 16px; }
@@ -269,6 +309,13 @@ html, body {
   align-items:center; justify-content:center;
 }
 .cart-badge.show { display:flex; }
+.orders-badge {
+  position:absolute; top:4px; right:calc(50% - 16px);
+  background:var(--red); color:#fff; font-size:10px; font-weight:800;
+  width:17px; height:17px; border-radius:50%; display:none;
+  align-items:center; justify-content:center;
+}
+.orders-badge.show { display:flex; }
 
 /* ─── FLOATING BUTTONS ─── */
 .float-btns { position:fixed; bottom:calc(var(--bottom-nav-h) + 14px); left:0; right:0; display:flex; justify-content:space-between; padding:0 16px; pointer-events:none; z-index:99; }
@@ -627,9 +674,10 @@ html, body {
       <span>السلة</span>
       <span class="cart-badge" id="cartBadge">0</span>
     </button>
-    <button class="nav-item" id="nav-orders" onclick="switchTab('orders')">
+    <button class="nav-item" id="nav-orders" onclick="openOrdersPopup()">
       <i class="fas fa-box"></i>
       <span>طلباتي</span>
+      <span class="orders-badge" id="ordersBadge" style="display:none;">0</span>
     </button>
     <button class="nav-item" id="nav-more" onclick="switchTab('more')">
       <i class="fas fa-ellipsis-h"></i>
@@ -647,6 +695,21 @@ html, body {
 
 <!-- TOAST -->
 <div id="toast"></div>
+
+<!-- ORDERS POPUP -->
+<div class="orders-popup" id="ordersPopup">
+  <div class="orders-popup-content">
+    <div class="orders-popup-header">
+      <h3><i class="fas fa-clipboard-list"></i> طلباتي</h3>
+      <button class="orders-popup-close" onclick="closeOrdersPopup()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="orders-popup-body" id="ordersPopupBody">
+      <!-- Loaded by JS -->
+    </div>
+  </div>
+</div>
 
 <!-- PRODUCT DETAIL MODAL -->
 <div class="modal-overlay" id="productModal" onclick="closeModal(event)">
@@ -1207,6 +1270,336 @@ function goCheckout() {
   window.location.href = 'p/e.html';
 }
 
+// ── Orders API Functions (Vercel) ──
+const ORDERS_API_URL = 'https://orders-9vxn.vercel.app/api/orders';
+
+function getUserId() {
+  const storedUserId = localStorage.getItem('zoonaUserId');
+  if (storedUserId) {
+    console.log('تم العثور على معرف مستخدم:', storedUserId);
+    return storedUserId;
+  } else {
+    console.log('لا يوجد معرف مستخدم محفوظ في localStorage');
+    return null;
+  }
+}
+
+function calculateProcessingTime(orderCreatedAt) {
+  const orderTime = new Date(orderCreatedAt);
+  const orderHour = orderTime.getHours();
+  const orderMinutes = orderTime.getMinutes();
+  
+  if (orderHour >= 5 && orderHour < 13) {
+    const processingTime = new Date(orderTime);
+    processingTime.setHours(orderHour + 2, orderMinutes, 0, 0);
+    return processingTime;
+  } else {
+    const nextDay = new Date(orderTime);
+    nextDay.setDate(nextDay.getDate() + 1);
+    nextDay.setHours(5, 0, 0, 0);
+    return nextDay;
+  }
+}
+
+function checkAndUpdateOrderStatus(order) {
+  const now = new Date();
+  const orderTime = new Date(order.created_at);
+  
+  if (order.status === 'new') {
+    const processingTime = calculateProcessingTime(order.created_at);
+    if (now >= processingTime) {
+      return 'processing';
+    }
+  }
+  
+  if (order.status === 'confirmed') {
+    return 'completed';
+  }
+  
+  return order.status;
+}
+
+function countActiveOrders(orders) {
+  return orders.filter(order => {
+    const status = checkAndUpdateOrderStatus(order);
+    return status !== 'completed' && status !== 'cancelled' && status !== 'delivered';
+  }).length;
+}
+
+function getStatusText(status) {
+  const statusMap = {
+    'new': 'جديد',
+    'processing': 'قيد المعالجة',
+    'shipped': 'تم الشحن',
+    'delivered': 'تم التسليم',
+    'cancelled': 'ملغي',
+    'confirmed': 'مكتمل',
+    'completed': 'مكتمل'
+  };
+  return statusMap[status] || status;
+}
+
+async function fetchUserOrders() {
+  const userId = getUserId();
+  
+  if (!userId) {
+    console.log('لا يوجد معرف مستخدم - لن يتم جلب أي طلبات');
+    return [];
+  }
+  
+  console.log('جلب الطلبات للمستخدم:', userId);
+  
+  try {
+    const response = await fetch(`${ORDERS_API_URL}?action=get_user_orders&userId=${userId}`);
+    
+    if (!response.ok) {
+      throw new Error(`خطأ في الاستجابة: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      console.error('خطأ من API:', result.error);
+      return [];
+    }
+    
+    console.log('تم جلب الطلبات بنجاح:', result.orders ? result.orders.length : 0);
+    
+    if (result.orders) {
+      localStorage.setItem('userOrders', JSON.stringify(result.orders));
+      localStorage.setItem('userOrdersLastUpdate', Date.now().toString());
+    }
+    
+    return result.orders || [];
+    
+  } catch (error) {
+    console.error('خطأ في جلب الطلبات من API:', error);
+    
+    const cachedOrders = localStorage.getItem('userOrders');
+    if (cachedOrders) {
+      console.log('استخدام البيانات المخزنة محلياً كنسخة احتياطية');
+      return JSON.parse(cachedOrders);
+    }
+    
+    return [];
+  }
+}
+
+async function getOrdersWithCache() {
+  const lastUpdate = localStorage.getItem('userOrdersLastUpdate');
+  const now = Date.now();
+  const CACHE_DURATION = 5 * 60 * 1000;
+
+  if (lastUpdate && (now - parseInt(lastUpdate)) < CACHE_DURATION) {
+    const cachedOrders = localStorage.getItem('userOrders');
+    if (cachedOrders) {
+      console.log('استخدام البيانات المخزنة محلياً');
+      return JSON.parse(cachedOrders);
+    }
+  }
+
+  console.log('تحديث البيانات من API');
+  return await fetchUserOrders();
+}
+
+async function loadOrdersPopup() {
+  const container = document.getElementById('ordersPopupBody');
+  const userId = getUserId();
+  
+  if (!userId) {
+    container.innerHTML = `
+      <div class="orders-empty">
+        <i class="fas fa-user-slash"></i>
+        <h3>لا توجد طلبات</h3>
+        <p>لم يتم العثور على معرف مستخدم محفوظ</p>
+        <p style="font-size:12px;color:#666;margin-top:10px;">قم بتسجيل طلب جديد لعرضه هنا</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="orders-loading">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>جاري البحث عن الطلبات...</p>
+      <p style="font-size:12px;color:#666;margin-top:5px;">المعرف: ${userId}</p>
+    </div>
+  `;
+
+  try {
+    const orders = await getOrdersWithCache();
+    
+    if (orders.length === 0) {
+      container.innerHTML = `
+        <div class="orders-empty">
+          <i class="fas fa-clipboard-list"></i>
+          <h3>لا توجد طلبات</h3>
+          <p>لم نعثر على أي طلبات مرتبطة بمعرفك</p>
+          <p style="font-size:12px;color:#666;margin-top:10px;">المعرف: ${userId}</p>
+          <button class="orders-refresh-btn" onclick="refreshOrders()" style="margin:15px auto 0;">
+            <i class="fas fa-sync-alt"></i> تحديث البحث
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    let ordersHTML = `
+      <button class="orders-refresh-btn" onclick="refreshOrders()">
+        <i class="fas fa-sync-alt"></i> تحديث الطلبات
+      </button>
+      <div style="margin-bottom:10px;font-size:11px;color:#666;">المعرف: ${userId}</div>
+      <div class="orders-table-wrap">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>رقم الطلب</th>
+              <th>المنتجات</th>
+              <th>السعر</th>
+              <th>التوصيل</th>
+              <th>المجموع</th>
+              <th>التاريخ</th>
+              <th>الحالة</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    orders.forEach(order => {
+      const orderDate = new Date(order.created_at).toLocaleDateString('ar-SA');
+      const currentStatus = checkAndUpdateOrderStatus(order);
+      const statusClass = `orders-status-${currentStatus}`;
+      const statusText = getStatusText(currentStatus);
+      
+      const productsInfo = order.products ? order.products.map(product => 
+        `${product.product_name} (${product.quantity})`
+      ).join('، ') : 'لا توجد منتجات';
+
+      ordersHTML += `
+        <tr>
+          <td>${order.order_id}</td>
+          <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${productsInfo}</td>
+          <td>${((order.total_amount || 0) - (order.shipping_cost || 0)).toLocaleString()} SDG</td>
+          <td>${(order.shipping_cost || 0).toLocaleString()} SDG</td>
+          <td><strong>${(order.total_amount || 0).toLocaleString()} SDG</strong></td>
+          <td>${orderDate}</td>
+          <td><span class="orders-status-badge ${statusClass}">${statusText}</span></td>
+        </tr>
+      `;
+    });
+
+    ordersHTML += `
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    container.innerHTML = ordersHTML;
+    updateOrdersBadge();
+    
+  } catch (error) {
+    console.error('خطأ في تحميل الطلبات:', error);
+    container.innerHTML = `
+      <div class="orders-empty">
+        <i class="fas fa-exclamation-triangle"></i>
+        <h3>خطأ في البحث عن الطلبات</h3>
+        <p>حدث خطأ أثناء البحث عن الطلبات</p>
+        <p style="font-size:12px;color:#666;margin-top:10px;">المعرف: ${userId}</p>
+        <button class="orders-refresh-btn" onclick="refreshOrders()" style="margin:15px auto 0;">
+          <i class="fas fa-sync-alt"></i> المحاولة مرة أخرى
+        </button>
+      </div>
+    `;
+  }
+}
+
+async function refreshOrders() {
+  console.log('تجديد البحث عن الطلبات...');
+  
+  const userId = getUserId();
+  if (!userId) {
+    console.log('لا يوجد معرف مستخدم لتحديث الطلبات');
+    return;
+  }
+  
+  localStorage.removeItem('userOrders');
+  localStorage.removeItem('userOrdersLastUpdate');
+  
+  await loadOrdersPopup();
+}
+
+function openOrdersPopup() {
+  document.getElementById('ordersPopup').classList.add('show');
+  loadOrdersPopup();
+}
+
+function closeOrdersPopup() {
+  document.getElementById('ordersPopup').classList.remove('show');
+}
+
+// Close popup when clicking outside or pressing escape
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('ordersPopup').addEventListener('click', function(e) {
+    if (e.target === this) {
+      closeOrdersPopup();
+    }
+  });
+  
+  // Close on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeOrdersPopup();
+    }
+  });
+});
+
+function updateOrdersBadge() {
+  getOrdersWithCache().then(orders => {
+    const count = countActiveOrders(orders);
+    const badge = document.getElementById('ordersBadge');
+    if (badge) {
+      if (count > 0) {
+        badge.textContent = count > 9 ? '9+' : count;
+        badge.classList.add('show');
+      } else {
+        badge.classList.remove('show');
+      }
+    }
+  });
+}
+
+// Start order status checker (runs every minute)
+function startOrderStatusChecker() {
+  setInterval(async () => {
+    console.log('فحص تلقائي لحالة الطلبات...');
+    const orders = await getOrdersWithCache();
+    let needsUpdate = false;
+    
+    orders.forEach(order => {
+      const originalStatus = order.status;
+      const newStatus = checkAndUpdateOrderStatus(order);
+      
+      if (originalStatus !== newStatus) {
+        needsUpdate = true;
+      }
+    });
+    
+    if (needsUpdate) {
+      console.log('تحديث الواجهة بسبب تغيير في حالة الطلبات');
+      updateOrdersBadge();
+      
+      if (document.getElementById('ordersPopup').classList.contains('show')) {
+        loadOrdersPopup();
+      }
+    }
+  }, 60000);
+}
+
+// Initialize orders counter on load
+setTimeout(() => {
+  updateOrdersBadge();
+}, 2000);
+
 // ── Render Orders ──
 function renderOrders() {
   const container = document.getElementById('ordersContent');
@@ -1435,6 +1828,8 @@ function initPullToRefresh() {
 
 // ── Cart badge on load ──
 updateCartBadge();
+updateOrdersBadge();
+startOrderStatusChecker();
 
 // ── Online/Offline ──
 window.addEventListener('offline', () => showToast('⚠️ أنت غير متصل بالإنترنت'));
