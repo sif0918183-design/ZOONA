@@ -217,7 +217,66 @@ html, body {
 .order-date { font-size:12px; color:#999; }
 .order-status { display:inline-block; background:#FFF3E0; color:#E65100; font-size:11px; font-weight:700; padding:3px 8px; border-radius:5px; margin-bottom:6px; }
 .order-status.done { background:#E8F5E9; color:#2E7D32; }
+.order-status.status-new { background:#E3F2FD; color:#1565C0; }
+.order-status.status-processing { background:#FFF3E0; color:#E65100; }
+.order-status.status-shipped { background:#E1F5FE; color:#0277BD; }
+.order-status.status-delivered { background:#E8F5E9; color:#2E7D32; }
+.order-status.status-cancelled { background:#FFEBEE; color:#C62828; }
 .clear-orders-btn { background:none; border:2px solid #ddd; color:#888; padding:10px 20px; border-radius:25px; font-family:var(--font); font-size:14px; font-weight:700; cursor:pointer; margin-top:8px; }
+
+/* ─── ORDERS POPUP ─── */
+.orders-popup-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: none; justify-content: center; align-items: flex-end;
+  z-index: 1000; font-family: var(--font);
+}
+.orders-popup {
+  background: #fff; width: 100%; max-width: 500px; max-height: 85vh;
+  border-radius: 20px 20px 0 0; overflow: hidden;
+  animation: slideUp .3s ease;
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.orders-popup-header {
+  background: var(--red-gradient); color: #fff; padding: 16px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.orders-popup-header h2 { font-size: 18px; font-weight: 800; margin: 0; }
+.orders-popup-close { background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; padding: 0; line-height: 1; }
+.orders-popup-body { padding: 16px; overflow-y: auto; max-height: calc(85vh - 60px); }
+
+/* Orders Table */
+.orders-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.orders-table th { background: #f5f5f5; padding: 10px 6px; text-align: right; font-weight: 700; color: #555; border-bottom: 2px solid #ddd; }
+.orders-table td { padding: 10px 6px; text-align: right; border-bottom: 1px solid #eee; color: #333; }
+.orders-table tr:last-child td { border-bottom: none; }
+
+/* Status Badge */
+.status-badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+.status-badge.status-new { background: #E3F2FD; color: #1565C0; }
+.status-badge.status-processing { background: #FFF3E0; color: #E65100; }
+.status-badge.status-shipped { background: #E1F5FE; color: #0277BD; }
+.status-badge.status-delivered { background: #E8F5E9; color: #2E7D32; }
+.status-badge.status-cancelled { background: #FFEBEE; color: #C62828; }
+.status-badge.status-confirmed, .status-badge.status-completed { background: #E8F5E9; color: #2E7D32; }
+
+/* Empty & Loading States */
+.empty-cart { text-align: center; padding: 40px 20px; }
+.empty-cart i { font-size: 50px; color: #ddd; margin-bottom: 16px; display: block; }
+.empty-cart h3 { color: #888; font-size: 18px; margin-bottom: 8px; }
+.empty-cart p { color: #aaa; font-size: 14px; }
+.orders-loading { text-align: center; padding: 40px 20px; }
+.orders-loading i { font-size: 40px; color: var(--red); margin-bottom: 12px; display: block; }
+.orders-loading p { color: #666; font-size: 14px; }
+
+/* Refresh Button */
+.refresh-btn {
+  background: var(--red-gradient); color: #fff; border: none;
+  padding: 10px 20px; border-radius: 25px; font-family: var(--font);
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: .25s;
+}
+.refresh-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
 
 /* ─── MORE PAGE ─── */
 .more-page { padding:12px; }
@@ -461,6 +520,19 @@ html, body {
     </div>
   </div><!-- /page-orders -->
 
+  <!-- ══════════════════ ORDERS POPUP ══════════════════ -->
+  <div class="orders-popup-overlay" id="orders-popup" onclick="closeOrdersPopup()">
+    <div class="orders-popup" onclick="event.stopPropagation()">
+      <div class="orders-popup-header">
+        <h2>📦 طلباتي</h2>
+        <button class="orders-popup-close" onclick="closeOrdersPopup()">✕</button>
+      </div>
+      <div class="orders-popup-body" id="ordersContainer">
+        <!-- Loaded via JavaScript -->
+      </div>
+    </div>
+  </div>
+
   <!-- ══════════════════ MORE PAGE ══════════════════ -->
   <div class="page" id="page-more">
     <div class="more-page">
@@ -630,6 +702,7 @@ html, body {
     <button class="nav-item" id="nav-orders" onclick="switchTab('orders')">
       <i class="fas fa-box"></i>
       <span>طلباتي</span>
+      <span class="cart-badge" id="ordersBadge" style="display:none;">0</span>
     </button>
     <button class="nav-item" id="nav-more" onclick="switchTab('more')">
       <i class="fas fa-ellipsis-h"></i>
@@ -1207,36 +1280,412 @@ function goCheckout() {
   window.location.href = 'p/e.html';
 }
 
-// ── Render Orders ──
-function renderOrders() {
-  const container = document.getElementById('ordersContent');
-  if (orders.length === 0) {
-    container.innerHTML = `
-      <div class="orders-empty">
-        <i class="fas fa-box-open"></i>
-        <h3 style="color:#888; font-size:18px;">لا توجد طلبات بعد</h3>
-        <p style="color:#aaa; font-size:14px; margin-bottom:20px;">سيظهر طلبك هنا بعد إتمامه</p>
-        <button class="go-shop" onclick="switchTab('home')">تسوق الآن</button>
-      </div>`;
-    return;
-  }
+// ══════════════════════════════════════════
+   // متغيرات API والتخزين المؤقت
+   // ══════════════════════════════════════════
+   const API_BASE_URL = '/api/orders';
+   const CACHE_DURATION = 5 * 60 * 1000; // 5 دقائق
 
-  container.innerHTML = orders.map((o, i) => `
-    <div class="order-card">
-      <div class="order-status">${o.status || 'قيد المعالجة'}</div>
-      <div class="order-id">رقم الطلب: ${o.id || 'N/A'}</div>
-      <div class="order-items">${o.items ? o.items.map(x=>x.name).join('، ') : 'طلب'}</div>
-      <div class="order-total">${o.total ? o.total.toLocaleString() + ' SDG' : ''}</div>
-      <div class="order-date">${o.date || ''}</div>
-    </div>
-  `).join('') + `<button class="clear-orders-btn" onclick="clearOrders()">مسح السجل</button>`;
-}
+   // ══════════════════════════════════════════
+   // دوال إدارة جلب معرف المستخدم
+   // ══════════════════════════════════════════
+   function getUserId() {
+     // البحث عن userId في localStorage
+     let userId = localStorage.getItem('userId');
+     
+     // إذا لم يوجد، ابحث في醒了
+     if (!userId) {
+       // ابحث في醒了 عن أي معرف مستخدم محفوظ
+       const keysToCheck = ['user_id', 'customerId', 'user_id', 'customer_id', 'zoona_user_id'];
+       for (const key of keysToCheck) {
+         const value = localStorage.getItem(key);
+         if (value) {
+           userId = value;
+           localStorage.setItem('userId', value); // حفظ للاستخدام المستقبلي
+           break;
+         }
+       }
+     }
+     
+     return userId;
+   }
+
+   // ══════════════════════════════════════════
+   // دوال إدارة الطلبات - معدلة للعمل مع Vercel API
+   // ══════════════════════════════════════════
+   async function fetchUserOrders() {
+     const userId = getUserId();
+     
+     if (!userId) {
+       console.log('⚠️ لا يوجد معرف مستخدم - لن يتم جلب أي طلبات');
+       return [];
+     }
+     
+     console.log('📥 جلب الطلبات للمستخدم:', userId);
+     
+     try {
+       const response = await fetch(`${API_BASE_URL}?action=get_user_orders&userId=${userId}`);
+       
+       if (!response.ok) {
+         throw new Error(`خطأ في الاستجابة: ${response.status}`);
+       }
+       
+       const result = await response.json();
+       
+       if (!result.success) {
+         console.error('❌ خطأ من API:', result.error);
+         return [];
+       }
+       
+       console.log('✅ تم جلب الطلبات بنجاح:', result.orders ? result.orders.length : 0);
+       
+       if (result.orders) {
+         localStorage.setItem('userOrders', JSON.stringify(result.orders));
+         localStorage.setItem('userOrdersLastUpdate', Date.now().toString());
+       }
+       
+       return result.orders || [];
+       
+     } catch (error) {
+       console.error('❌ خطأ في جلب الطلبات من API:', error);
+       
+       const cachedOrders = localStorage.getItem('userOrders');
+       if (cachedOrders) {
+         console.log('📦 استخدام البيانات المخزنة محلياً كنسخة احتياطية');
+         return JSON.parse(cachedOrders);
+       }
+       
+       return [];
+     }
+   }
+
+   async function getOrdersWithCache() {
+     const lastUpdate = localStorage.getItem('userOrdersLastUpdate');
+     const now = Date.now();
+
+     if (lastUpdate && (now - parseInt(lastUpdate)) < CACHE_DURATION) {
+       const cachedOrders = localStorage.getItem('userOrders');
+       if (cachedOrders) {
+         console.log('💾 استخدام البيانات المخزنة محلياً');
+         return JSON.parse(cachedOrders);
+       }
+     }
+
+     console.log('🔄 تحديث البيانات من API');
+     return await fetchUserOrders();
+   }
+
+   // ══════════════════════════════════════════
+   // دالة تحديث عداد الطلبات
+   // ══════════════════════════════════════════
+   window.updateOrdersCount = function() {
+     const userId = getUserId();
+     if (!userId) return;
+     
+     const cachedOrders = localStorage.getItem('userOrders');
+     if (cachedOrders) {
+       const orders = JSON.parse(cachedOrders);
+       const badge = document.getElementById('ordersBadge');
+       if (badge && orders.length > 0) {
+         badge.textContent = orders.length;
+         badge.style.display = 'flex';
+       }
+     }
+   };
+
+   // ══════════════════════════════════════════
+   // دالة التحقق من حالة الطلب
+   // ══════════════════════════════════════════
+   function checkAndUpdateOrderStatus(order) {
+     if (!order || !order.created_at) return order?.status || 'new';
+     
+     const now = new Date();
+     const orderDate = new Date(order.created_at);
+     const hoursDiff = (now - orderDate) / (1000 * 60 * 60);
+     
+     let status = order.status;
+     
+     // تحديث تلقائي للحالة حسب الوقت
+     if (order.status === 'new' && hoursDiff > 2) {
+       status = 'processing';
+     } else if (order.status === 'processing' && hoursDiff > 24) {
+       status = 'shipped';
+     } else if (order.status === 'shipped' && hoursDiff > 48) {
+       status = 'delivered';
+     }
+     
+     return status;
+   }
+
+   // ══════════════════════════════════════════
+   // دوال عرض نافذة الطلبات (Popup)
+   // ══════════════════════════════════════════
+   async function loadOrdersPopup() {
+     const container = document.getElementById('ordersContainer');
+     if (!container) {
+       console.error('❌ لم يتم العثور على حاوية الطلبات');
+       return;
+     }
+     
+     const userId = getUserId();
+     
+     if (!userId) {
+       container.innerHTML = `
+         <div class="empty-cart">
+           <i class="fas fa-user-slash"></i>
+           <h3>لا توجد طلبات</h3>
+           <p>لم يتم العثور على معرف مستخدم محفوظ</p>
+           <p style="font-size: 12px; color: #666; margin-top: 10px;">
+             قم بتسجيل طلب جديد لعرضه هنا
+           </p>
+         </div>
+       `;
+       return;
+     }
+
+     container.innerHTML = `
+       <div class="orders-loading">
+         <i class="fas fa-spinner fa-spin"></i>
+         <p>جاري البحث عن الطلبات...</p>
+         <p style="font-size: 12px; color: #666; margin-top: 5px;">
+           المعرف: ${userId}
+         </p>
+       </div>
+     `;
+
+     try {
+       const orders = await getOrdersWithCache();
+       
+       if (orders.length === 0) {
+         container.innerHTML = `
+           <div class="empty-cart">
+             <i class="fas fa-clipboard-list"></i>
+             <h3>لا توجد طلبات</h3>
+             <p>لم نعثر على أي طلبات مرتبطة بمعرفك</p>
+             <p style="font-size: 12px; color: #666; margin-top: 10px;">
+               المعرف: ${userId}
+             </p>
+             <button class="refresh-btn" onclick="refreshOrders()">
+               <i class="fas fa-sync-alt"></i> تحديث البحث
+             </button>
+           </div>
+         `;
+         return;
+       }
+
+       let ordersHTML = `
+         <div style="margin-bottom: 15px; text-align: right;">
+           <button class="refresh-btn" onclick="refreshOrders()">
+             <i class="fas fa-sync-alt"></i> تحديث الطلبات
+           </button>
+           <span style="margin-right: 10px; font-size: 12px; color: #666;">
+             المعرف: ${userId}
+           </span>
+         </div>
+         <div style="overflow-x: auto;">
+           <table class="orders-table">
+             <thead>
+               <tr>
+                 <th>رقم الطلب</th>
+                 <th>المنتجات</th>
+                 <th>السعر</th>
+                 <th>التوصيل</th>
+                 <th>المجموع</th>
+                 <th>التاريخ</th>
+                 <th>الحالة</th>
+               </tr>
+             </thead>
+             <tbody>
+       `;
+
+       orders.forEach(order => {
+         const orderDate = new Date(order.created_at).toLocaleDateString('ar-SA');
+         const currentStatus = checkAndUpdateOrderStatus(order);
+         const statusClass = `status-${currentStatus}`;
+         const statusText = getStatusText(currentStatus);
+         
+         const productsInfo = order.products ? order.products.map(product => 
+           `${product.product_name} (${product.quantity})`
+         ).join('، ') : 'لا توجد منتجات';
+
+         ordersHTML += `
+           <tr>
+             <td>${order.order_id}</td>
+             <td>${productsInfo}</td>
+             <td>${((order.total_amount || 0) - (order.shipping_cost || 0)).toLocaleString()} SDG</td>
+             <td>${(order.shipping_cost || 0).toLocaleString()} SDG</td>
+             <td><strong>${(order.total_amount || 0).toLocaleString()} SDG</strong></td>
+             <td>${orderDate}</td>
+             <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+           </tr>
+         `;
+       });
+
+       ordersHTML += `
+             </tbody>
+           </table>
+         </div>
+       `;
+
+       container.innerHTML = ordersHTML;
+       
+       window.updateOrdersCount();
+       
+     } catch (error) {
+       console.error('❌ خطأ في تحميل الطلبات:', error);
+       container.innerHTML = `
+         <div class="empty-cart">
+           <i class="fas fa-exclamation-triangle"></i>
+           <h3>خطأ في البحث عن الطلبات</h3>
+           <p>حدث خطأ أثناء البحث عن الطلبات المرتبطة بمعرفك</p>
+           <p style="font-size: 12px; color: #666; margin-top: 10px;">
+             المعرف: ${userId}
+           </p>
+           <button class="refresh-btn" onclick="refreshOrders()">
+             <i class="fas fa-sync-alt"></i> المحاولة مرة أخرى
+           </button>
+         </div>
+       `;
+     }
+   }
+
+   async function refreshOrders() {
+     console.log('🔄 تجديد البحث عن الطلبات...');
+     
+     const userId = getUserId();
+     if (!userId) {
+       console.log('❌ لا يوجد معرف مستخدم لتحديث الطلبات');
+       return;
+     }
+     
+     localStorage.removeItem('userOrders');
+     localStorage.removeItem('userOrdersLastUpdate');
+     
+     await loadOrdersPopup();
+   }
+
+   function getStatusText(status) {
+     const statusMap = {
+       'new': 'جديد',
+       'processing': 'قيد المعالجة',
+       'shipped': 'تم الشحن',
+       'delivered': 'تم التسليم',
+       'cancelled': 'ملغي',
+       'confirmed': 'مكتمل',
+       'completed': 'مكتمل'
+     };
+     return statusMap[status] || status;
+   }
+
+   function startOrderStatusChecker() {
+     setInterval(async () => {
+       console.log('🔍 فحص تلقائي لحالة الطلبات...');
+       const orders = await getOrdersWithCache();
+       let needsUpdate = false;
+       
+       orders.forEach(order => {
+         const originalStatus = order.status;
+         const newStatus = checkAndUpdateOrderStatus(order);
+         
+         if (originalStatus !== newStatus) {
+           needsUpdate = true;
+         }
+       });
+       
+       if (needsUpdate) {
+         console.log('📝 تحديث الواجهة بسبب تغيير في حالة الطلبات');
+         window.updateOrdersCount();
+         
+         if (document.getElementById('orders-popup') && document.getElementById('orders-popup').style.display === 'flex') {
+           loadOrdersPopup();
+         }
+       }
+     }, 60000);
+   }
+
+   // بدء فحص حالة الطلبات تلقائياً
+   startOrderStatusChecker();
+
+   // ══════════════════════════════════════════
+   // دالة فتح نافذة الطلبات (Popup)
+   // ══════════════════════════════════════════
+   window.showOrdersPopup = function() {
+     const popup = document.getElementById('orders-popup');
+     if (popup) {
+       popup.style.display = 'flex';
+       loadOrdersPopup();
+     }
+   };
+
+   window.closeOrdersPopup = function() {
+     const popup = document.getElementById('orders-popup');
+     if (popup) {
+       popup.style.display = 'none';
+     }
+   };
+
+   // ══════════════════════════════════════════
+   // Render Orders (الصفحة الرئيسية)
+   // ══════════════════════════════════════════
+   function renderOrders() {
+     const container = document.getElementById('ordersContent');
+     if (!container) return;
+     
+     const userId = getUserId();
+     
+     if (!userId) {
+       container.innerHTML = `
+         <div class="orders-empty">
+           <i class="fas fa-user-slash"></i>
+           <h3 style="color:#888; font-size:18px;">لا توجد طلبات بعد</h3>
+           <p style="color:#aaa; font-size:14px; margin-bottom:20px;">سيظهر طلبك هنا بعد إتمامه</p>
+           <button class="go-shop" onclick="switchTab('home')">تسوق الآن</button>
+         </div>`;
+       return;
+     }
+
+     // تحميل الطلبات مع التخزين المؤقت
+     getOrdersWithCache().then(orders => {
+       if (orders.length === 0) {
+         container.innerHTML = `
+           <div class="orders-empty">
+             <i class="fas fa-box-open"></i>
+             <h3 style="color:#888; font-size:18px;">لا توجد طلبات بعد</h3>
+             <p style="color:#aaa; font-size:14px; margin-bottom:20px;">سيظهر طلبك هنا بعد إتمامه</p>
+             <button class="go-shop" onclick="switchTab('home')">تسوق الآن</button>
+           </div>`;
+         return;
+       }
+
+       container.innerHTML = orders.map((o, i) => {
+         const orderDate = new Date(o.created_at).toLocaleDateString('ar-SA');
+         const currentStatus = checkAndUpdateOrderStatus(o);
+         const statusClass = `status-${currentStatus}`;
+         const statusText = getStatusText(currentStatus);
+         
+         const productsInfo = o.products ? o.products.map(x => x.product_name).join('، ') : 'طلب';
+         
+         return `
+           <div class="order-card">
+             <div class="order-status ${statusClass}">${statusText}</div>
+             <div class="order-id">رقم الطلب: ${o.order_id || 'N/A'}</div>
+             <div class="order-items">${productsInfo}</div>
+             <div class="order-total">${(o.total_amount || 0).toLocaleString()} SDG</div>
+             <div class="order-date">${orderDate}</div>
+           </div>
+         `;
+       }).join('') + `<button class="clear-orders-btn" onclick="clearOrders()">مسح السجل</button>`;
+     });
+   }
 
 function clearOrders() {
   if (confirm('هل تريد مسح سجل الطلبات؟')) {
     orders = [];
     localStorage.removeItem('zoonaOrders');
+    localStorage.removeItem('userOrders');
+    localStorage.removeItem('userOrdersLastUpdate');
     renderOrders();
+    window.updateOrdersCount();
   }
 }
 
