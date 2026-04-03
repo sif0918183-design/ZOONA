@@ -1379,10 +1379,24 @@
         }
         
         function setupMapButton() {
-            document.getElementById('locationMainBtn').addEventListener('click', openMap);
-            document.getElementById('cancelLocation').addEventListener('click', closeMap);
-            document.getElementById('confirmLocation').addEventListener('click', confirmLocation);
-            document.getElementById('locateMe').addEventListener('click', locateMe);
+            // التحقق من وجود عناصر الخريطة قبل إضافة event listeners
+            const locationMainBtn = document.getElementById('locationMainBtn');
+            const cancelLocation = document.getElementById('cancelLocation');
+            const confirmLocation = document.getElementById('confirmLocation');
+            const locateMe = document.getElementById('locateMe');
+            
+            if (locationMainBtn) {
+                locationMainBtn.addEventListener('click', openMap);
+            }
+            if (cancelLocation) {
+                cancelLocation.addEventListener('click', closeMap);
+            }
+            if (confirmLocation) {
+                confirmLocation.addEventListener('click', confirmLocation);
+            }
+            if (locateMe) {
+                locateMe.addEventListener('click', locateMe);
+            }
         }
         
         // ========== دوال إدارة البيانات المحلية ==========
