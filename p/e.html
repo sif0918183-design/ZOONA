@@ -1720,18 +1720,28 @@
                     return;
                 }
                 
-                document.getElementById('pdfUserId').textContent = orderData.userId || '';
-                document.getElementById('pdfName').textContent = orderData.name || '';
-                document.getElementById('pdfPhone').textContent = orderData.phone || '';
-                document.getElementById('pdfPhone2').textContent = orderData.phone2 || 'غير متوفر';
-                document.getElementById('pdfCity').textContent = orderData.city || '';
-                document.getElementById('pdfAddress').textContent = orderData.address || '';
-                document.getElementById('pdfLocation').textContent = orderData.location ? 
-                    `(${orderData.location.lat.toFixed(6)}, ${orderData.location.lng.toFixed(6)})` : 'لم يتم التحديد';
-                document.getElementById('pdfPaymentType').textContent = orderData.cityType === 'cod' ? 'دفع عند الاستلام' : 'دفع مقدم';
-                document.getElementById('pdfTotal').textContent = `${orderData.total.toLocaleString()} SDG`;
-                document.getElementById('pdfDate').textContent = getFormattedDate();
-                document.getElementById('pdfOrderId').textContent = `رقم الطلب: ${orderData.orderId || ''}`;
+                // دالة مساعدة لتعيين textContent مع التحقق من وجود العنصر
+                const setPdfContent = (id, value) => {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        element.textContent = value;
+                    } else {
+                        console.warn(`⚠️ العنصر ${id} غير موجود في قالب PDF`);
+                    }
+                };
+                
+                setPdfContent('pdfUserId', orderData.userId || '');
+                setPdfContent('pdfName', orderData.name || '');
+                setPdfContent('pdfPhone', orderData.phone || '');
+                setPdfContent('pdfPhone2', orderData.phone2 || 'غير متوفر');
+                setPdfContent('pdfCity', orderData.city || '');
+                setPdfContent('pdfAddress', orderData.address || '');
+                setPdfContent('pdfLocation', orderData.location ? 
+                    `(${orderData.location.lat.toFixed(6)}, ${orderData.location.lng.toFixed(6)})` : 'لم يتم التحديد');
+                setPdfContent('pdfPaymentType', orderData.cityType === 'cod' ? 'دفع عند الاستلام' : 'دفع مقدم');
+                setPdfContent('pdfTotal', `${orderData.total.toLocaleString()} SDG`);
+                setPdfContent('pdfDate', getFormattedDate());
+                setPdfContent('pdfOrderId', `رقم الطلب: ${orderData.orderId || ''}`);
                 
                 const pdfProductsList = document.getElementById('pdfProductsList');
                 pdfProductsList.innerHTML = '<div style="margin: 15px 0; font-weight: bold;">المنتجات المطلوبة:</div>';
