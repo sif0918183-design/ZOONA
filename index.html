@@ -775,7 +775,8 @@ html, body {
 // ── Helpers ──
 function slugify(text) {
   if (!text) return "";
-  return text.toString().toLowerCase().trim()
+  const words = text.toString().trim().split(/\s+/).slice(0, 3).join(' ');
+  return words.toLowerCase()
     .replace(/\s+/g, '-')           // Replace spaces with -
     .replace(/[^\u0621-\u064A\u0660-\u0669a-zA-Z0-9-]+/g, '') // Remove non-Arabic, non-English alphanumeric except -
     .replace(/\-\-+/g, '-')         // Replace multiple - with single -
@@ -942,19 +943,27 @@ function renderProducts(products) {
 }
 
 // ── Category Filter ──
-function filterCategory(cat, btn) {
+function filterCategory(cat, btn, fromPopState = false) {
   currentCategory = cat;
 
   // Update buttons
-  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.cat-btn').forEach(b => {
+    b.classList.remove('active');
+    if (b.textContent.trim() === cat) b.classList.add('active');
+  });
   if (btn) btn.classList.add('active');
 
   if (cat === 'الكل') {
     filteredProducts = [...allProducts];
     document.getElementById('sectionTitle').textContent = '🔥 المنتجات المميزة';
+    if (!fromPopState) window.history.pushState({ category: 'الكل' }, 'ZOONA - متجر إلكتروني', '/');
   } else {
     filteredProducts = allProducts.filter(p => p.category === cat);
     document.getElementById('sectionTitle').textContent = `📦 ${cat}`;
+    if (!fromPopState) {
+      const slug = slugify(cat);
+      window.history.pushState({ category: cat }, cat + ' | ZOONA', '/c/' + slug);
+    }
   }
 
   const searchVal = document.getElementById('searchInput').value.trim();
@@ -1062,7 +1071,7 @@ function openModal(id, fromPopState = false) {
 
   if (!fromPopState) {
     const slug = slugify(p.name);
-    window.history.pushState({ productId: id }, p.name, '/' + slug);
+    window.history.pushState({ productId: id, category: currentCategory }, p.name, '/' + slug);
     document.title = p.name + ' | ZOONA';
   }
 
@@ -1077,8 +1086,14 @@ function closeModal(e, fromPopState = false) {
   document.body.style.overflow = '';
 
   if (wasOpen && !fromPopState) {
-    window.history.pushState({}, 'ZOONA - متجر إلكتروني', '/');
-    document.title = 'ZOONA - متجر إلكتروني';
+    if (currentCategory === 'الكل') {
+      window.history.pushState({ category: 'الكل' }, 'ZOONA - متجر إلكتروني', '/');
+      document.title = 'ZOONA - متجر إلكتروني';
+    } else {
+      const slug = slugify(currentCategory);
+      window.history.pushState({ category: currentCategory }, currentCategory + ' | ZOONA', '/c/' + slug);
+      document.title = currentCategory + ' | ZOONA';
+    }
   }
 }
 
@@ -1097,17 +1112,34 @@ function addModalToCart() {
 // ── URL Handling ──
 function checkUrlForProduct() {
   const path = window.location.pathname;
-  if (path === '/' || path === '/index.html' || path === '') return;
+  if (path === '/' || path === '/index.html' || path === '') {
+    filterCategory('الكل', null, true);
+    return;
+  }
 
   const decodedPath = decodeURIComponent(path);
-  // Remove leading/trailing slashes and get the last part of the path
+  // Remove leading/trailing slashes
   const parts = decodedPath.split('/').filter(p => p.length > 0);
   if (parts.length === 0) return;
 
+  // Handle Category URLs /c/slug
+  if (parts[0] === 'c' && parts[1]) {
+    const slug = parts[1];
+    const categories = [...new Set(allProducts.map(p => p.category))];
+    const cat = categories.find(c => slugify(c) === slug);
+    if (cat) {
+      filterCategory(cat, null, true);
+      switchTab('home');
+      return;
+    }
+  }
+
+  // Handle Product URLs /slug
   const slug = parts[parts.length - 1];
   if (slug) {
     const product = allProducts.find(p => slugify(p.name) === slug);
     if (product) {
+      if (product.category) filterCategory(product.category, null, true);
       openModal(product.id, true);
     }
   }
@@ -1116,8 +1148,12 @@ function checkUrlForProduct() {
 window.addEventListener('popstate', (event) => {
   if (event.state && event.state.productId) {
     openModal(event.state.productId, true);
+  } else if (event.state && event.state.category) {
+    closeModal(null, true);
+    filterCategory(event.state.category, null, true);
   } else {
     closeModal(null, true);
+    checkUrlForProduct();
   }
 });
 
