@@ -773,11 +773,35 @@ html, body {
 ══════════════════════════════════════════ */
 
 // ── Helpers ──
+const categorySlugs = {
+  'الكل': 'all',
+  'موبايلات': 'mobiles',
+  'أجهزة إلكترونية': 'electronics',
+  'أجهزة كهربائية': 'electrical-appliances',
+  'ألعاب أطفال': 'toys',
+  'إكسسوارات موبايلات': 'accessories',
+  'مستحضرات تجميل': 'cosmetics'
+};
+
+function transliterateArabic(text) {
+  const mapping = {
+    'أ': 'a', 'إ': 'i', 'آ': 'a', 'ا': 'a', 'ب': 'b', 'ت': 't', 'ث': 'th', 'ج': 'j', 'ح': 'h', 'خ': 'kh',
+    'د': 'd', 'ذ': 'dh', 'ر': 'r', 'ز': 'z', 'س': 's', 'ش': 'sh', 'ص': 's', 'ض': 'd', 'ط': 't', 'ظ': 'z',
+    'ع': 'a', 'غ': 'gh', 'ف': 'f', 'ق': 'q', 'ك': 'k', 'ل': 'l', 'م': 'm', 'ن': 'n', 'ه': 'h', 'و': 'w',
+    'ي': 'y', 'ى': 'a', 'ة': 't', 'ؤ': 'u', 'ئ': 'i', 'ء': 'a'
+  };
+  return text.split('').map(char => mapping[char] || char).join('');
+}
+
 function slugify(text) {
   if (!text) return "";
-  return text.toString().toLowerCase().trim()
+  const trimmed = text.toString().trim();
+  if (categorySlugs[trimmed]) return categorySlugs[trimmed];
+
+  const words = trimmed.split(/\s+/).slice(0, 3).join(' ');
+  return transliterateArabic(words.toLowerCase())
     .replace(/\s+/g, '-')           // Replace spaces with -
-    .replace(/[^\u0621-\u064A\u0660-\u0669a-zA-Z0-9-]+/g, '') // Remove non-Arabic, non-English alphanumeric except -
+    .replace(/[^a-z0-9-]+/g, '')    // Remove non-Latin alphanumeric except -
     .replace(/\-\-+/g, '-')         // Replace multiple - with single -
     .replace(/^-+/, '')             // Trim - from start
     .replace(/-+$/, '');            // Trim - from end
@@ -942,19 +966,27 @@ function renderProducts(products) {
 }
 
 // ── Category Filter ──
-function filterCategory(cat, btn) {
+function filterCategory(cat, btn, fromPopState = false) {
   currentCategory = cat;
 
   // Update buttons
-  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.cat-btn').forEach(b => {
+    b.classList.remove('active');
+    if (b.textContent.trim() === cat) b.classList.add('active');
+  });
   if (btn) btn.classList.add('active');
 
   if (cat === 'الكل') {
     filteredProducts = [...allProducts];
     document.getElementById('sectionTitle').textContent = '🔥 المنتجات المميزة';
+    if (!fromPopState) window.history.pushState({ category: 'الكل' }, 'ZOONA - متجر إلكتروني', '/');
   } else {
     filteredProducts = allProducts.filter(p => p.category === cat);
     document.getElementById('sectionTitle').textContent = `📦 ${cat}`;
+    if (!fromPopState) {
+      const slug = slugify(cat);
+      window.history.pushState({ category: cat }, cat + ' | ZOONA', '/c/' + slug);
+    }
   }
 
   const searchVal = document.getElementById('searchInput').value.trim();
@@ -1062,7 +1094,7 @@ function openModal(id, fromPopState = false) {
 
   if (!fromPopState) {
     const slug = slugify(p.name);
-    window.history.pushState({ productId: id }, p.name, '/' + slug);
+    window.history.pushState({ productId: id, category: currentCategory }, p.name, '/' + slug);
     document.title = p.name + ' | ZOONA';
   }
 
@@ -1077,8 +1109,14 @@ function closeModal(e, fromPopState = false) {
   document.body.style.overflow = '';
 
   if (wasOpen && !fromPopState) {
-    window.history.pushState({}, 'ZOONA - متجر إلكتروني', '/');
-    document.title = 'ZOONA - متجر إلكتروني';
+    if (currentCategory === 'الكل') {
+      window.history.pushState({ category: 'الكل' }, 'ZOONA - متجر إلكتروني', '/');
+      document.title = 'ZOONA - متجر إلكتروني';
+    } else {
+      const slug = slugify(currentCategory);
+      window.history.pushState({ category: currentCategory }, currentCategory + ' | ZOONA', '/c/' + slug);
+      document.title = currentCategory + ' | ZOONA';
+    }
   }
 }
 
@@ -1097,17 +1135,41 @@ function addModalToCart() {
 // ── URL Handling ──
 function checkUrlForProduct() {
   const path = window.location.pathname;
-  if (path === '/' || path === '/index.html' || path === '') return;
+  if (path === '/' || path === '/index.html' || path === '') {
+    filterCategory('الكل', null, true);
+    return;
+  }
 
   const decodedPath = decodeURIComponent(path);
-  // Remove leading/trailing slashes and get the last part of the path
+  // Remove leading/trailing slashes
   const parts = decodedPath.split('/').filter(p => p.length > 0);
   if (parts.length === 0) return;
 
+  // Handle Category URLs /c/slug
+  if (parts[0] === 'c' && parts[1]) {
+    const slug = parts[1];
+    // Try matching from our mapping first for speed and accuracy
+    let cat = Object.keys(categorySlugs).find(c => categorySlugs[c] === slug);
+
+    // Fallback to dynamic matching if not in static mapping
+    if (!cat) {
+      const categories = [...new Set(allProducts.map(p => p.category))];
+      cat = categories.find(c => slugify(c) === slug);
+    }
+
+    if (cat) {
+      filterCategory(cat, null, true);
+      switchTab('home');
+      return;
+    }
+  }
+
+  // Handle Product URLs /slug
   const slug = parts[parts.length - 1];
   if (slug) {
     const product = allProducts.find(p => slugify(p.name) === slug);
     if (product) {
+      if (product.category) filterCategory(product.category, null, true);
       openModal(product.id, true);
     }
   }
@@ -1116,8 +1178,12 @@ function checkUrlForProduct() {
 window.addEventListener('popstate', (event) => {
   if (event.state && event.state.productId) {
     openModal(event.state.productId, true);
+  } else if (event.state && event.state.category) {
+    closeModal(null, true);
+    filterCategory(event.state.category, null, true);
   } else {
     closeModal(null, true);
+    checkUrlForProduct();
   }
 });
 
