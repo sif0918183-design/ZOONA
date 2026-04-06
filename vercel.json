@@ -1,8 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/((?!api|assets|icon|p|well-known|.*\\\\.).*)",
-      "destination": "/index.html"
+      "source": "/((?!api/|assets/|icon/|p/|well-known/|.*\\.).*)",
+      "destination": "/api/og?path=/$1"
     }
   ]
 }
