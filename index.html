@@ -855,28 +855,12 @@ window.addEventListener('DOMContentLoaded', () => {
   }, 1800);
 });
 
-// ── Supabase Configuration ──
-const SUPABASE_URL = 'https://yhujvalqfmnlyffvejbh.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlodWp2YWxxZm1ubHlmZnZlamJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNTc3OTcsImV4cCI6MjA3ODYzMzc5N30.mMG55moG7HdM-vDzT5R5HiD7kKdE_Jr9BkRio4MJGqw';
-
-// Cache key and timeout
+// ── Configuration ──
+// Cache key and timeout for local storage
 const PRODUCTS_CACHE_KEY = 'zoona_products_cache';
 const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
 
-// Supabase fetch helper
-async function supabaseFetch(endpoint, options = {}) {
-  const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
-  const headers = {
-    'Content-Type': 'application/json',
-    'apikey': SUPABASE_KEY,
-    'Authorization': `Bearer ${SUPABASE_KEY}`
-  };
-  const response = await fetch(url, { ...options, headers });
-  if (!response.ok) throw new Error('Request failed');
-  return response.json();
-}
-
-// ── Load Products from Supabase with Caching ──
+// ── Load Products from API with Caching ──
 async function loadProducts() {
   try {
     // Check localStorage cache first
@@ -892,8 +876,10 @@ async function loadProducts() {
       }
     }
     
-    // Fetch from Supabase
-    allProducts = await supabaseFetch('products?select=*&order=id.desc');
+    // Fetch from our local Vercel API
+    const response = await fetch('/api/products');
+    if (!response.ok) throw new Error('Failed to fetch from API');
+    allProducts = await response.json();
     
     // Cache the products
     localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify({
