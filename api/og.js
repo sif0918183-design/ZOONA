@@ -138,6 +138,15 @@ export default async function handler(req, res) {
     }
   }
 
+  // Upgrade image quality for Pexels (increase width from 400 to 1200)
+  if (image && image.includes('pexels.com')) {
+    image = image.replace(/w=400/g, 'w=1200');
+  }
+
+  // Determine image dimensions
+  const imageWidth = (image && image.includes('splash-logo.png')) ? "512" : "1200";
+  const imageHeight = (image && image.includes('splash-logo.png')) ? "512" : "630";
+
   const esc = (str) => str.replace(/[&<>"']/g, (m) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[m]));
@@ -146,10 +155,14 @@ export default async function handler(req, res) {
     'og:title': title,
     'og:description': description,
     'og:image': image,
+    'og:image:width': imageWidth,
+    'og:image:height': imageHeight,
     'og:url': url,
     'twitter:title': title,
     'twitter:description': description,
     'twitter:image': image,
+    'twitter:image:width': imageWidth,
+    'twitter:image:height': imageHeight,
     'twitter:url': url,
   };
 
