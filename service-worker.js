@@ -52,125 +52,79 @@ self.addEventListener('activate', event => {
 });
 
 // =================================================================
-// 5️⃣ Fetch (Offline Support) - الكود المعدل
+// 5️⃣ Fetch (Offline Support) - Network-First Strategy
 // =================================================================
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
-  const isNavigationRequest = event.request.mode === 'navigate';
   
-  // تجاهل طلبات غير GET
+  // تجاهل طلبات غير GET والطلبات الخارجية غير المقصودة
   if (event.request.method !== 'GET') return;
 
-  // Google Fonts cache-first
+  // 1. API Requests: Network-First
+  if (url.pathname.includes('/api/')) {
+    event.respondWith(
+      fetch(event.request)
+        .then(networkResponse => {
+          if (networkResponse && networkResponse.ok) {
+            const responseClone = networkResponse.clone();
+            caches.open(API_CACHE_NAME).then(cache => cache.put(event.request, responseClone));
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // 2. Google Fonts: Cache-First
   if (url.origin.includes('fonts.googleapis.com') || url.origin.includes('fonts.gstatic.com')) {
     event.respondWith(
-      caches.match(event.request).then(cached => {
-        if (cached) return cached;
-        
-        return fetch(event.request).then(response => {
-          if (response.ok) {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then(cache => {
-              cache.put(event.request, responseClone);
-            });
+      caches.match(event.request).then(cachedResponse => {
+        if (cachedResponse) return cachedResponse;
+        return fetch(event.request).then(networkResponse => {
+          if (networkResponse && networkResponse.ok) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
           }
-          return response;
-        }).catch(() => {
-          // يمكنك إرجاع رد افتراضي للخطوط
-          return new Response('', {
-            status: 408,
-            statusText: 'الخطوط غير متوفرة حالياً'
-          });
+          return networkResponse;
         });
       })
     );
     return;
   }
 
-  // Stale-While-Revalidate للطلبات الأخرى
-  event.respondWith((async () => {
-    const cache = await caches.open(CACHE_NAME);
-    const cachedResponse = await cache.match(event.request);
-    
-    // تحديث ذكي في الخلفية
-    const fetchPromise = fetch(event.request).then(async networkResponse => {
-      if (networkResponse && networkResponse.ok) {
-        const responseClone = networkResponse.clone();
-        await cache.put(event.request, responseClone);
-      }
-      return networkResponse;
-    }).catch(() => {
-      // تجاهل الأخطاء في تحديث الخلفية
-      return null;
-    });
-
-    // إذا كان طلب تصفح (صفحة HTML) والعملية متصلة
-    if (isNavigationRequest) {
-      try {
-        const networkResponse = await fetchPromise;
+  // 3. Navigation & Other Assets: Network-First with Offline Fallback
+  event.respondWith(
+    fetch(event.request)
+      .then(networkResponse => {
         if (networkResponse && networkResponse.ok) {
-          return networkResponse;
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
+        }
+        return networkResponse;
+      })
+      .catch(async () => {
+        const cachedResponse = await caches.match(event.request);
+        if (cachedResponse) return cachedResponse;
+
+        // إذا كان طلب تصفح وفشل، ارجع إلى صفحة التوقف
+        if (event.request.mode === 'navigate') {
+          const offlinePage = await caches.match('/p/offline.html');
+          return offlinePage || new Response(`
+            <!DOCTYPE html>
+            <html lang="ar" dir="rtl">
+            <head><meta charset="utf-8"><title>غير متصل</title></head>
+            <body style="font-family:sans-serif;text-align:center;padding:50px;">
+              <h1>أنت غير متصل بالإنترنت</h1>
+              <p>يرجى التحقق من اتصالك بالشبكة.</p>
+            </body>
+            </html>
+          `, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
         }
         
-        // إذا فشل طلب الشبكة، حاول استخدام المحفوظ
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-        
-        // إذا لم يكن هناك محفوظ، ارجع إلى صفحة OFFLINE_FALLBACK_URL
-        const offlinePage = await cache.match('/p/offline.html');
-        if (offlinePage) {
-          return offlinePage;
-        }
-        
-        // رد افتراضي إذا لم توجد صفحة OFFLINE
-        return new Response(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <title>غير متصل بالإنترنت - ZOONA SD</title>
-            <style>
-              body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
-              h1 { color: #333; }
-              p { color: #666; }
-            </style>
-          </head>
-          <body>
-            <h1>عذراً، أنت غير متصل بالإنترنت</h1>
-            <p>يرجى التحقق من اتصالك بالشبكة وحاول مرة أخرى.</p>
-            <p>متجر ZOONA SD</p>
-          </body>
-          </html>
-        `, {
-          status: 200,
-          headers: { 'Content-Type': 'text/html; charset=utf-8' }
-        });
-      } catch (error) {
-        // معالجة الأخطاء هنا
-        const offlinePage = await cache.match('/p/offline.html');
-        return offlinePage || new Response('غير متصل بالإنترنت', {
-          status: 503,
-          headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-        });
-      }
-    }
-    
-    // للطلبات غير التصفحية (صور، CSS، JS، إلخ)
-    try {
-      const networkResponse = await fetch(event.request);
-      if (networkResponse.ok) {
-        const responseClone = networkResponse.clone();
-        cache.put(event.request, responseClone);
-      }
-      return cachedResponse || networkResponse;
-    } catch (error) {
-      return cachedResponse || new Response('الملف غير متوفر حالياً', {
-        status: 408,
-        headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-      });
-    }
-  })());
+        return new Response('غير متوفر حالياً', { status: 503 });
+      })
+  );
 });
 
 
