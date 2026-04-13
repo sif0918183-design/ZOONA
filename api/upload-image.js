@@ -1,12 +1,28 @@
 // Vercel API endpoint for image upload
 // Handles multipart form-data and uploads to Supabase Storage
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY;
-
 export default async function handler(req, res) {
-  // Set CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // 1. التحقق من النطاق
+  const origin = req.headers.origin || req.headers.referer || '';
+  const allowedOrigins = ['https://zoonasd.com', 'https://www.zoonasd.com'];
+  const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed));
+  
+  if (!isAllowed && origin) {
+    return res.status(403).json({ error: 'Access denied. Invalid origin.' });
+  }
+
+  // 2. Set CORS headers for allowed origins only
+  const allowedOriginsList = ['https://zoonasd.com', 'https://www.zoonasd.com'];
+  const currentOrigin = req.headers.origin;
+  
+  if (currentOrigin && allowedOriginsList.includes(currentOrigin)) {
+    res.setHeader('Access-Control-Allow-Origin', currentOrigin);
+  } else if (!currentOrigin) {
+    res.setHeader('Access-Control-Allow-Origin', 'https://zoonasd.com');
+  } else {
+    return res.status(403).json({ error: 'Origin not allowed' });
+  }
+  
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   
@@ -19,11 +35,14 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Check content-type
+  // 3. Check content-type
   const contentType = req.headers['content-type'] || '';
   if (!contentType.includes('multipart/form-data')) {
     return res.status(400).json({ error: 'Content-Type must be multipart/form-data' });
   }
+
+  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY;
 
   try {
     // Check environment variables

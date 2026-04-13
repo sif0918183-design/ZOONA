@@ -8,6 +8,35 @@ if (!admin.apps.length) {
 }
 
 export default async function handler(req, res) {
+  // 1. التحقق من النطاق
+  const origin = req.headers.origin || req.headers.referer || '';
+  const allowedOrigins = ['https://zoonasd.com', 'https://www.zoonasd.com'];
+  const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed));
+  
+  if (!isAllowed && origin) {
+    return res.status(403).json({ error: 'Access denied. Invalid origin.' });
+  }
+
+  // 2. Set CORS headers for allowed origins only
+  const allowedOriginsList = ['https://zoonasd.com', 'https://www.zoonasd.com'];
+  const currentOrigin = req.headers.origin;
+  
+  if (currentOrigin && allowedOriginsList.includes(currentOrigin)) {
+    res.setHeader('Access-Control-Allow-Origin', currentOrigin);
+  } else if (!currentOrigin) {
+    res.setHeader('Access-Control-Allow-Origin', 'https://zoonasd.com');
+  } else {
+    return res.status(403).json({ error: 'Origin not allowed' });
+  }
+  
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return;
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).end('Method Not Allowed');
   }

@@ -4,7 +4,16 @@
  */
 
 export default async function handler(req, res) {
-  // 1. التحقق من طريقة الطلب (GET فقط)
+  // 1. التحقق من النطاق
+  const origin = req.headers.origin || req.headers.referer || '';
+  const allowedOrigins = ['https://zoonasd.com', 'https://www.zoonasd.com'];
+  const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed));
+  
+  if (!isAllowed && origin) {
+    return res.status(403).json({ error: 'Access denied. Invalid origin.' });
+  }
+
+  // 2. جلب متغيرات البيئة
   if (req.method !== 'GET') {
     res.setHeader('Allow', ['GET']);
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
@@ -22,9 +31,25 @@ export default async function handler(req, res) {
     });
   }
 
-  // 3. إعداد رؤوس CORS
+  // 3. التحقق من طريقة الطلب (GET فقط)
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', ['GET']);
+    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+  }
+
+  // 4. إعداد رؤوس CORS للنطاقات المسموحة فقط
+  const allowedOriginsList = ['https://zoonasd.com', 'https://www.zoonasd.com'];
+  const currentOrigin = req.headers.origin;
+  
+  if (currentOrigin && allowedOriginsList.includes(currentOrigin)) {
+    res.setHeader('Access-Control-Allow-Origin', currentOrigin);
+  } else if (!currentOrigin) {
+    res.setHeader('Access-Control-Allow-Origin', 'https://zoonasd.com');
+  } else {
+    return res.status(403).json({ error: 'Origin not allowed' });
+  }
+  
   res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
   res.setHeader(
     'Access-Control-Allow-Headers',
