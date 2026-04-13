@@ -26,6 +26,12 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Check environment variables
+    if (!SUPABASE_URL || !SUPABASE_KEY) {
+      console.error('Missing environment variables:', { SUPABASE_URL: !!SUPABASE_URL, SUPABASE_KEY: !!SUPABASE_KEY });
+      return res.status(500).json({ error: 'Server configuration error: Missing Supabase credentials' });
+    }
+
     // Get the boundary
     const boundary = contentType.split('boundary=')[1];
     if (!boundary) {

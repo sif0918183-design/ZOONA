@@ -16,8 +16,11 @@ export default async function handler(req, res) {
   const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
   if (!SUPABASE_URL || !SUPABASE_KEY) {
-    console.error('Supabase credentials are missing in environment variables.');
-    return res.status(500).json({ error: 'Internal Server Error: Missing Database Credentials' });
+    console.error('Supabase credentials missing. SUPABASE_URL:', !!SUPABASE_URL, 'SUPABASE_KEY:', !!SUPABASE_KEY);
+    return res.status(500).json({ 
+      error: 'Server configuration error',
+      details: 'Please set SUPABASE_URL and SUPABASE_KEY environment variables in Vercel project settings.'
+    });
   }
 
   // 3. إعداد رؤوس CORS
