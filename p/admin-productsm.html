@@ -455,37 +455,70 @@ textarea.form-control{resize:vertical;min-height:80px}
    ZOONA Admin - Products Manager (Supabase)
 ══════════════════════════════════════ */
 
-// Supabase Configuration
-const SUPABASE_URL = 'https://yhujvalqfmnlyffvejbh.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlodWp2YWxxZm1ubHlmZnZlamJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNTc3OTcsImV4cCI6MjA3ODYzMzc5N30.mMG55moG7HdM-vDzT5R5HiD7kKdE_Jr9BkRio4MJGqw';
-
+// Supabase API Endpoint (secured via server-side API)
+const API_BASE = '/api/admin-products';
 const ADMIN_PASS = 'zoona2025';
 
-// Supabase client functions
+// Supabase client functions - now uses server API
 async function supabaseFetch(endpoint, options = {}) {
-  const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
+  // Extract the table/endpoint from the original format
+  let method = options.method || 'GET';
+  let url = API_BASE;
+  let body = options.body;
+  
+  // Parse endpoint to get ID for PATCH/DELETE
+  const endpointMatch = endpoint.match(/^products\?id=eq\.(\d+)/);
+  if (endpointMatch && (method === 'PATCH' || method === 'DELETE')) {
+    url = `${API_BASE}?id=${endpointMatch[1]}`;
+  } else if (endpoint === 'products' && method === 'POST') {
+    // New product - use POST to /api/admin-products
+    url = API_BASE;
+  } else if (endpoint === 'products') {
+    // Get all products - use GET to /api/admin-products
+    url = API_BASE;
+  }
+  
   const headers = {
-    'Content-Type': 'application/json',
-    'apikey': SUPABASE_KEY,
-    'Authorization': `Bearer ${SUPABASE_KEY}`,
-    'Prefer': options.prefer || 'return=representation'
+    'Content-Type': 'application/json'
   };
   
-  const response = await fetch(url, { ...options, headers });
+  // For GET requests without body
+  if (method === 'GET' || !body) {
+    const response = await fetch(url, { method, headers });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Request failed');
+    }
+    return response.json();
+  }
+  
+  // For POST/PATCH/DELETE with body
+  const response = await fetch(url, { 
+    method, 
+    headers,
+    body: typeof body === 'string' ? body : JSON.stringify(body)
+  });
+  
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.message || 'Request failed');
   }
-  return response.json();
+  
+  const contentType = response.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    return response.json();
+  }
+  return { success: true };
 }
 
-// Check admin password
+// Check admin password - now uses server API
 async function verifyAdminPassword(password) {
   try {
-    const result = await supabaseFetch('admin_settings?key=eq.admin_password&select=value');
-    return result.length > 0 && result[0].value === password;
+    const response = await fetch(`/api/admin-auth?password=${encodeURIComponent(password)}`);
+    const data = await response.json();
+    return data.valid === true;
   } catch {
-    // Fallback to local check if table doesn't exist
+    // Fallback to local check if API fails
     return password === ADMIN_PASS;
   }
 }

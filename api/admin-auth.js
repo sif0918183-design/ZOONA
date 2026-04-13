@@ -1,9 +1,8 @@
 /**
- * Vercel API: /api/products
- * يقوم بجلب المنتجات من Supabase وإخفاء المفاتيح عن المتصفح.
+ * Vercel API: /api/admin-auth
+ * للتحقق من كلمة مرور المسؤول عبر Supabase مع إخفاء المفاتيح.
  */
 
-// التحقق من النطاق المسموح
 export default async function handler(req, res) {
   // 1. التحقق من النطاق
   const origin = req.headers.origin || req.headers.referer || '';
@@ -14,7 +13,7 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Access denied. Invalid origin.' });
   }
 
-  // 2. التحقق من طريقة الطلب (GET فقط)
+  // 2. جلب متغيرات البيئة
   if (req.method !== 'GET') {
     res.setHeader('Allow', ['GET']);
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
@@ -32,7 +31,13 @@ export default async function handler(req, res) {
     });
   }
 
-  // 3. إعداد رؤوس CORS للنطاقات المسموحة فقط
+  // 3. التحقق من طريقة الطلب (GET فقط)
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', ['GET']);
+    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+  }
+
+  // 4. إعداد رؤوس CORS للنطاقات المسموحة فقط
   const allowedOriginsList = ['https://zoonasd.com', 'https://www.zoonasd.com'];
   const currentOrigin = req.headers.origin;
   
@@ -57,19 +62,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { id } = req.query;
-    let fetchUrl = '';
+    const { password } = req.query;
 
-    // 4. بناء الرابط بناءً على وجود معرف المنتج (ID)
-    if (id) {
-      // جلب منتج واحد محدد
-      fetchUrl = `${SUPABASE_URL}/rest/v1/products?id=eq.${id}&select=*`;
-    } else {
-      // جلب جميع المنتجات مرتبة تنازلياً حسب ID
-      fetchUrl = `${SUPABASE_URL}/rest/v1/products?select=*&order=id.desc`;
+    if (!password) {
+      return res.status(400).json({ error: 'Password is required' });
     }
 
-    // 5. طلب البيانات من Supabase
+    // 4. التحقق من كلمة المرور من Supabase
+    const fetchUrl = `${SUPABASE_URL}/rest/v1/admin_settings?key=eq.admin_password&select=value`;
+    
     const response = await fetch(fetchUrl, {
       method: 'GET',
       headers: {
@@ -80,27 +81,17 @@ export default async function handler(req, res) {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Supabase API error: ${response.status} - ${errorText}`);
+      // في حالة الخطأ، نرجع فشل للتحقق
+      return res.status(200).json({ valid: false, error: 'Database error' });
     }
 
     const data = await response.json();
+    const valid = data.length > 0 && data[0].value === password;
 
-    // 6. إعداد التخزين المؤقت (Cache-Control)
-    // s-maxage=60: يتم التخزين في الـ CDN لمدة دقيقة واحدة
-    // stale-while-revalidate: يسمح بتقديم نسخة قديمة بينما يتم تحديثها في الخلفية
-    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
-
-    // 7. إرجاع النتيجة
-    // إذا كان الطلب بـ ID، نعيد الكائن الأول من المصفوفة (أو null إذا لم يوجد)
-    if (id) {
-      return res.status(200).json(data.length > 0 ? data[0] : null);
-    }
-
-    return res.status(200).json(data);
+    return res.status(200).json({ valid });
 
   } catch (error) {
-    console.error('Error fetching products:', error.message);
-    return res.status(500).json({ error: 'Failed to fetch products from database' });
+    console.error('[Admin-Auth] Error:', error.message);
+    return res.status(200).json({ valid: false, error: error.message });
   }
 }

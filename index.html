@@ -853,8 +853,9 @@ window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('splash').style.display = 'none';
       document.getElementById('app').style.display = 'flex';
       document.getElementById('floatBtns').style.display = 'flex';
-      registerServiceWorker();
-      setTimeout(maybeShowNotifPrompt, 4000);
+      // Disabled for WebView apps
+      // registerServiceWorker();
+      // setTimeout(maybeShowNotifPrompt, 4000);
     }, 400);
   }, 1800);
 });
@@ -1785,90 +1786,84 @@ function getAffiliateId() {
 }
 
 // ── Service Worker ──
-function registerServiceWorker() {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js')
-      .then(r => { console.log('SW registered'); initFirebaseMessaging(r); })
-      .catch(e => console.error('SW error:', e));
-  }
-}
+// Disabled for WebView apps - no need for custom SW
+// function registerServiceWorker() {
+//   if ('serviceWorker' in navigator) {
+//     navigator.serviceWorker.register('service-worker.js')
+//       .then(r => { console.log('SW registered'); initFirebaseMessaging(r); })
+//       .catch(e => console.error('SW error:', e));
+//   }
+// }
 
-// ── Firebase Notifications ──
-async function initFirebaseMessaging(registration) {
-  try {
-    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js");
-    const { getMessaging, getToken, onMessage } = await import("https://www.gstatic.com/firebasejs/12.6.0/firebase-messaging.js");
-    const app = initializeApp({
-      apiKey: "AIzaSyBxQLDLqr4W3lApfYLPjSV5It7925a9Rr0",
-      authDomain: "double-carport-476915-j7.firebaseapp.com",
-      projectId: "double-carport-476915-j7",
-      storageBucket: "double-carport-476915-j7.firebasestorage.app",
-      messagingSenderId: "122641462099",
-      appId: "1:122641462099:web:345b777a88757d3ef7e7a6"
-    });
-    const messaging = getMessaging(app);
+// ── Firebase Notifications (Disabled for WebView apps) ──
+//.async function initFirebaseMessaging(registration) {
+//  try {
+//    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js");
+//    const { getMessaging, getToken, onMessage } = await import("https://www.gstatic.com/firebasejs/12.6.0/firebase-messaging.js");
+//    const app = initializeApp({
+//      apiKey: "AIzaSyBxQLDLqr4W3lApfYLPjSV5It7925a9Rr0",
+//      authDomain: "double-carport-476915-j7.firebaseapp.com",
+//      projectId: "double-carport-476915-j7",
+//      storageBucket: "double-carport-476915-j7.firebasestorage.app",
+//      messagingSenderId: "122641462099",
+//      appId: "1:122641462099:web:345b777a88757d3ef7e7a6"
+//    });
+//    const messaging = getMessaging(app);
+//
+//    document.getElementById('enableNotifBtn').onclick = async () => {
+//      document.getElementById('notifModal').style.display = 'none';
+//      const permission = await Notification.requestPermission();
+//      if (permission === 'granted') {
+//        const token = await getToken(messaging, {
+//          vapidKey: "BE2_9m83w2cu_fxhqV4eUowZQT7E8nm-FZZMWqN5DByd-Naykp52nWwA9uuW_L9x_3rPPsMNZzctsZD8j5YyaZw",
+//          serviceWorkerRegistration: registration
+//        });
+//        if (token) {
+//          localStorage.setItem('fcm_token', token);
+//          localStorage.setItem('notifications_enabled', 'true');
+//          showToast('✅ تم تفعيل الإشعارات بنجاح', 'green');
+//          fetch('/api/saveToken', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({token}) }).catch(()=>{});
+//        }
+//      }
+//    };
+//
+//    onMessage(messaging, payload => {
+//      if (payload.notification) showNotifBanner(payload.notification);
+//    });
+//  } catch(e) { console.log('Firebase messaging not available'); }
+//}
 
-    document.getElementById('enableNotifBtn').onclick = async () => {
-      document.getElementById('notifModal').style.display = 'none';
-      const permission = await Notification.requestPermission();
-      if (permission === 'granted') {
-        const token = await getToken(messaging, {
-          vapidKey: "BE2_9m83w2cu_fxhqV4eUowZQT7E8nm-FZZMWqN5DByd-Naykp52nWwA9uuW_L9x_3rPPsMNZzctsZD8j5YyaZw",
-          serviceWorkerRegistration: registration
-        });
-        if (token) {
-          localStorage.setItem('fcm_token', token);
-          localStorage.setItem('notifications_enabled', 'true');
-          showToast('✅ تم تفعيل الإشعارات بنجاح', 'green');
-          fetch('/api/saveToken', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({token}) }).catch(()=>{});
-        }
-      }
-    };
-
-    onMessage(messaging, payload => {
-      if (payload.notification) showNotifBanner(payload.notification);
-    });
-  } catch(e) { console.log('Firebase messaging not available'); }
-}
-
+// Disabled for WebView apps - notifications handled by native app
 function showNotifBanner(n) {
-  const el = document.createElement('div');
-  el.innerHTML = `<div style="position:fixed;top:20px;right:16px;background:var(--red-gradient);color:#fff;padding:14px 18px;border-radius:12px;box-shadow:0 6px 20px rgba(211,47,47,.3);z-index:9999;max-width:320px;font-family:var(--font);direction:rtl;animation:slideInRight .3s ease">
-    <div style="display:flex;align-items:center;gap:10px"><span style="font-size:22px">🔔</span><div><div style="font-weight:800;font-size:15px">${n.title||'ZOONA'}</div><div style="font-size:13px;opacity:.9">${n.body||''}</div></div><button onclick="this.closest('div').parentNode.remove()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;margin-right:auto">✕</button></div></div>`;
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 6000);
+  // No-op - WebView apps handle notifications natively
 }
 
 function maybeShowNotifPrompt() {
-  if (localStorage.getItem('notifications_enabled') === 'true') return;
-  if (localStorage.getItem('notifications_declined') === 'true') return;
-  if (typeof Notification === 'undefined') return;
-  if (Notification.permission !== 'default') return;
-  document.getElementById('notifModal').style.display = 'flex';
+  // Disabled for WebView apps
 }
 
 function dismissNotif() {
-  document.getElementById('notifModal').style.display = 'none';
-  localStorage.setItem('notifications_declined', 'true');
+  // Disabled for WebView apps
 }
 
+// Disabled for WebView apps - PWA not needed when opened in native app
 // ── PWA Install ──
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault();
-  deferredPrompt = e;
-  if (localStorage.getItem('pwaInstallShown') !== 'true') {
-    setTimeout(() => { document.getElementById('pwaBox').style.display = 'block'; }, 5000);
-  }
-});
-document.getElementById('installBtn').onclick = async () => {
-  document.getElementById('pwaBox').style.display = 'none';
-  localStorage.setItem('pwaInstallShown', 'true');
-  if (deferredPrompt) {
-    deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
-    deferredPrompt = null;
-  }
-};
+// window.addEventListener('beforeinstallprompt', e => {
+//   e.preventDefault();
+//   deferredPrompt = e;
+//   if (localStorage.getItem('pwaInstallShown') !== 'true') {
+//     setTimeout(() => { document.getElementById('pwaBox').style.display = 'block'; }, 5000);
+//   }
+// });
+// document.getElementById('installBtn').onclick = async () => {
+//   document.getElementById('pwaBox').style.display = 'none';
+//   localStorage.setItem('pwaInstallShown', 'true');
+//   if (deferredPrompt) {
+//     deferredPrompt.prompt();
+//     await deferredPrompt.userChoice;
+//     deferredPrompt = null;
+//   }
+// };
 
 // ── Pull to Refresh ──
 function initPullToRefresh() {

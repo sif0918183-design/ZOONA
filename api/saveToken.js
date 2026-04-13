@@ -1,9 +1,45 @@
-// ❌ تم حذف سطر استيراد node-fetch للاعتماد على دالة fetch المضمنة في Vercel
-
-const BIN_ID = '69336a3dae596e708f8650a1';
-const JSONBIN_KEY = '$2a$10$oHNml.lQOJitFfK0hyyT0.81SIcJolFR5be5uAAQ8IOiECZHAELTW';
+// Vercel API endpoint for saving FCM tokens
+// Uses environment variables for JSONBIN credentials
 
 export default async function handler(req, res) {
+  // 1. التحقق من النطاق
+  const origin = req.headers.origin || req.headers.referer || '';
+  const allowedOrigins = ['https://zoonasd.com', 'https://www.zoonasd.com'];
+  const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed));
+  
+  if (!isAllowed && origin) {
+    return res.status(403).json({ error: 'Access denied. Invalid origin.' });
+  }
+
+  // 2. Set CORS headers for allowed origins only
+  const allowedOriginsList = ['https://zoonasd.com', 'https://www.zoonasd.com'];
+  const currentOrigin = req.headers.origin;
+  
+  if (currentOrigin && allowedOriginsList.includes(currentOrigin)) {
+    res.setHeader('Access-Control-Allow-Origin', currentOrigin);
+  } else if (!currentOrigin) {
+    res.setHeader('Access-Control-Allow-Origin', 'https://zoonasd.com');
+  } else {
+    return res.status(403).json({ error: 'Origin not allowed' });
+  }
+  
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return;
+  }
+
+  // 3. جلب متغيرات البيئة
+  const JSONBIN_BIN_ID = process.env.JSONBIN_BIN_ID_FCM || '69336a3dae596e708f8650a1';
+  const JSONBIN_KEY = process.env.JSONBIN_API_KEY_FCM || process.env.JSONBIN_API_KEY;
+
+  if (!JSONBIN_BIN_ID || !JSONBIN_KEY) {
+    console.error('Missing JSONBIN credentials');
+    return res.status(500).json({ success: false, error: 'Server configuration error' });
+  }
+
   if (req.method === 'POST') {
     const { token } = req.body;
 
@@ -13,27 +49,23 @@ export default async function handler(req, res) {
 
     try {
       // 1️⃣ جلب البيانات الحالية من JSONBin
-      const getRes = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+      const getRes = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
         headers: { 'X-Master-Key': JSONBIN_KEY }
       });
 
-      // 💡 فحص رمز الحالة: إذا فشل الجلب (4xx أو 5xx)
       if (!getRes.ok) {
         const errorText = await getRes.text();
         throw new Error(`Failed to GET data from JSONBin. Status: ${getRes.status}. Response: ${errorText}`);
       }
 
       const json = await getRes.json();
-      
-      // البنية الحالية هي: {"tokens": []}، لذا يجب أن يكون المسار 'tokens' وليس 'record.tokens'
-      // 💡 التعديل: تغيير المسار إلى 'json.tokens' بدلاً من 'json.record.tokens' بناءً على محتوى Bin الحالي
       let tokens = json.tokens || []; 
 
       // 2️⃣ إضافة الـ token الجديد إذا لم يكن موجودًا
       if (!tokens.includes(token)) tokens.push(token);
 
       // 3️⃣ تحديث الـ Bin في JSONBin
-      const putRes = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+      const putRes = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -42,18 +74,15 @@ export default async function handler(req, res) {
         body: JSON.stringify({ tokens })
       });
       
-      // 💡 فحص رمز الحالة للتحديث
       if (!putRes.ok) {
         const errorText = await putRes.text();
         throw new Error(`Failed to PUT data to JSONBin. Status: ${putRes.status}. Response: ${errorText}`);
       }
 
-
       return res.status(200).json({ success: true, tokens });
 
     } catch (err) {
       console.error('JSONBin API Error:', err.message);
-      // إرجاع رسالة خطأ أكثر تحديداً
       return res.status(500).json({ success: false, error: "Server error during token update. Check Vercel logs for details." });
     }
 
