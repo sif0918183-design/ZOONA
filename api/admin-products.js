@@ -48,6 +48,9 @@ export default async function handler(req, res) {
       }
     };
 
+    // Debug: log incoming request
+    console.log(`[Admin-Products] ${req.method} - id: ${id}, body:`, req.body);
+
     // 4. بناء الطلب حسب الطريقة
     if (req.method === 'GET') {
       if (id) {
@@ -61,7 +64,16 @@ export default async function handler(req, res) {
     else if (req.method === 'POST') {
       // إضافة منتج جديد
       fetchUrl = baseUrl;
-      fetchOptions.body = JSON.stringify(req.body);
+      // Handle both string and object body
+      let bodyData = req.body;
+      if (typeof req.body === 'string') {
+        try {
+          bodyData = JSON.parse(req.body);
+        } catch (e) {
+          bodyData = req.body;
+        }
+      }
+      fetchOptions.body = JSON.stringify(bodyData);
     } 
     else if (req.method === 'PATCH') {
       // تحديث منتج موجود
@@ -69,8 +81,17 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Product ID is required for update' });
       }
       fetchUrl = `${baseUrl}?id=eq.${id}`;
+      // Handle both string and object body
+      let bodyData = req.body;
+      if (typeof req.body === 'string') {
+        try {
+          bodyData = JSON.parse(req.body);
+        } catch (e) {
+          bodyData = req.body;
+        }
+      }
       fetchOptions.body = JSON.stringify({
-        ...req.body,
+        ...bodyData,
         updated_at: new Date().toISOString()
       });
     } 
