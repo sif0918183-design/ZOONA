@@ -187,21 +187,50 @@ html, body {
 /* ─── CATEGORIES PAGE ─── */
 .categories-page { padding:12px; }
 .cat-page-title { font-size:22px; font-weight:800; color:#222; text-align:center; margin-bottom:16px; }
-.cat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.cat-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
 .cat-item {
-  background:linear-gradient(120deg,#8b0000,#c20000,#ff3b3b); background-size:300% 300%;
-  animation:bannerGrad 8s ease infinite; border-radius:14px; padding:16px 10px;
-  text-align:center; color:#fff; cursor:pointer; transition:.25s;
-  box-shadow:0 4px 12px rgba(0,0,0,.18); text-decoration:none; display:block;
-  position:relative; overflow:hidden;
+  height: 130px;
+  border-radius:16px;
+  position:relative;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  color:#fff;
+  cursor:pointer;
+  transition:.3s ease;
+  box-shadow:0 4px 12px rgba(0,0,0,.12);
+  text-decoration:none;
+  background-size: cover;
+  background-position: center;
 }
-.cat-item::before { content:""; position:absolute; top:0; left:-75%; width:50%; height:100%; background:linear-gradient(120deg,transparent 0%,rgba(255,255,255,.25) 50%,transparent 100%); transform:skewX(-20deg); animation:shine 6s linear infinite; }
-.cat-item:hover { transform:scale(1.04); box-shadow:0 6px 20px rgba(0,0,0,.28); }
-.cat-item .cat-icon { width:72px; height:72px; background:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 10px; box-shadow:inset 0 0 6px rgba(0,0,0,.08); }
-.cat-item .cat-icon i { font-size:28px; color:#c20000; }
-.cat-item .cat-name { background:#fff; color:#c20000; display:inline-block; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:800; margin-bottom:4px; }
-.cat-item p { font-size:11px; color:rgba(255,255,255,.9); margin:0; line-height:1.3; }
-@media (max-width:360px) { .cat-grid { grid-template-columns:repeat(2,1fr); } }
+.cat-item::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.2) 100%);
+  z-index: 1;
+}
+.cat-item:hover { transform:translateY(-3px); box-shadow:0 8px 20px rgba(0,0,0,.2); }
+.cat-item .cat-name {
+  position: relative;
+  z-index: 2;
+  font-size: 16px;
+  font-weight: 900;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  margin-bottom: 2px;
+}
+.cat-item p {
+  position: relative;
+  z-index: 2;
+  font-size: 11px;
+  color:rgba(255,255,255,0.95);
+  margin:0;
+  line-height: 1.3;
+  font-weight: 600;
+}
 
 /* ─── CART PAGE ─── */
 .cart-page { padding:12px; }
@@ -381,7 +410,7 @@ html, body {
 /* Responsive */
 @media (min-width:480px) {
   .products-grid { grid-template-columns:repeat(3,1fr); }
-  .cat-grid { grid-template-columns:repeat(3,1fr); }
+  .cat-grid { grid-template-columns:repeat(4,1fr); }
 }
 
 /* Delivery Cities in Modal */
@@ -458,6 +487,7 @@ html, body {
       <button class="cat-btn" onclick="filterCategory('أجهزة كهربائية', this)">الكهربائيات</button>
       <button class="cat-btn" onclick="filterCategory('ألعاب أطفال', this)">ألعاب أطفال</button>
       <button class="cat-btn" onclick="filterCategory('مستحضرات تجميل', this)">تجميل</button>
+      <button class="cat-btn" onclick="filterCategory('أزياء نسائية', this)">أزياء نسائية</button>
       <button class="cat-btn" onclick="filterCategory('المنزل والمطبخ', this)">المنزل والمطبخ</button>
     </div>
 
@@ -475,33 +505,35 @@ html, body {
     <div class="categories-page">
       <div class="cat-page-title">🛍️ أقسام المتجر</div>
       <div class="cat-grid">
-        <div class="cat-item" onclick="filterCategory('موبايلات', null); switchTab('home');">
-          <div class="cat-icon"><i class="fas fa-mobile-screen-button"></i></div>
+        <div class="cat-item" style="background-image: url('https://images.pexels.com/photos/404280/pexels-photo-404280.jpeg?auto=compress&cs=tinysrgb&w=600')" onclick="filterCategory('موبايلات', null); switchTab('home');">
           <div class="cat-name">موبايلات</div>
           <p>أحدث الهواتف الذكية</p>
         </div>
-        <div class="cat-item" onclick="filterCategory('إكسسوارات موبايلات', null); switchTab('home');">
-          <div class="cat-icon"><i class="fas fa-headphones"></i></div>
+        <div class="cat-item" style="background-image: url('https://images.pexels.com/photos/3945667/pexels-photo-3945667.jpeg?auto=compress&cs=tinysrgb&w=600')" onclick="filterCategory('إكسسوارات موبايلات', null); switchTab('home');">
           <div class="cat-name">إكسسوارات</div>
           <p>سماعات وشواحن وكفرات</p>
         </div>
-        <div class="cat-item" onclick="filterCategory('أجهزة إلكترونية', null); switchTab('home');">
-          <div class="cat-icon"><i class="fas fa-computer"></i></div>
+        <div class="cat-item" style="background-image: url('https://images.pexels.com/photos/356056/pexels-photo-356056.jpeg?auto=compress&cs=tinysrgb&w=600')" onclick="filterCategory('أجهزة إلكترونية', null); switchTab('home');">
           <div class="cat-name">الإلكترونيات</div>
           <p>أجهزة وجودة مضمونة</p>
         </div>
-        <div class="cat-item" onclick="filterCategory('أجهزة كهربائية', null); switchTab('home');">
-          <div class="cat-icon"><i class="fas fa-plug"></i></div>
+        <div class="cat-item" style="background-image: url('https://images.pexels.com/photos/5824485/pexels-photo-5824485.jpeg?auto=compress&cs=tinysrgb&w=600')" onclick="filterCategory('أجهزة كهربائية', null); switchTab('home');">
           <div class="cat-name">الكهربائيات</div>
           <p>أجهزة منزلية أصلية</p>
         </div>
-        <div class="cat-item" onclick="filterCategory('ألعاب أطفال', null); switchTab('home');">
-          <div class="cat-icon"><i class="fas fa-puzzle-piece"></i></div>
+        <div class="cat-item" style="background-image: url('https://images.pexels.com/photos/974911/pexels-photo-974911.jpeg?auto=compress&cs=tinysrgb&w=600')" onclick="filterCategory('أزياء نسائية', null); switchTab('home');">
+          <div class="cat-name">أزياء نسائية</div>
+          <p>أناقة عصرية لكل مناسبة</p>
+        </div>
+        <div class="cat-item" style="background-image: url('https://images.pexels.com/photos/2062426/pexels-photo-2062426.jpeg?auto=compress&cs=tinysrgb&w=600')" onclick="filterCategory('المنزل والمطبخ', null); switchTab('home');">
+          <div class="cat-name">المنزل والمطبخ</div>
+          <p>مستلزمات عصرية لبيتك</p>
+        </div>
+        <div class="cat-item" style="background-image: url('https://images.pexels.com/photos/3663060/pexels-photo-3663060.jpeg?auto=compress&cs=tinysrgb&w=600')" onclick="filterCategory('ألعاب أطفال', null); switchTab('home');">
           <div class="cat-name">ألعاب أطفال</div>
           <p>كل ما يسعد أطفالك</p>
         </div>
-        <div class="cat-item" onclick="filterCategory('مستحضرات تجميل', null); switchTab('home');">
-          <div class="cat-icon"><i class="fas fa-magic-wand-sparkles"></i></div>
+        <div class="cat-item" style="background-image: url('https://images.pexels.com/photos/3373739/pexels-photo-3373739.jpeg?auto=compress&cs=tinysrgb&w=600')" onclick="filterCategory('مستحضرات تجميل', null); switchTab('home');">
           <div class="cat-name">التجميل</div>
           <p>منتجات عناية أصلية</p>
         </div>
@@ -801,7 +833,9 @@ const categorySlugs = {
   'أجهزة كهربائية': 'electrical-appliances',
   'ألعاب أطفال': 'toys',
   'إكسسوارات موبايلات': 'accessories',
-  'مستحضرات تجميل': 'cosmetics'
+  'مستحضرات تجميل': 'cosmetics',
+  'أزياء نسائية': 'women-fashion',
+  'المنزل والمطبخ': 'home-kitchen'
 };
 
 function transliterateArabic(text) {
