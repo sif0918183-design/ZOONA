@@ -17,13 +17,14 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="description" content="متجر ZOONA الإلكتروني - أحدث الموبايلات والأجهزة الإلكترونية في السودان">
+  <meta name="description" content="متجر ZOONA الإلكتروني - أفضل العروض والمنتجات الأصلية في السودان. توصيل سريع لجميع الولايات ودفع عند الاستلام.">
+  <link rel="canonical" href="https://zoonasd.com/">
 
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://zoonasd.com/">
-  <meta property="og:title" content="ZOONA - متجر إلكتروني">
-  <meta property="og:description" content="متجر ZOONA الإلكتروني - أحدث الموبايلات والأجهزة الإلكترونية في السودان">
+  <meta property="og:title" content="ZOONA - متجر إلكتروني سوداني">
+  <meta property="og:description" content="متجر ZOONA الإلكتروني - أفضل العروض والمنتجات الأصلية في السودان. توصيل سريع لجميع الولايات ودفع عند الاستلام.">
   <meta property="og:image" content="https://zoonasd.com/assets/splash-logo.png">
   <meta property="og:image:width" content="512">
   <meta property="og:image:height" content="512">
@@ -31,13 +32,47 @@
   <!-- Twitter -->
   <meta property="twitter:card" content="summary_large_image">
   <meta property="twitter:url" content="https://zoonasd.com/">
-  <meta property="twitter:title" content="ZOONA - متجر إلكتروني">
-  <meta property="twitter:description" content="متجر ZOONA الإلكتروني - أحدث الموبايلات والأجهزة الإلكترونية في السودان">
+  <meta property="twitter:title" content="ZOONA - متجر إلكتروني سوداني">
+  <meta property="twitter:description" content="متجر ZOONA الإلكتروني - أفضل العروض والمنتجات الأصلية في السودان. توصيل سريع لجميع الولايات ودفع عند الاستلام.">
   <meta property="twitter:image" content="https://zoonasd.com/assets/splash-logo.png">
   <meta property="twitter:image:width" content="512">
   <meta property="twitter:image:height" content="512">
 
-  <title>ZOONA - متجر إلكتروني</title>
+  <title>ZOONA - متجر إلكتروني سوداني</title>
+
+  <!-- JSON-LD Schemas -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "ZOONA",
+    "url": "https://zoonasd.com/",
+    "logo": "https://zoonasd.com/assets/splash-logo.png",
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "telephone": "+249918183521",
+      "contactType": "customer service",
+      "areaServed": "SD",
+      "availableLanguage": "Arabic"
+    },
+    "sameAs": [
+      "https://wa.me/+249110269224"
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "ZOONA",
+    "url": "https://zoonasd.com/",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://zoonasd.com/?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" href="icon/icon-72x72.png">
   <link rel="apple-touch-icon" href="icon/icon-152x152.png">
@@ -473,7 +508,7 @@ html, body {
 
     <!-- Banner -->
     <div class="zona-banner" style="margin-top:10px;">
-      <h2>❤️ أهلاً بك في <strong>زونا للتسوق</strong>!</h2>
+      <h1 style="font-size:17px; font-weight:800; margin-bottom:4px; position:relative; z-index:1;">❤️ أهلاً بك في <strong>زونا للتسوق</strong>!</h1>
       <div class="rotating-msg" id="rotatingMsg"></div>
       <a href="#" onclick="switchTab('cats'); return false;">تسوق الآن من زونا 🛒</a>
     </div>
