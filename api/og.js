@@ -20,7 +20,9 @@ const categorySlugs = {
   'أجهزة كهربائية': 'electrical-appliances',
   'ألعاب أطفال': 'toys',
   'إكسسوارات موبايلات': 'accessories',
-  'مستحضرات تجميل': 'cosmetics'
+  'مستحضرات تجميل': 'cosmetics',
+  'أزياء نسائية': 'women-fashion',
+  'المنزل والمطبخ': 'home-kitchen'
 };
 
 function transliterateArabic(text) {
@@ -73,7 +75,7 @@ async function getProducts() {
     return productsCache;
   }
   try {
-    const fetchUrl = `${url}/rest/v1/products?select=name,category,image,description&order=id.desc`;
+    const fetchUrl = `${url}/rest/v1/products?select=id,name,category,image,description,price&order=id.desc`;
     const res = await fetch(fetchUrl, {
       headers: {
         'apikey': key,
@@ -110,10 +112,11 @@ export default async function handler(req, res) {
 
   let html = htmlBase;
   const parts = fullPath.split('/').filter(p => p.length > 0);
-  let title = "ZOONA - متجر إلكتروني";
-  let description = "متجر ZOONA الإلكتروني - أحدث الموبايلات والأجهزة الإلكترونية في السودان";
+  let title = "ZOONA - متجر إلكتروني سوداني";
+  let description = "متجر ZOONA الإلكتروني - أفضل العروض والمنتجات الأصلية في السودان. توصيل سريع لجميع الولايات ودفع عند الاستلام.";
   let image = "https://zoonasd.com/assets/splash-logo.png";
   let url = `https://zoonasd.com${fullPath}`;
+  let jsonLd = null;
 
   const products = await getProducts();
 
@@ -125,16 +128,38 @@ export default async function handler(req, res) {
       catName = categories.find(c => slugify(c) === slug);
     }
     if (catName) {
-      title = `${catName} | ZOONA`;
-      description = `تسوق أحدث منتجات ${catName} في متجر زونا السودان.`;
+      title = `${catName} | متجر زونا السودان`;
+      description = `تسوق أحدث منتجات ${catName} في متجر زونا السودان. جودة عالية، أفضل الأسعار وتوصيل سريع لكل السودان.`;
     }
   } else if (parts.length === 1) {
     const slug = parts[0];
     const product = products.find(p => slugify(p.name) === slug);
     if (product) {
-      title = `${product.name} | ZOONA`;
+      title = `${product.name} | متجر زونا السودان`;
       description = product.description ? product.description.substring(0, 160).replace(/\n/g, ' ') : description;
       image = product.image;
+
+      // JSON-LD Product Schema
+      jsonLd = {
+        "@context": "https://schema.org/",
+        "@type": "Product",
+        "name": product.name,
+        "image": [product.image],
+        "description": product.description,
+        "sku": `ZOONA-${product.id}`,
+        "offers": {
+          "@type": "Offer",
+          "url": url,
+          "priceCurrency": "SDG",
+          "price": product.price,
+          "itemCondition": "https://schema.org/NewCondition",
+          "availability": "https://schema.org/InStock",
+          "seller": {
+            "@type": "Organization",
+            "name": "ZOONA"
+          }
+        }
+      };
     }
   }
 
@@ -173,6 +198,17 @@ export default async function handler(req, res) {
 
   html = html.replace(/<title>[^<]*<\/title>/g, `<title>${esc(title)}</title>`);
   html = html.replace(/<meta name="description" content="[^"]*">/g, `<meta name="description" content="${esc(description)}">`);
+
+  // Inject Canonical Tag
+  const canonicalTag = `<link rel="canonical" href="${esc(url)}">`;
+  html = html.replace('</head>', `${canonicalTag}\n</head>`);
+
+  // Inject JSON-LD
+  if (jsonLd) {
+    const jsonLdString = JSON.stringify(jsonLd).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+    const jsonLdTag = `<script type="application/ld+json">${jsonLdString}</script>`;
+    html = html.replace('</head>', `${jsonLdTag}\n</head>`);
+  }
 
   res.setHeader('Content-Type', 'text/html');
   res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
