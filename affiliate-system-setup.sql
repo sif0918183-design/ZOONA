@@ -22,12 +22,14 @@ CREATE TABLE IF NOT EXISTS affiliates (
 CREATE TABLE IF NOT EXISTS orders (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     order_id TEXT UNIQUE NOT NULL, -- The external order ID from the shop
+    user_id TEXT, -- The unique user/visitor ID
     affiliate_id TEXT REFERENCES affiliates(affiliate_id), -- The referring affiliate
     status TEXT DEFAULT 'new', -- 'new', 'processing', 'shipped', 'delivered', 'cancelled'
     name TEXT, -- Customer Name
     phone TEXT, -- Customer Phone
     phone2 TEXT, -- Additional Phone
     city TEXT,
+    city_type TEXT, -- 'cod' or 'prepaid'
     address TEXT,
     location_link TEXT,
     total_amount NUMERIC DEFAULT 0,
@@ -41,10 +43,11 @@ CREATE TABLE IF NOT EXISTS affiliate_events (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     affiliate_id TEXT REFERENCES affiliates(affiliate_id),
     event_type TEXT NOT NULL, -- 'click', 'add_to_cart', 'checkout_visit'
-    product_id TEXT, -- Optional product context
+    product_id TEXT,
+    product_name TEXT,
     user_agent TEXT,
     ip_address TEXT,
-    referrer TEXT,
+    metadata JSONB DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -57,14 +60,11 @@ ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE affiliate_events ENABLE ROW LEVEL SECURITY;
 
 -- 5. Strict RLS Policies (Security First)
--- No public read access to affiliates or orders
 DROP POLICY IF EXISTS "affiliates_read" ON affiliates;
 DROP POLICY IF EXISTS "orders_read" ON orders;
 DROP POLICY IF EXISTS "events_read" ON affiliate_events;
 
 -- Allow inserting events publicly (tracking)
 CREATE POLICY "events_insert" ON affiliate_events FOR INSERT WITH CHECK (true);
-
--- API will handle authenticated access, so we disable direct public read
--- In a real Supabase Auth setup, we'd use auth.uid(),
--- but since this uses a custom API proxy, we'll rely on the API layer for auth.
+-- Allow creating orders publicly
+CREATE POLICY "orders_insert" ON orders FOR INSERT WITH CHECK (true);

@@ -120,11 +120,20 @@ export default async function handler(req, res) {
         method: 'POST',
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          order_id: orderData.orderId, affiliate_id: orderData.affiliateId, name: orderData.name,
-          phone: orderData.phone, phone2: orderData.phone2, city: orderData.city,
-          shipping_cost: orderData.shippingCost, total_amount: orderData.total,
-          address: orderData.address, location_link: orderData.location ? orderData.location.link : null,
-          order_products: orderData.products, status: 'new'
+          order_id: orderData.orderId,
+          user_id: orderData.userId,
+          affiliate_id: orderData.affiliateId,
+          name: orderData.name,
+          phone: orderData.phone,
+          phone2: orderData.phone2,
+          city: orderData.city,
+          city_type: orderData.cityType,
+          shipping_cost: orderData.shippingCost,
+          total_amount: orderData.total,
+          address: orderData.address,
+          location_link: orderData.location ? orderData.location.link : null,
+          order_products: orderData.products,
+          status: 'new'
         })
       });
       if (!response.ok) throw new Error('Failed to create order');
