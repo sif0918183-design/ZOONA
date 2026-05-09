@@ -10,7 +10,8 @@ export default async function handler(req, res) {
   const allowedOrigins = [
     'https://zoonasd.com',
     'https://www.zoonasd.com',
-    'https://zoona-git-feat-product-modal-enhancemen-94c8c9-sifians-projects.vercel.app'
+    'https://zoona-git-feat-product-modal-enhancemen-94c8c9-sifians-projects.vercel.app',
+    'https://zoona-git-professional-affiliate-system-892776-sifians-projects.vercel.app'
   ];
   const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed));
   
@@ -40,7 +41,8 @@ export default async function handler(req, res) {
   const allowedOriginsList = [
     'https://zoonasd.com',
     'https://www.zoonasd.com',
-    'https://zoona-git-feat-product-modal-enhancemen-94c8c9-sifians-projects.vercel.app'
+    'https://zoona-git-feat-product-modal-enhancemen-94c8c9-sifians-projects.vercel.app',
+    'https://zoona-git-professional-affiliate-system-892776-sifians-projects.vercel.app'
   ];
   const currentOrigin = req.headers.origin;
   

@@ -6,7 +6,11 @@
 
 import crypto from 'crypto';
 
-const ALLOWED_ORIGINS = ['https://zoonasd.com', 'https://www.zoonasd.com'];
+const ALLOWED_ORIGINS = [
+  'https://zoonasd.com',
+  'https://www.zoonasd.com',
+  'https://zoona-git-professional-affiliate-system-892776-sifians-projects.vercel.app'
+];
 
 function hashPassword(password) {
   return crypto.createHash('sha256').update(password).digest('hex');
