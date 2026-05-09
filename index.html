@@ -1445,6 +1445,8 @@ function addToCart(e, id) {
 }
 
 function addProductToCart(p, qty) {
+  // Track cart add for affiliate
+  trackAffiliateEvent('cart_add', p);
   // Get delivery cities from product
   let deliveryCities = [];
   if (p.delivery_cities) {
@@ -2019,8 +2021,53 @@ function showToast(msg, type = '') {
 function getAffiliateId() {
   const p = new URLSearchParams(window.location.search);
   const ref = p.get('ref');
-  if (ref) { localStorage.setItem('currentAffiliateId', ref); return ref; }
+  if (ref) {
+    const prevRef = localStorage.getItem('currentAffiliateId');
+    localStorage.setItem('currentAffiliateId', ref);
+    // Track click only if it's a new reference or first time in session
+    if (ref !== prevRef || !sessionStorage.getItem('affiliateTracked')) {
+      trackAffiliateClick(ref);
+    }
+    return ref;
+  }
   return localStorage.getItem('currentAffiliateId') || 'direct';
+}
+
+async function trackAffiliateClick(affiliateId) {
+  if (!affiliateId || affiliateId === 'direct') return;
+  try {
+    const productName = currentModalProduct ? currentModalProduct.name : 'الصفحة الرئيسية';
+    await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'track_event',
+        affiliateId: affiliateId,
+        eventType: 'click',
+        productName: productName,
+        metadata: { trackingUrl: window.location.href }
+      })
+    });
+    sessionStorage.setItem('affiliateTracked', 'true');
+  } catch (e) { console.error('Error tracking click:', e); }
+}
+
+async function trackAffiliateEvent(eventType, product) {
+  const affiliateId = getAffiliateId();
+  if (!affiliateId || affiliateId === 'direct') return;
+  try {
+    await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'track_event',
+        affiliateId: affiliateId,
+        eventType: eventType,
+        productId: product.id,
+        productName: product.name
+      })
+    });
+  } catch (e) { console.error('Error tracking event:', e); }
 }
 
 // ── Service Worker ──

@@ -652,7 +652,7 @@
     </div>
 
     <script>
-        const API_URL = 'https://orders-9vxn.vercel.app/api/orders';
+        const API_URL = '/api/orders';
         
         let debugMode = false;
         let currentAffiliateDetails = null;
@@ -672,36 +672,18 @@
                 const oneMonth = 30 * 24 * 60 * 60 * 1000;
                 
                 if (now - timestamp < oneMonth) {
-                    // التحقق من أن المعرف صحيح عن طريق جلب بيانات المسوقين
-                    const isValid = await verifyAffiliateId(password);
-                    if (isValid) {
-                        isLoggedIn = true;
-                        showAdminPanel();
-                        return;
-                    }
+                    isLoggedIn = true;
+                    correctAffiliateId = password;
+                    showAdminPanel();
+                    return;
                 }
                 localStorage.removeItem('admin_login');
             }
             showLoginPanel();
         }
 
-        // التحقق من صحة معرف المسوق
-        async function verifyAffiliateId(affiliateId) {
-            try {
-                // جلب بيانات المسوقين للتحقق من وجود المعرف
-                const response = await fetch(`${API_URL}?action=get_affiliates_stats`);
-                const result = await response.json();
-                
-                if (result.success && result.affiliates) {
-                    // البحث عن المعرف في قائمة المسوقين
-                    const affiliateExists = result.affiliates.some(aff => aff.affiliate_id === affiliateId);
-                    return affiliateExists;
-                }
-                return false;
-            } catch (error) {
-                console.error('خطأ في التحقق من المعرف:', error);
-                return false;
-            }
+        function getAuthHeader() {
+            return { 'Authorization': `Bearer ${correctAffiliateId}` };
         }
 
         function showLoginPanel() {
@@ -726,22 +708,30 @@
             const errorElement = document.getElementById('loginError');
             
             if (!password) {
-                errorElement.textContent = 'يرجى إدخال معرف المسوق';
+                errorElement.textContent = 'يرجى إدخال كلمة مرور الإدارة';
                 errorElement.style.display = 'block';
                 return;
             }
             
-            const isValid = await verifyAffiliateId(password);
-            
-            if (isValid) {
-                const loginData = {
-                    timestamp: new Date().getTime(),
-                    password: password
-                };
-                localStorage.setItem('admin_login', JSON.stringify(loginData));
-                showAdminPanel();
-            } else {
-                errorElement.textContent = 'معرف المسوق غير صحيح';
+            try {
+                const response = await fetch(`${API_URL}?action=get_all_orders`, {
+                    headers: { 'Authorization': `Bearer ${password}` }
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    const loginData = {
+                        timestamp: new Date().getTime(),
+                        password: password
+                    };
+                    localStorage.setItem('admin_login', JSON.stringify(loginData));
+                    correctAffiliateId = password;
+                    showAdminPanel();
+                } else {
+                    throw new Error();
+                }
+            } catch (error) {
+                errorElement.textContent = 'كلمة مرور الإدارة غير صحيحة';
                 errorElement.style.display = 'block';
             }
         }
@@ -794,7 +784,9 @@
             tableElement.style.display = 'none';
             
             try {
-                const response = await fetch(`${API_URL}?action=get_all_orders`);
+                const response = await fetch(`${API_URL}?action=get_all_orders`, {
+                    headers: getAuthHeader()
+                });
                 const result = await response.json();
                 
                 if (!result.success) {
@@ -855,32 +847,15 @@
             orderProducts.forEach(orderProduct => {
                 if (!orderProduct.product_name) return;
                 
-                const cleanText = (text) => {
-                    return text.toLowerCase()
-                        .replace(/[❤️✨]/g, '')
-                        .replace(/\s+/g, ' ')
-                        .trim();
-                };
-                
-                const cleanOrderProduct = cleanText(orderProduct.product_name);
-                
-                const product = products.find(p => {
-                    if (!p.name) return false;
-                    
-                    const cleanProductName = cleanText(p.name);
-                    
-                    const orderWords = cleanOrderProduct.split(' ');
-                    const productWords = cleanProductName.split(' ');
-                    
-                    const commonWords = orderWords.filter(word => 
-                        productWords.some(pWord => pWord.includes(word) || word.includes(pWord))
-                    );
-                    
-                    return commonWords.length >= 2;
-                });
+                // البحث عن المنتج أولاً بالمعرف إذا توفر، أو بالاسم كبديل
+                const product = products.find(p =>
+                    (orderProduct.id && p.id == orderProduct.id) ||
+                    (p.name && orderProduct.product_name && orderProduct.product_name.includes(p.name)) ||
+                    (p.name && orderProduct.product_name && p.name.includes(orderProduct.product_name))
+                );
                 
                 if (product && product.commission) {
-                    totalCommission += product.commission * (orderProduct.quantity || 1);
+                    totalCommission += Number(product.commission) * (orderProduct.quantity || 1);
                 }
             });
             
@@ -1068,6 +1043,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        ...getAuthHeader()
                     },
                     body: JSON.stringify({
                         action: 'update_order_status',
@@ -1101,7 +1077,9 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             tableElement.style.display = 'none';
             
             try {
-                const response = await fetch(`${API_URL}?action=get_affiliates_stats`);
+                const response = await fetch(`${API_URL}?action=get_affiliates_stats`, {
+                    headers: getAuthHeader()
+                });
                 const result = await response.json();
                 
                 if (!result.success) {
@@ -1240,7 +1218,9 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
         // عرض تفاصيل المسوق
         async function viewAffiliateDetails(affiliateId) {
             try {
-                const response = await fetch(`${API_URL}?action=get_affiliate_data&affiliateId=${affiliateId}`);
+                const response = await fetch(`${API_URL}?action=get_affiliate_data&affiliateId=${affiliateId}`, {
+                    headers: getAuthHeader()
+                });
                 const result = await response.json();
                 
                 if (!result.success) {
@@ -1318,6 +1298,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        ...getAuthHeader()
                     },
                     body: JSON.stringify({
                         action: 'update_affiliate_status',
@@ -1357,7 +1338,9 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             tableElement.style.display = 'none';
             
             try {
-                const response = await fetch(`${API_URL}?action=get_all_products`);
+                const response = await fetch(`${API_URL}?action=get_all_products`, {
+                    headers: getAuthHeader()
+                });
                 const result = await response.json();
                 
                 if (!result.success) {
@@ -1466,9 +1449,11 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        ...getAuthHeader()
                     },
                     body: JSON.stringify({
-                        action: 'delete_product',
+                        action: 'admin_product_crud',
+                        method: 'DELETE',
                         id: productId
                     })
                 });
@@ -1491,14 +1476,24 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
         // إضافة أو تحديث منتج
         async function saveProduct(productData) {
             try {
+                const method = productData.id ? 'PATCH' : 'POST';
+
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        ...getAuthHeader()
                     },
                     body: JSON.stringify({
-                        action: 'save_product',
-                        ...productData
+                        action: 'admin_product_crud',
+                        method: method,
+                        id: productData.id,
+                        data: {
+                            name: productData.name,
+                            url: productData.url,
+                            commission: productData.commission,
+                            status: productData.status
+                        }
                     })
                 });
                 
