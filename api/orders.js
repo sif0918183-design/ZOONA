@@ -45,8 +45,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Server configuration error' });
   }
 
-  // ✅ التعديل رقم 1: إصلاح استقبال action
-  const action = req.method === 'POST' ? req.body.action : req.query.action;
+  const { action } = req.method === 'POST' ? req.body : req.query;
   const authHeader = req.headers.authorization;
   const isAdmin = authHeader === `Bearer ${ADMIN_PASSWORD}`;
 
@@ -202,59 +201,87 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, products: await response.json() });
     }
 
-    // ✅ التعديل رقم 2: إصلاح admin_product_crud مع تحويل id إلى رقم
     if (action === 'admin_product_crud' && req.method === 'POST') {
       const { method, id, data } = req.body;
-      console.log('📦 admin_product_crud received:', { method, id, data });
-      
+      console.log(`[admin_product_crud] Method: ${method}, ID: ${id}, Data:`, JSON.stringify(data));
+
       let response;
-      
       if (method === 'POST') {
+        // Validation: Ensure required fields are present for new products
+        if (!data || !data.name) throw new Error('Missing product name');
+
         response = await fetch(`${SUPABASE_URL}/rest/v1/products`, {
           method: 'POST',
-          headers: { 
-            'apikey': SUPABASE_KEY, 
-            'Authorization': `Bearer ${SUPABASE_KEY}`, 
-            'Content-Type': 'application/json', 
-            'Prefer': 'return=representation' 
-          },
-          body: JSON.stringify(data)
-        });
-      } else if (method === 'PATCH') {
-        const productId = parseInt(id);
-        response = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${productId}`, {
-          method: 'PATCH',
-          headers: { 
-            'apikey': SUPABASE_KEY, 
-            'Authorization': `Bearer ${SUPABASE_KEY}`, 
-            'Content-Type': 'application/json' 
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
           },
           body: JSON.stringify({
             name: data.name,
             url: data.url,
-            commission: data.commission,
-            status: data.status,
-            updated_at: new Date().toISOString()
+            commission: Number(data.commission) || 0,
+            status: data.status || 'active'
           })
         });
+      } else if (method === 'PATCH') {
+        if (!id) throw new Error('Missing product ID for update');
+
+        // Prepare update object with only provided fields
+        const updateData = {};
+        if (data.name !== undefined) updateData.name = data.name;
+        if (data.url !== undefined) updateData.url = data.url;
+        if (data.commission !== undefined) updateData.commission = Number(data.commission) || 0;
+        if (data.status !== undefined) updateData.status = data.status;
+
+        response = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${id}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(updateData)
+        });
       } else if (method === 'DELETE') {
-        const productId = parseInt(id);
-        response = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${productId}`, {
+        if (!id) throw new Error('Missing product ID for deletion');
+        response = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${id}`, {
           method: 'DELETE',
-          headers: { 
-            'apikey': SUPABASE_KEY, 
-            'Authorization': `Bearer ${SUPABASE_KEY}` 
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`
           }
         });
+      } else {
+        throw new Error(`Invalid method: ${method}`);
       }
-      
+
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Product operation failed:', errorText);
-        throw new Error('Product operation failed');
+        const errorBody = await response.text();
+        console.error(`[admin_product_crud] Supabase Error:`, response.status, errorBody);
+        let errorMessage = 'Product operation failed';
+        try {
+          const errorJson = JSON.parse(errorBody);
+          errorMessage = errorJson.message || errorJson.error || errorMessage;
+        } catch (e) {
+          errorMessage = errorBody || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
-      
-      return res.status(200).json({ success: true });
+
+      // Supabase returns 204 No Content for successful PATCH/DELETE by default
+      let result = { success: true };
+      if (response.status !== 204) {
+        try {
+          result = await response.json();
+        } catch (e) {
+          console.warn(`[admin_product_crud] Failed to parse response JSON:`, e.message);
+        }
+      }
+
+      console.log(`[admin_product_crud] Success:`, result);
+      return res.status(200).json({ success: true, data: result });
     }
 
     return res.status(400).json({ error: 'Invalid action' });
