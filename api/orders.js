@@ -45,7 +45,8 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Server configuration error' });
   }
 
-  const { action } = req.method === 'POST' ? req.body : req.query;
+  // ✅ التعديل رقم 1: إصلاح استقبال action
+  const action = req.method === 'POST' ? req.body.action : req.query.action;
   const authHeader = req.headers.authorization;
   const isAdmin = authHeader === `Bearer ${ADMIN_PASSWORD}`;
 
@@ -201,28 +202,58 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, products: await response.json() });
     }
 
+    // ✅ التعديل رقم 2: إصلاح admin_product_crud مع تحويل id إلى رقم
     if (action === 'admin_product_crud' && req.method === 'POST') {
       const { method, id, data } = req.body;
+      console.log('📦 admin_product_crud received:', { method, id, data });
+      
       let response;
+      
       if (method === 'POST') {
         response = await fetch(`${SUPABASE_URL}/rest/v1/products`, {
           method: 'POST',
-          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+          headers: { 
+            'apikey': SUPABASE_KEY, 
+            'Authorization': `Bearer ${SUPABASE_KEY}`, 
+            'Content-Type': 'application/json', 
+            'Prefer': 'return=representation' 
+          },
           body: JSON.stringify(data)
         });
       } else if (method === 'PATCH') {
-        response = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${id}`, {
+        const productId = parseInt(id);
+        response = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${productId}`, {
           method: 'PATCH',
-          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
+          headers: { 
+            'apikey': SUPABASE_KEY, 
+            'Authorization': `Bearer ${SUPABASE_KEY}`, 
+            'Content-Type': 'application/json' 
+          },
+          body: JSON.stringify({
+            name: data.name,
+            url: data.url,
+            commission: data.commission,
+            status: data.status,
+            updated_at: new Date().toISOString()
+          })
         });
       } else if (method === 'DELETE') {
-        response = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${id}`, {
+        const productId = parseInt(id);
+        response = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${productId}`, {
           method: 'DELETE',
-          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+          headers: { 
+            'apikey': SUPABASE_KEY, 
+            'Authorization': `Bearer ${SUPABASE_KEY}` 
+          }
         });
       }
-      if (!response.ok) throw new Error('Product operation failed');
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Product operation failed:', errorText);
+        throw new Error('Product operation failed');
+      }
+      
       return res.status(200).json({ success: true });
     }
 
