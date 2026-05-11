@@ -39,15 +39,24 @@ export default async function handler(req, res) {
   // 2. Environment Variables
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_KEY = process.env.SUPABASE_KEY;
-  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'ZoonaAdmin2024';
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
-  if (!SUPABASE_URL || !SUPABASE_KEY) {
+  if (!SUPABASE_URL || !SUPABASE_KEY || !ADMIN_PASSWORD) {
+    console.error('[API Orders] Server configuration missing:', {
+      hasUrl: !!SUPABASE_URL,
+      hasKey: !!SUPABASE_KEY,
+      hasAdmin: !!ADMIN_PASSWORD
+    });
     return res.status(500).json({ error: 'Server configuration error' });
   }
 
   const { action } = req.method === 'POST' ? req.body : req.query;
   const authHeader = req.headers.authorization;
   const isAdmin = authHeader === `Bearer ${ADMIN_PASSWORD}`;
+
+  if (!action) {
+    return res.status(400).json({ success: false, error: 'Missing action parameter' });
+  }
 
   try {
     // --- AUTHENTICATION ACTIONS ---
@@ -78,7 +87,7 @@ export default async function handler(req, res) {
 
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || 'Registration failed');
-      return res.status(200).json({ success: true, affiliate: result[0] });
+      return res.status(200).json({ success: true, data: result[0] });
     }
 
     if (action === 'login_affiliate' && req.method === 'POST') {
@@ -92,9 +101,9 @@ export default async function handler(req, res) {
 
       const data = await response.json();
       if (data.length > 0) {
-        return res.status(200).json({ success: true, affiliate: data[0] });
+        return res.status(200).json({ success: true, data: data[0] });
       } else {
-        return res.status(401).json({ success: false, message: 'معرف المسوق أو كلمة المرور غير صحيحة' });
+        return res.status(401).json({ success: false, error: 'معرف المسوق أو كلمة المرور غير صحيحة' });
       }
     }
 
@@ -111,7 +120,17 @@ export default async function handler(req, res) {
           ip_address: req.headers['x-forwarded-for'] || req.socket.remoteAddress
         })
       });
-      return res.status(200).json({ success: true });
+      return res.status(200).json({ success: true, data: {} });
+    }
+
+    if (action === 'update_affiliate_status' && req.method === 'POST') {
+      const { affiliateId, status } = req.body;
+      await fetch(`${SUPABASE_URL}/rest/v1/affiliates?affiliate_id=eq.${affiliateId}`, {
+        method: 'PATCH',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      return res.status(200).json({ success: true, data: {} });
     }
 
     if (action === 'create_order' && req.method === 'POST') {
@@ -137,14 +156,14 @@ export default async function handler(req, res) {
         })
       });
       if (!response.ok) throw new Error('Failed to create order');
-      return res.status(200).json({ success: true });
+      return res.status(200).json({ success: true, data: {} });
     }
 
     // --- ADMIN ACTIONS (Protected) ---
 
     if (!isAdmin) {
       const adminActions = ['get_all_orders', 'update_order_status', 'get_affiliates_stats', 'update_affiliate_status', 'get_all_products', 'admin_product_crud'];
-      if (adminActions.includes(action)) return res.status(403).json({ error: 'Unauthorized' });
+      if (adminActions.includes(action)) return res.status(403).json({ success: false, error: 'Unauthorized' });
     }
 
     if (action === 'get_all_orders' && req.method === 'GET') {
@@ -153,7 +172,14 @@ export default async function handler(req, res) {
         fetch(`${SUPABASE_URL}/rest/v1/affiliates?select=*`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }),
         fetch(`${SUPABASE_URL}/rest/v1/products?select=*`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } })
       ]);
-      return res.status(200).json({ success: true, orders: await ordersRes.json(), affiliates: await affiliatesRes.json(), products: await productsRes.json() });
+      return res.status(200).json({
+        success: true,
+        data: {
+          orders: await ordersRes.json(),
+          affiliates: await affiliatesRes.json(),
+          products: await productsRes.json()
+        }
+      });
     }
 
     if (action === 'update_order_status' && req.method === 'POST') {
@@ -163,7 +189,7 @@ export default async function handler(req, res) {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
       });
-      return res.status(200).json({ success: true });
+      return res.status(200).json({ success: true, data: {} });
     }
 
     if (action === 'get_affiliate_data' && req.method === 'GET') {
@@ -179,10 +205,22 @@ export default async function handler(req, res) {
       const clicks = await clicksRes.json();
       const orders = await ordersRes.json();
       return res.status(200).json({
-        success: true, affiliate: affData[0],
-        stats: { totalClicks: clicks.length, totalOrders: orders.length, confirmedOrders: orders.filter(o => o.status === 'delivered').length },
-        products: await productsRes.json()
+        success: true,
+        data: {
+          affiliate: affData[0],
+          stats: { totalClicks: clicks.length, totalOrders: orders.length, confirmedOrders: orders.filter(o => o.status === 'delivered').length },
+          products: await productsRes.json()
+        }
       });
+    }
+
+    if (action === 'get_affiliate_orders' && req.method === 'GET') {
+      const { affiliateId } = req.query;
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/orders?affiliate_id=eq.${affiliateId}&select=*&order=created_at.desc`, {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+      });
+      const orders = await response.json();
+      return res.status(200).json({ success: true, data: { orders } });
     }
 
     if (action === 'get_affiliates_stats' && req.method === 'GET') {
@@ -193,12 +231,12 @@ export default async function handler(req, res) {
         const clicks = await clicksRes.json();
         return { ...aff, total_clicks: clicks.length };
       });
-      return res.status(200).json({ success: true, affiliates: await Promise.all(statsPromises) });
+      return res.status(200).json({ success: true, data: { affiliates: await Promise.all(statsPromises) } });
     }
 
     if (action === 'get_all_products' && req.method === 'GET') {
       const response = await fetch(`${SUPABASE_URL}/rest/v1/products?select=*`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } });
-      return res.status(200).json({ success: true, products: await response.json() });
+      return res.status(200).json({ success: true, data: { products: await response.json() } });
     }
 
     if (action === 'admin_product_crud' && req.method === 'POST') {
@@ -284,7 +322,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, data: result });
     }
 
-    return res.status(400).json({ error: 'Invalid action' });
+    return res.status(400).json({ success: false, error: `Invalid action: ${action}` });
   } catch (error) {
     console.error(`[API Orders] Error:`, error.message);
     return res.status(500).json({ success: false, error: error.message });

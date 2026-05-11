@@ -793,9 +793,9 @@
                     throw new Error(result.error || 'خطأ في تحميل الطلبات');
                 }
                 
-                allOrders = result.orders || [];
-                allAffiliates = result.affiliates || [];
-                allProducts = result.products || [];
+                allOrders = result.data.orders || [];
+                allAffiliates = result.data.affiliates || [];
+                allProducts = result.data.products || [];
 
                 if (debugMode) {
                     document.getElementById('debugContent').innerHTML = `
@@ -1086,8 +1086,8 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     throw new Error(result.error || 'خطأ في تحميل بيانات المسوقين');
                 }
                 
-                updateAffiliatesStats(result.affiliates || []);
-                displayAffiliates(result.affiliates || []);
+                updateAffiliatesStats(result.data.affiliates || []);
+                displayAffiliates(result.data.affiliates || []);
                 
             } catch (error) {
                 console.error('خطأ في تحميل بيانات المسوقين:', error);
@@ -1347,7 +1347,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     throw new Error(result.error || 'خطأ في تحميل المنتجات');
                 }
                 
-                allProducts = result.products || [];
+                allProducts = result.data.products || [];
                 displayProducts(allProducts);
                 
             } catch (error) {

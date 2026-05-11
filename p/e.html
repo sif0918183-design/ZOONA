@@ -896,7 +896,7 @@
                     }
 
                     const result = await response.json();
-                    console.log('✅ تم تتبع زيارة المسوق:', result.message);
+                    console.log('✅ تم تتبع زيارة المسوق:', result.success);
                 } catch (error) {
                     console.error('❌ خطأ في تتبع النقرة:', error);
                 }
@@ -934,7 +934,7 @@
                 }
 
                 const result = await response.json();
-                console.log('✅ تم إنشاء الطلب عبر API:', result.message);
+                console.log('✅ تم إنشاء الطلب عبر API:', result.success);
                 return result;
 
             } catch (error) {

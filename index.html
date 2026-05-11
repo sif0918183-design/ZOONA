@@ -1045,6 +1045,9 @@ let deferredPrompt = null;
 
 // ── Init ──
 window.addEventListener('DOMContentLoaded', () => {
+  // Initialize affiliate tracking immediately if ref is present
+  getAffiliateId();
+
   // Show splash then load app
   setTimeout(() => {
     loadProducts();
@@ -1445,8 +1448,6 @@ function addToCart(e, id) {
 }
 
 function addProductToCart(p, qty) {
-  // Track cart add for affiliate
-  trackAffiliateEvent('cart_add', p);
   // Get delivery cities from product
   let deliveryCities = [];
   if (p.delivery_cities) {
@@ -1476,6 +1477,9 @@ function addProductToCart(p, qty) {
   }
   saveCart();
   showToast(`✅ تمت إضافة "${p.name}" إلى السلة`, 'green');
+
+  // Track "Add to Cart" event for affiliate system
+  trackAffiliateEvent('add_to_cart', p);
 
   // Update button
   const btn = document.getElementById(`cartBtn-${p.id}`);
@@ -2035,6 +2039,11 @@ function getAffiliateId() {
 
 async function trackAffiliateClick(affiliateId) {
   if (!affiliateId || affiliateId === 'direct') return;
+
+  // Create a unique key for this affiliate in this session
+  const sessionKey = `tracked_${affiliateId}`;
+  if (sessionStorage.getItem(sessionKey)) return;
+
   try {
     const productName = currentModalProduct ? currentModalProduct.name : 'الصفحة الرئيسية';
     await fetch('/api/orders', {
@@ -2048,7 +2057,8 @@ async function trackAffiliateClick(affiliateId) {
         metadata: { trackingUrl: window.location.href }
       })
     });
-    sessionStorage.setItem('affiliateTracked', 'true');
+    sessionStorage.setItem(sessionKey, 'true');
+    sessionStorage.setItem('affiliateTracked', 'true'); // Legacy support
   } catch (e) { console.error('Error tracking click:', e); }
 }
 
