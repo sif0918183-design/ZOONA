@@ -754,9 +754,46 @@
 
 <script>
 // ========== إعدادات Vercel ==========
-const API_BASE_URL = 'https://orders-9vxn.vercel.app/api/orders';
+const API_BASE_URL = '/api/orders';
 
 // ========== دوال النظام الأساسية ==========
+
+// دوان تحويل الأسماء إلى روابط (Slugs)
+const categorySlugs = {
+    'الكل': 'all',
+    'موبايلات': 'mobiles',
+    'أجهزة إلكترونية': 'electronics',
+    'أجهزة كهربائية': 'electrical-appliances',
+    'ألعاب أطفال': 'toys',
+    'إكسسوارات موبايلات': 'accessories',
+    'مستحضرات تجميل': 'cosmetics',
+    'أزياء نسائية': 'women-fashion',
+    'المنزل والمطبخ': 'home-kitchen'
+};
+
+function transliterateArabic(text) {
+    const mapping = {
+        'أ': 'a', 'إ': 'i', 'آ': 'a', 'ا': 'a', 'ب': 'b', 'ت': 't', 'ث': 'th', 'ج': 'j', 'ح': 'h', 'خ': 'kh',
+        'د': 'd', 'ذ': 'dh', 'ر': 'r', 'ز': 'z', 'س': 's', 'ش': 'sh', 'ص': 's', 'ض': 'd', 'ط': 't', 'ظ': 'z',
+        'ع': 'a', 'غ': 'gh', 'ف': 'f', 'ق': 'q', 'ك': 'k', 'ل': 'l', 'م': 'm', 'ن': 'n', 'ه': 'h', 'و': 'w',
+        'ي': 'y', 'ى': 'a', 'ة': 't', 'ؤ': 'u', 'ئ': 'i', 'ء': 'a'
+    };
+    return text.split('').map(char => mapping[char] || char).join('');
+}
+
+function slugify(text) {
+    if (!text) return "";
+    const trimmed = text.toString().trim();
+    if (categorySlugs[trimmed]) return categorySlugs[trimmed];
+
+    const words = trimmed.split(/\s+/).slice(0, 3).join(' ');
+    return transliterateArabic(words.toLowerCase())
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]+/g, '')
+        .replace(/\-\-+/g, '-')
+        .replace(/^-+/, '')
+        .replace(/-+$/, '');
+}
 
 function isEnglishText(text) {
     const englishPattern = /^[A-Za-z\s]+$/;
@@ -859,7 +896,7 @@ async function getAffiliateData(affiliateId) {
 
 async function getAffiliateOrders(affiliateId) {
     try {
-        const response = await fetch(`${API_BASE_URL}?affiliateId=${affiliateId}`);
+        const response = await fetch(`${API_BASE_URL}?action=get_affiliate_orders&affiliateId=${affiliateId}`);
         console.log('حالة جلب الطلبات:', response.status);
         
         if (!response.ok) {
@@ -884,10 +921,11 @@ async function trackAffiliateClick(affiliateId, productName, trackingUrl) {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                action: 'track_affiliate_click',
+                action: 'track_event',
+                eventType: 'click',
                 affiliateId: affiliateId,
                 productName: productName,
-                trackingUrl: trackingUrl
+                metadata: { trackingUrl: trackingUrl }
             })
         });
 
@@ -903,7 +941,7 @@ async function trackAffiliateClick(affiliateId, productName, trackingUrl) {
 
 function setUserSession(affiliate) {
     const sessionData = {
-        id: affiliate.affiliate_id,
+        affiliateId: affiliate.affiliate_id,
         name: affiliate.name,
         email: affiliate.email,
         loginTime: new Date().toISOString()
@@ -923,7 +961,7 @@ function checkSession() {
             
             // تم تعديل هذه الدالة لجعل الجلسة صالحة لمدة شهر
             if (diffDays < 30) {
-                console.log('جلسة نشطة:', sessionData.id);
+                console.log('جلسة نشطة:', sessionData.affiliateId);
                 return sessionData;
             } else {
                 console.log('انتهت صلاحية الجلسة');
@@ -988,31 +1026,32 @@ async function loadDashboardData() {
     if (!session) return;
     
     document.getElementById('userName').textContent = session.name;
-    document.getElementById('affiliateIdDisplay').textContent = session.id;
+    document.getElementById('affiliateIdDisplay').textContent = session.affiliateId;
     
     try {
         // جلب بيانات المسوق
-        const affiliateData = await getAffiliateData(session.id);
+        const affiliateData = await getAffiliateData(session.affiliateId);
         
         if (affiliateData.success) {
+            const data = affiliateData.data;
             // تحديث الإحصائيات
-            document.getElementById('totalClicks').textContent = affiliateData.stats.totalClicks || 0;
-            document.getElementById('totalOrders').textContent = affiliateData.stats.totalOrders || 0;
+            document.getElementById('totalClicks').textContent = data.stats.totalClicks || 0;
+            document.getElementById('totalOrders').textContent = data.stats.totalOrders || 0;
             
             // حساب العمولة المؤكدة فقط (الطلبات المؤكدة والمكتملة)
-            const confirmedCommission = await calculateConfirmedCommission(session.id, affiliateData.products || []);
+            const confirmedCommission = await calculateConfirmedCommission(session.affiliateId, data.products || []);
             document.getElementById('totalCommission').textContent = confirmedCommission + ' ج.س';
             
             // تحديث تفصيل الطلبات
-            document.getElementById('pendingOrdersCount').textContent = affiliateData.stats.pendingOrders || 0;
-            document.getElementById('confirmedOrdersCount').textContent = affiliateData.stats.confirmedOrders || 0;
-            document.getElementById('cancelledOrdersCount').textContent = affiliateData.stats.cancelledOrders || 0;
+            document.getElementById('pendingOrdersCount').textContent = data.stats.pendingOrders || 0;
+            document.getElementById('confirmedOrdersCount').textContent = data.stats.confirmedOrders || 0;
+            document.getElementById('cancelledOrdersCount').textContent = data.stats.cancelledOrders || 0;
             
             // تحميل قائمة المنتجات
-            await loadProductsList(affiliateData.products || []);
+            await loadProductsList(data.products || []);
             
             // تحميل الطلبات
-            await loadAllOrders(session.id, affiliateData.products || []);
+            await loadAllOrders(session.affiliateId, data.products || []);
         } else {
             console.error('فشل في جلب بيانات المسوق:', affiliateData.message);
             showMessage('error', 'فشل في تحميل البيانات: ' + affiliateData.message);
@@ -1029,13 +1068,13 @@ async function calculateConfirmedCommission(affiliateId, products) {
     try {
         const ordersData = await getAffiliateOrders(affiliateId);
         
-        if (!ordersData.success || !ordersData.orders || ordersData.orders.length === 0) {
+        if (!ordersData.success || !ordersData.data.orders || ordersData.data.orders.length === 0) {
             return 0;
         }
         
         let totalConfirmedCommission = 0;
         
-        for (let order of ordersData.orders) {
+        for (let order of ordersData.data.orders) {
             // حساب العمولة فقط للطلبات المؤكدة والمكتملة
             if (order.status === 'confirmed' || order.status === 'delivered') {
                 const commission = calculateOrderCommission(order, products);
@@ -1081,13 +1120,13 @@ async function loadAllOrders(affiliateId, products) {
     try {
         const ordersData = await getAffiliateOrders(affiliateId);
         
-        if (!ordersData.success || !ordersData.orders || ordersData.orders.length === 0) {
+        if (!ordersData.success || !ordersData.data.orders || ordersData.data.orders.length === 0) {
             tableBody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 30px; color: #6c757d;">لا توجد طلبات حتى الآن</td></tr>`;
         } else {
             tableBody.innerHTML = '';
             
             // ترتيب الطلبات من الأحدث إلى الأقدم
-            const sortedOrders = [...ordersData.orders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            const sortedOrders = [...ordersData.data.orders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
             
             for (let order of sortedOrders) {
                 // حساب العمولة
@@ -1188,21 +1227,13 @@ async function generateTrackingLink() {
     }
     
     let productName = productSelect.value;
-    let productUrl = productSelect.options[productSelect.selectedIndex].getAttribute('data-url');
     
     let trackingUrl = '';
-    let linkType = '';
+    let linkType = 'product';
     
-    // تحديد نوع الرابط
-    if (productUrl && productUrl.startsWith('http')) {
-        // رابط المنتج مع إضافة المرجع
-        trackingUrl = `${productUrl}${productUrl.includes('?') ? '&' : '?'}ref=${session.id}`;
-        linkType = 'product';
-    } else {
-        // إذا لم يكن هناك رابط منتج، استخدام الرابط الافتراضي
-        trackingUrl = `https://www.zoonasd.com/?ref=${session.id}`;
-        linkType = 'default';
-    }
+    // إنشاء رابط احترافي باستخدام Slug
+    const productSlug = slugify(productName);
+    trackingUrl = `https://zoonasd.com/${productSlug}?ref=${session.affiliateId}`;
     
     // عرض الرابط
     const linkElement = document.getElementById('trackingLink');
@@ -1229,7 +1260,7 @@ async function generateTrackingLink() {
         e.preventDefault();
         
         // تسجيل النقرة
-        const clickRecorded = await trackAffiliateClick(session.id, productName, trackingUrl);
+        const clickRecorded = await trackAffiliateClick(session.affiliateId, productName, trackingUrl);
         
         if (clickRecorded) {
             // فتح الرابط في نافذة جديدة بعد تسجيل النقرة
@@ -1318,7 +1349,7 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
     const result = await loginAffiliate(affiliateId, password);
     
     if (result.success) {
-        setUserSession(result.affiliate);
+        setUserSession(result.data);
         showDashboard();
         showMessage('success', 'تم تسجيل الدخول بنجاح!');
     } else {
@@ -1366,8 +1397,8 @@ document.getElementById('registerForm').addEventListener('submit', async functio
     if (result.success) {
         messageDiv.innerHTML = `<div class="message success">
             ✅ تم التسجيل بنجاح!<br>
-            📌 معرف المسوق الخاص بك: <strong>${result.affiliate.affiliate_id}</strong><br>
-            <button type="button" class="copy-id-btn" onclick="copyAffiliateId('${result.affiliate.affiliate_id}')">
+            📌 معرف المسوق الخاص بك: <strong>${result.data.affiliate_id}</strong><br>
+            <button type="button" class="copy-id-btn" onclick="copyAffiliateId('${result.data.affiliate_id}')">
                 <i class="fas fa-copy"></i> نسخ المعرف
             </button>
         </div>`;
