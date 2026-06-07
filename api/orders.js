@@ -44,13 +44,22 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Supabase credentials missing' });
   }
 
-  const body = req.body || {};
-  const action = req.query.action || body.action;
-  const affiliateId = req.query.affiliateId || body.affiliateId;
-  const userId = req.query.userId || body.userId;
-  const orderId = req.query.orderId || body.orderId;
-  const password = req.query.password || body.password;
-  const status = req.query.status || body.status;
+  // Robust body and query parameter extraction
+  let body = req.body || {};
+  if (typeof body === 'string') {
+    try { body = JSON.parse(body); } catch (e) { body = {}; }
+  }
+
+  const getParam = (name) => {
+    return (req.query[name] || body[name] || '').toString().trim();
+  };
+
+  const action = getParam('action');
+  const affiliateId = getParam('affiliateId');
+  const userId = getParam('userId');
+  const orderId = getParam('orderId');
+  const password = getParam('password');
+  const status = getParam('status');
 
   try {
     // ═══════════════════════════════════════════
@@ -80,7 +89,7 @@ export default async function handler(req, res) {
       });
       const affData = await affRes.json();
 
-      if (affData.length > 0) {
+      if (Array.isArray(affData) && affData.length > 0) {
         await fetch(`${SUPABASE_URL}/rest/v1/affiliates?affiliate_id=eq.${affId}`, {
           method: 'PATCH',
           headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
@@ -163,7 +172,7 @@ export default async function handler(req, res) {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
       });
       const affData = await affRes.json();
-      if (affData.length === 0) return res.status(404).json({ success: false, message: 'Affiliate not found' });
+      if (!Array.isArray(affData) || affData.length === 0) return res.status(404).json({ success: false, message: 'Affiliate not found' });
 
       // Fetch orders to calculate stats
       const ordersRes = await fetch(`${SUPABASE_URL}/rest/v1/orders?affiliate_id=eq.${affiliateId}&select=*`, {
@@ -279,22 +288,30 @@ export default async function handler(req, res) {
       }
 
       const aff = await resInsert.json();
-      return res.status(200).json({ success: true, affiliate: aff[0] });
+      if (Array.isArray(aff) && aff.length > 0) {
+        return res.status(200).json({ success: true, affiliate: aff[0] });
+      } else {
+        return res.status(500).json({ success: false, error: 'Registration succeeded but return data failed' });
+      }
     }
 
     // ═══════════════════════════════════════════
     // ACTION: login_affiliate
     // ═══════════════════════════════════════════
     if (action === 'login_affiliate') {
-      const affId = affiliateId;
+      const affId = affiliateId.toLowerCase(); // IDs are stored in lowercase
       const pass = password;
+      if (!affId || !pass) {
+        return res.status(400).json({ success: false, message: 'يرجى إدخال معرف المسوق وكلمة المرور' });
+      }
+
       const resAff = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?affiliate_id=eq.${affId}&select=*`, {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
       });
       const dataAff = await resAff.json();
 
-      if (dataAff.length === 0 || dataAff[0].password_hash !== hashPassword(pass)) {
-        return res.status(401).json({ success: false, message: 'Invalid ID or password' });
+      if (!Array.isArray(dataAff) || dataAff.length === 0 || dataAff[0].password_hash !== hashPassword(pass)) {
+        return res.status(401).json({ success: false, message: 'معرف المسوق أو كلمة المرور غير صحيحة' });
       }
 
       return res.status(200).json({ success: true, affiliate: dataAff[0] });
