@@ -17,12 +17,13 @@ export default async function handler(req, res) {
     'https://www.zoonasd.com',
     'https://zoona-git-fix-affiliate-tracking-system-3aafe9-sifians-projects.vercel.app'
   ];
-  const origin = req.headers.origin;
+  const origin = req.headers.origin || '';
+  const isAllowed = allowedOrigins.some(allowed => origin === allowed) || origin.endsWith('.vercel.app');
 
-  if (origin && allowedOrigins.includes(origin)) {
+  if (origin && isAllowed) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   } else if (!origin) {
-    res.setHeader('Access-Control-Allow-Origin', '*'); // Allow for direct testing
+    res.setHeader('Access-Control-Allow-Origin', '*');
   }
 
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -43,15 +44,20 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Supabase credentials missing' });
   }
 
-  const { action, affiliateId, userId, orderId, password, status, id } = req.query;
-  const body = req.body;
+  const body = req.body || {};
+  const action = req.query.action || body.action;
+  const affiliateId = req.query.affiliateId || body.affiliateId;
+  const userId = req.query.userId || body.userId;
+  const orderId = req.query.orderId || body.orderId;
+  const password = req.query.password || body.password;
+  const status = req.query.status || body.status;
 
   try {
     // ═══════════════════════════════════════════
     // ACTION: track_affiliate_click
     // ═══════════════════════════════════════════
-    if (action === 'track_affiliate_click' || (req.method === 'POST' && body.action === 'track_affiliate_click')) {
-      const affId = affiliateId || body.affiliateId;
+    if (action === 'track_affiliate_click') {
+      const affId = affiliateId;
       if (!affId) return res.status(400).json({ error: 'affiliateId required' });
 
       // 1. Log event
@@ -88,7 +94,7 @@ export default async function handler(req, res) {
     // ═══════════════════════════════════════════
     // ACTION: create_order
     // ═══════════════════════════════════════════
-    if (action === 'create_order' || (req.method === 'POST' && body.action === 'create_order')) {
+    if (action === 'create_order') {
       const orderData = body;
 
       // 1. Insert order
@@ -190,7 +196,7 @@ export default async function handler(req, res) {
     // ═══════════════════════════════════════════
     // ACTION: get_affiliate_orders
     // ═══════════════════════════════════════════
-    if (action === 'get_affiliate_orders' || (req.method === 'GET' && affiliateId && !action)) {
+    if (action === 'get_affiliate_orders' || (!action && affiliateId && req.method === 'GET')) {
       const affId = affiliateId;
       const response = await fetch(`${SUPABASE_URL}/rest/v1/orders?affiliate_id=eq.${affId}&select=*,order_products(*)&order=created_at.desc`, {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
@@ -241,8 +247,8 @@ export default async function handler(req, res) {
     // ═══════════════════════════════════════════
     // ACTION: register_affiliate
     // ═══════════════════════════════════════════
-    if (action === 'register_affiliate' || (req.method === 'POST' && body.action === 'register_affiliate')) {
-      const data = body.action === 'register_affiliate' ? body : body;
+    if (action === 'register_affiliate') {
+      const data = body;
 
       // Generate ID
       const namePart = data.name.trim().toLowerCase().replace(/\s+/g, '');
@@ -279,14 +285,15 @@ export default async function handler(req, res) {
     // ═══════════════════════════════════════════
     // ACTION: login_affiliate
     // ═══════════════════════════════════════════
-    if (action === 'login_affiliate' || (req.method === 'POST' && body.action === 'login_affiliate')) {
-      const { affiliateId, password } = body;
-      const resAff = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?affiliate_id=eq.${affiliateId}&select=*`, {
+    if (action === 'login_affiliate') {
+      const affId = affiliateId;
+      const pass = password;
+      const resAff = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?affiliate_id=eq.${affId}&select=*`, {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
       });
       const dataAff = await resAff.json();
 
-      if (dataAff.length === 0 || dataAff[0].password_hash !== hashPassword(password)) {
+      if (dataAff.length === 0 || dataAff[0].password_hash !== hashPassword(pass)) {
         return res.status(401).json({ success: false, message: 'Invalid ID or password' });
       }
 
@@ -296,9 +303,9 @@ export default async function handler(req, res) {
     // ═══════════════════════════════════════════
     // ACTION: update_order_status
     // ═══════════════════════════════════════════
-    if (action === 'update_order_status' || (req.method === 'POST' && body.action === 'update_order_status')) {
-      const oId = orderId || body.orderId;
-      const newStatus = status || body.status;
+    if (action === 'update_order_status') {
+      const oId = orderId;
+      const newStatus = status;
 
       const resUpdate = await fetch(`${SUPABASE_URL}/rest/v1/orders?order_id=eq.${oId}`, {
         method: 'PATCH',
@@ -313,9 +320,9 @@ export default async function handler(req, res) {
     // ═══════════════════════════════════════════
     // ACTION: update_affiliate_status (Commission Payout)
     // ═══════════════════════════════════════════
-    if (action === 'update_affiliate_status' || (req.method === 'POST' && body.action === 'update_affiliate_status')) {
-      const oId = orderId || body.orderId;
-      const newAffStatus = status || body.status; // 'paid' or 'pending'
+    if (action === 'update_affiliate_status') {
+      const oId = orderId;
+      const newAffStatus = status; // 'paid' or 'pending'
 
       const resUpdate = await fetch(`${SUPABASE_URL}/rest/v1/orders?order_id=eq.${oId}`, {
         method: 'PATCH',
