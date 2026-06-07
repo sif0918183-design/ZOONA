@@ -7,11 +7,12 @@ export default async function handler(req, res) {
   // 1. إعداد رؤوس CORS
   const origin = req.headers.origin || req.headers.referer || '';
   const allowedOrigins = [
+    'http://localhost:3000', 'http://localhost:5000', 'http://127.0.0.1:3000', 'http://127.0.0.1:5000',
     'https://zoonasd.com',
     'https://www.zoonasd.com',
     'https://zoona-git-fix-affiliate-marketing-syste-10e4dc-sifians-projects.vercel.app'
   ];
-  const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed)) || !origin;
+  const isAllowed = (origin && origin.endsWith('.vercel.app')) || allowedOrigins.some(allowed => origin.startsWith(allowed)) || !origin;
 
   if (origin && !isAllowed) {
     return res.status(403).json({ error: 'Access denied. Invalid origin.' });
@@ -32,6 +33,7 @@ export default async function handler(req, res) {
   // 2. جلب متغيرات البيئة
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_KEY = process.env.SUPABASE_KEY;
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'zoona2025'; // Fallback to default if not set
 
   if (!SUPABASE_URL || !SUPABASE_KEY) {
     return res.status(500).json({ error: 'Supabase credentials missing' });
@@ -39,7 +41,7 @@ export default async function handler(req, res) {
 
   // 3. تحليل جسم الطلب (Body)
   let body = {};
-  if (req.method === 'POST' || req.method === 'PATCH') {
+  if (req.method === 'POST' || req.method === 'PATCH' || req.method === 'DELETE') {
     if (typeof req.body === 'string') {
       try { body = JSON.parse(req.body); } catch (e) { body = {}; }
     } else {
@@ -49,6 +51,25 @@ export default async function handler(req, res) {
 
   const action = req.query.action || body.action;
   const effectiveAction = action || (req.method === 'GET' ? (req.query.affiliateId ? 'get_affiliate_orders' : 'get_all_orders') : '');
+
+  // 4. نظام الحماية (Authentication) لعمليات الإدارة
+  const adminActions = [
+    'get_all_orders',
+    'get_all_products',
+    'save_product',
+    'delete_product',
+    'get_affiliates_stats',
+    'update_order_status',
+    'update_commission_payment',
+    'update_affiliate_status'
+  ];
+
+  if (adminActions.includes(effectiveAction)) {
+    const providedPass = req.headers['x-admin-password'] || req.query.adminPassword || body.adminPassword;
+    if (providedPass !== ADMIN_PASSWORD) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Admin password required' });
+    }
+  }
 
   try {
     switch (effectiveAction) {
@@ -273,10 +294,10 @@ export default async function handler(req, res) {
       case 'save_product': {
         const { id, name, url, commission, status } = body;
         const productData = {
-          name,
-          url,
-          commission: Number(commission),
-          status,
+          name: name || '',
+          url: url || '',
+          commission: (commission !== undefined && commission !== null) ? Number(commission) : 0,
+          status: status || 'active',
           updated_at: new Date().toISOString()
         };
 
@@ -284,18 +305,36 @@ export default async function handler(req, res) {
         if (id) {
           resp = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_tracking_links?id=eq.${id}`, {
             method: 'PATCH',
-            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=representation'
+            },
             body: JSON.stringify(productData)
           });
         } else {
+          const insertData = { ...productData, created_at: new Date().toISOString() };
           resp = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_tracking_links`, {
             method: 'POST',
-            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...productData, created_at: new Date().toISOString() })
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=representation'
+            },
+            body: JSON.stringify(insertData)
           });
         }
-        if (!resp.ok) throw new Error(await resp.text());
-        return res.status(200).json({ success: true });
+
+        if (!resp.ok) {
+          const txt = await resp.text();
+          console.error("[Supabase Error in save_product]", txt);
+          return res.status(resp.status).json({ success: false, error: txt });
+        }
+
+        const resultData = await resp.json();
+        return res.status(200).json({ success: true, product: resultData[0] });
       }
 
       case 'delete_product': {

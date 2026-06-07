@@ -794,7 +794,8 @@
             tableElement.style.display = 'none';
             
             try {
-                const response = await fetch(`${API_URL}?action=get_all_orders`);
+                const loginData = JSON.parse(localStorage.getItem('admin_login') || '{}');
+                const response = await fetch(`${API_URL}?action=get_all_orders&adminPassword=${encodeURIComponent(loginData.password)}`);
                 const result = await response.json();
                 
                 if (!result.success) {
@@ -1078,6 +1079,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
         // دالة تحديث حالة الطلب
         async function updateOrderStatus(orderId, newStatus) {
             try {
+                const loginData = JSON.parse(localStorage.getItem('admin_login') || '{}');
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
@@ -1085,6 +1087,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     },
                     body: JSON.stringify({
                         action: 'update_order_status',
+                        adminPassword: loginData.password,
                         orderId: orderId,
                         status: newStatus
                     })
@@ -1107,11 +1110,13 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
         async function markAsPaid(orderId) {
             if(!confirm('هل تم دفع العمولة للمسوق بالفعل؟')) return;
             try {
+                const loginData = JSON.parse(localStorage.getItem('admin_login') || '{}');
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         action: 'update_commission_payment',
+                        adminPassword: loginData.password,
                         orderId: orderId,
                         affiliateStatus: 'paid'
                     })
@@ -1139,11 +1144,13 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
 
         async function saveManualComm(orderId, val) {
             try {
+                const loginData = JSON.parse(localStorage.getItem('admin_login') || '{}');
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         action: 'update_order_status',
+                        adminPassword: loginData.password,
                         orderId: orderId,
                         commission: Number(val)
                     })
@@ -1166,7 +1173,8 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             tableElement.style.display = 'none';
             
             try {
-                const response = await fetch(`${API_URL}?action=get_affiliates_stats`);
+                const loginData = JSON.parse(localStorage.getItem('admin_login') || '{}');
+                const response = await fetch(`${API_URL}?action=get_affiliates_stats&adminPassword=${encodeURIComponent(loginData.password)}`);
                 const result = await response.json();
                 
                 if (!result.success) {
@@ -1384,6 +1392,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
         async function toggleAffiliateStatus(affiliateId, currentStatus) {
             try {
                 const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+                const loginData = JSON.parse(localStorage.getItem('admin_login') || '{}');
                 
                 const response = await fetch(API_URL, {
                     method: 'POST',
@@ -1392,6 +1401,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     },
                     body: JSON.stringify({
                         action: 'update_affiliate_status',
+                        adminPassword: loginData.password,
                         affiliateId: affiliateId,
                         status: newStatus
                     })
@@ -1428,7 +1438,8 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             tableElement.style.display = 'none';
             
             try {
-                const response = await fetch(`${API_URL}?action=get_all_products`);
+                const loginData = JSON.parse(localStorage.getItem('admin_login') || '{}');
+                const response = await fetch(`${API_URL}?action=get_all_products&adminPassword=${encodeURIComponent(loginData.password)}`);
                 const result = await response.json();
                 
                 if (!result.success) {
@@ -1533,6 +1544,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             }
             
             try {
+                const loginData = JSON.parse(localStorage.getItem('admin_login') || '{}');
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
@@ -1540,6 +1552,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     },
                     body: JSON.stringify({
                         action: 'delete_product',
+                        adminPassword: loginData.password,
                         id: productId
                     })
                 });
@@ -1562,6 +1575,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
         // إضافة أو تحديث منتج
         async function saveProduct(productData) {
             try {
+                const loginData = JSON.parse(localStorage.getItem('admin_login') || '{}');
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
@@ -1569,6 +1583,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     },
                     body: JSON.stringify({
                         action: 'save_product',
+                        adminPassword: loginData.password,
                         ...productData
                     })
                 });
