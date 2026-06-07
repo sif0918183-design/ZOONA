@@ -12,15 +12,11 @@ function hashPassword(password) {
 
 export default async function handler(req, res) {
   // CORS Configuration
-  const allowedOrigins = [
-    'https://zoonasd.com',
-    'https://www.zoonasd.com',
-    'https://zoona-git-fix-affiliate-tracking-system-3aafe9-sifians-projects.vercel.app'
-  ];
   const origin = req.headers.origin || '';
-  const isAllowed = allowedOrigins.some(allowed => origin === allowed) || origin.endsWith('.vercel.app');
+  const isVercel = origin.endsWith('.vercel.app');
+  const isMain = origin === 'https://zoonasd.com' || origin === 'https://www.zoonasd.com';
 
-  if (origin && isAllowed) {
+  if (origin && (isVercel || isMain)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   } else if (!origin) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -51,7 +47,8 @@ export default async function handler(req, res) {
   }
 
   const getParam = (name) => {
-    return (req.query[name] || body[name] || '').toString().trim();
+    const val = req.query[name] || body[name];
+    return val ? val.toString().trim() : '';
   };
 
   const action = getParam('action');
@@ -67,7 +64,7 @@ export default async function handler(req, res) {
     // ═══════════════════════════════════════════
     if (action === 'track_affiliate_click') {
       const affId = affiliateId;
-      if (!affId) return res.status(400).json({ error: 'affiliateId required' });
+      if (!affId) return res.status(400).json({ success: false, error: 'affiliateId required' });
 
       // 1. Log event
       await fetch(`${SUPABASE_URL}/rest/v1/affiliate_events`, {
@@ -82,15 +79,14 @@ export default async function handler(req, res) {
         })
       });
 
-      // 2. Increment click count in affiliates table
-      // We first fetch current count then update
-      const affRes = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?affiliate_id=eq.${affId}&select=total_clicks`, {
+      // 2. Increment click count
+      const affRes = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?affiliate_id=eq.${encodeURIComponent(affId)}&select=total_clicks`, {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
       });
       const affData = await affRes.json();
 
       if (Array.isArray(affData) && affData.length > 0) {
-        await fetch(`${SUPABASE_URL}/rest/v1/affiliates?affiliate_id=eq.${affId}`, {
+        await fetch(`${SUPABASE_URL}/rest/v1/affiliates?affiliate_id=eq.${encodeURIComponent(affId)}`, {
           method: 'PATCH',
           headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ total_clicks: (affData[0].total_clicks || 0) + 1 })
@@ -165,17 +161,17 @@ export default async function handler(req, res) {
     // ACTION: get_affiliate_data (For Dashboard)
     // ═══════════════════════════════════════════
     if (action === 'get_affiliate_data') {
-      if (!affiliateId) return res.status(400).json({ error: 'affiliateId required' });
+      if (!affiliateId) return res.status(400).json({ success: false, error: 'affiliateId required' });
 
       // Fetch affiliate
-      const affRes = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?affiliate_id=eq.${affiliateId}&select=*`, {
+      const affRes = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?affiliate_id=eq.${encodeURIComponent(affiliateId)}&select=*`, {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
       });
       const affData = await affRes.json();
-      if (!Array.isArray(affData) || affData.length === 0) return res.status(404).json({ success: false, message: 'Affiliate not found' });
+      if (!Array.isArray(affData) || affData.length === 0) return res.status(404).json({ success: false, message: 'المسوق غير موجود' });
 
       // Fetch orders to calculate stats
-      const ordersRes = await fetch(`${SUPABASE_URL}/rest/v1/orders?affiliate_id=eq.${affiliateId}&select=*`, {
+      const ordersRes = await fetch(`${SUPABASE_URL}/rest/v1/orders?affiliate_id=eq.${encodeURIComponent(affiliateId)}&select=*`, {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
       });
       const ordersData = await ordersRes.json();
@@ -207,7 +203,7 @@ export default async function handler(req, res) {
     // ═══════════════════════════════════════════
     if (action === 'get_affiliate_orders' || (!action && affiliateId && req.method === 'GET')) {
       const affId = affiliateId;
-      const response = await fetch(`${SUPABASE_URL}/rest/v1/orders?affiliate_id=eq.${affId}&select=*,order_products(*)&order=created_at.desc`, {
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/orders?affiliate_id=eq.${encodeURIComponent(affId)}&select=*,order_products(*)&order=created_at.desc`, {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
       });
       const data = await response.json();
@@ -299,19 +295,23 @@ export default async function handler(req, res) {
     // ACTION: login_affiliate
     // ═══════════════════════════════════════════
     if (action === 'login_affiliate') {
-      const affId = affiliateId.toLowerCase(); // IDs are stored in lowercase
+      const affId = affiliateId.toLowerCase().trim();
       const pass = password;
       if (!affId || !pass) {
         return res.status(400).json({ success: false, message: 'يرجى إدخال معرف المسوق وكلمة المرور' });
       }
 
-      const resAff = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?affiliate_id=eq.${affId}&select=*`, {
+      const resAff = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?affiliate_id=eq.${encodeURIComponent(affId)}&select=*`, {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
       });
       const dataAff = await resAff.json();
 
-      if (!Array.isArray(dataAff) || dataAff.length === 0 || dataAff[0].password_hash !== hashPassword(pass)) {
-        return res.status(401).json({ success: false, message: 'معرف المسوق أو كلمة المرور غير صحيحة' });
+      if (!Array.isArray(dataAff) || dataAff.length === 0) {
+        return res.status(401).json({ success: false, message: 'معرف المسوق غير موجود' });
+      }
+
+      if (dataAff[0].password_hash !== hashPassword(pass)) {
+        return res.status(401).json({ success: false, message: 'كلمة المرور غير صحيحة' });
       }
 
       return res.status(200).json({ success: true, affiliate: dataAff[0] });

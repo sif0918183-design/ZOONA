@@ -814,6 +814,7 @@ async function registerAffiliate(affiliateData) {
 
 async function loginAffiliate(affiliateId, password) {
     try {
+        console.log('محاولة تسجيل الدخول لـ:', affiliateId);
         const response = await fetch(API_BASE_URL, {
             method: 'POST',
             headers: {
@@ -821,45 +822,60 @@ async function loginAffiliate(affiliateId, password) {
             },
             body: JSON.stringify({
                 action: 'login_affiliate',
-                affiliateId: affiliateId,
+                affiliateId: affiliateId.trim(),
                 password: password
             })
         });
 
-        const result = await response.json();
-        console.log('استجابة تسجيل الدخول:', result);
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            const result = await response.json();
+            console.log('استجابة تسجيل الدخول:', result);
 
-        if (!response.ok) {
-            throw new Error(result.error || result.details || 'حدث خطأ أثناء تسجيل الدخول');
+            if (!response.ok) {
+                return {
+                    success: false,
+                    message: result.message || result.error || 'حدث خطأ أثناء تسجيل الدخول'
+                };
+            }
+            return result;
+        } else {
+            const text = await response.text();
+            console.error('استجابة غير متوقعة:', text);
+            return {
+                success: false,
+                message: 'استجابة غير متوقعة من الخادم. يرجى المحاولة لاحقاً.'
+            };
         }
-
-        return result;
 
     } catch (error) {
         console.error('خطأ في تسجيل الدخول:', error);
         return { 
             success: false, 
-            message: error.message || 'حدث خطأ غير متوقع أثناء تسجيل الدخول' 
+            message: 'تعذر الاتصال بالخادم. يرجى التحقق من اتصالك بالإنترنت.'
         };
     }
 }
 
 async function getAffiliateData(affiliateId) {
     try {
-        const response = await fetch(`${API_BASE_URL}?action=get_affiliate_data&affiliateId=${affiliateId}`);
+        const response = await fetch(`${API_BASE_URL}?action=get_affiliate_data&affiliateId=${encodeURIComponent(affiliateId)}`);
         console.log('حالة جلب البيانات:', response.status);
         
-        if (!response.ok) {
-            throw new Error('فشل في جلب البيانات');
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            const result = await response.json();
+            console.log('بيانات المسوق:', result);
+            return result;
+        } else {
+            const text = await response.text();
+            console.error('استجابة غير متوقعة:', text);
+            return { success: false, message: 'فشل في جلب البيانات من الخادم' };
         }
-
-        const result = await response.json();
-        console.log('بيانات المسوق:', result);
-        return result;
 
     } catch (error) {
         console.error('خطأ في جلب بيانات المسوق:', error);
-        return { success: false, message: 'فشل في جلب البيانات' };
+        return { success: false, message: 'تعذر جلب البيانات. يرجى المحاولة لاحقاً.' };
     }
 }
 
