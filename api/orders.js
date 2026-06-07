@@ -46,16 +46,18 @@ export default async function handler(req, res) {
     try { body = JSON.parse(body); } catch (e) { body = {}; }
   }
 
-  const getParam = (name) => {
+  const getParam = (name, trim = true) => {
     const val = req.query[name] || body[name];
-    return val ? val.toString().trim() : '';
+    if (!val) return '';
+    const str = val.toString();
+    return trim ? str.trim() : str;
   };
 
   const action = getParam('action');
   const affiliateId = getParam('affiliateId');
   const userId = getParam('userId');
   const orderId = getParam('orderId');
-  const password = getParam('password');
+  const password = getParam('password', false); // Do not trim passwords
   const status = getParam('status');
 
   try {
@@ -253,10 +255,12 @@ export default async function handler(req, res) {
     // ACTION: register_affiliate
     // ═══════════════════════════════════════════
     if (action === 'register_affiliate') {
-      const data = body;
+      const name = getParam('name');
+      const email = getParam('email');
+      const phone = getParam('phone');
 
       // Generate ID
-      const namePart = data.name.trim().toLowerCase().replace(/\s+/g, '');
+      const namePart = name.toLowerCase().replace(/\s+/g, '');
       const randomNum = Math.floor(1000 + Math.random() * 9000);
       const generatedId = namePart + randomNum;
 
@@ -270,10 +274,10 @@ export default async function handler(req, res) {
         },
         body: JSON.stringify({
           affiliate_id: generatedId,
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          password_hash: hashPassword(data.password),
+          name: name,
+          email: email,
+          phone: phone,
+          password_hash: hashPassword(password),
           status: 'active'
         })
       });
