@@ -1050,6 +1050,7 @@ window.addEventListener('DOMContentLoaded', () => {
     loadProducts();
     initRotatingMessages();
     initPullToRefresh();
+    getAffiliateId(); // Check for and track affiliate referral
   }, 100);
 
   setTimeout(() => {
@@ -1586,7 +1587,7 @@ function goCheckout() {
 }
 
 // ── Orders API Functions (Vercel) ──
-const ORDERS_API_URL = 'https://orders-9vxn.vercel.app/api/orders';
+const ORDERS_API_URL = '/api/orders';
 
 function getUserId() {
   const storedUserId = localStorage.getItem('zoonaUserId');
@@ -2015,11 +2016,43 @@ function showToast(msg, type = '') {
   toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3000);
 }
 
-// ── Affiliate ──
+// ── Affiliate Tracking ──
+async function trackAffiliateClick(affiliateId) {
+  if (!affiliateId || affiliateId === 'direct') return;
+
+  // Prevent double tracking in the same session
+  const trackedSession = sessionStorage.getItem('affiliateTracked');
+  if (trackedSession === affiliateId) return;
+
+  try {
+    const response = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'track_affiliate_click',
+        affiliateId: affiliateId,
+        trackingUrl: window.location.href,
+        productName: 'landing_page'
+      })
+    });
+
+    if (response.ok) {
+      sessionStorage.setItem('affiliateTracked', affiliateId);
+      console.log('✅ Affiliate click tracked successfully');
+    }
+  } catch (error) {
+    console.error('❌ Error tracking affiliate click:', error);
+  }
+}
+
 function getAffiliateId() {
   const p = new URLSearchParams(window.location.search);
   const ref = p.get('ref');
-  if (ref) { localStorage.setItem('currentAffiliateId', ref); return ref; }
+  if (ref) {
+    localStorage.setItem('currentAffiliateId', ref);
+    trackAffiliateClick(ref); // Track the click automatically
+    return ref;
+  }
   return localStorage.getItem('currentAffiliateId') || 'direct';
 }
 

@@ -681,7 +681,13 @@
             <div class="stat-card">
                 <i class="fas fa-money-bill-wave"></i>
                 <div class="stat-number" id="totalCommission">0 ج.س</div>
-                <div>العمولة المؤكدة</div>
+                <div>العمولة القابلة للصرف</div>
+            </div>
+
+            <div class="stat-card">
+                <i class="fas fa-check-circle"></i>
+                <div class="stat-number" id="paidCommission">0 ج.س</div>
+                <div>العمولة المدفوعة</div>
             </div>
             
             <div class="stat-card extended">
@@ -754,7 +760,7 @@
 
 <script>
 // ========== إعدادات Vercel ==========
-const API_BASE_URL = 'https://orders-9vxn.vercel.app/api/orders';
+const API_BASE_URL = '/api/orders';
 
 // ========== دوال النظام الأساسية ==========
 
@@ -808,6 +814,7 @@ async function registerAffiliate(affiliateData) {
 
 async function loginAffiliate(affiliateId, password) {
     try {
+        console.log('محاولة تسجيل الدخول لـ:', affiliateId);
         const response = await fetch(API_BASE_URL, {
             method: 'POST',
             headers: {
@@ -815,45 +822,60 @@ async function loginAffiliate(affiliateId, password) {
             },
             body: JSON.stringify({
                 action: 'login_affiliate',
-                affiliateId: affiliateId,
+                affiliateId: affiliateId.trim(),
                 password: password
             })
         });
 
-        const result = await response.json();
-        console.log('استجابة تسجيل الدخول:', result);
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            const result = await response.json();
+            console.log('استجابة تسجيل الدخول:', result);
 
-        if (!response.ok) {
-            throw new Error(result.error || result.details || 'حدث خطأ أثناء تسجيل الدخول');
+            if (!response.ok) {
+                return {
+                    success: false,
+                    message: result.message || result.error || 'حدث خطأ أثناء تسجيل الدخول'
+                };
+            }
+            return result;
+        } else {
+            const text = await response.text();
+            console.error('استجابة غير متوقعة:', text);
+            return {
+                success: false,
+                message: 'استجابة غير متوقعة من الخادم. يرجى المحاولة لاحقاً.'
+            };
         }
-
-        return result;
 
     } catch (error) {
         console.error('خطأ في تسجيل الدخول:', error);
         return { 
             success: false, 
-            message: error.message || 'حدث خطأ غير متوقع أثناء تسجيل الدخول' 
+            message: 'تعذر الاتصال بالخادم. يرجى التحقق من اتصالك بالإنترنت.'
         };
     }
 }
 
 async function getAffiliateData(affiliateId) {
     try {
-        const response = await fetch(`${API_BASE_URL}?action=get_affiliate_data&affiliateId=${affiliateId}`);
+        const response = await fetch(`${API_BASE_URL}?action=get_affiliate_data&affiliateId=${encodeURIComponent(affiliateId)}`);
         console.log('حالة جلب البيانات:', response.status);
         
-        if (!response.ok) {
-            throw new Error('فشل في جلب البيانات');
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            const result = await response.json();
+            console.log('بيانات المسوق:', result);
+            return result;
+        } else {
+            const text = await response.text();
+            console.error('استجابة غير متوقعة:', text);
+            return { success: false, message: 'فشل في جلب البيانات من الخادم' };
         }
-
-        const result = await response.json();
-        console.log('بيانات المسوق:', result);
-        return result;
 
     } catch (error) {
         console.error('خطأ في جلب بيانات المسوق:', error);
-        return { success: false, message: 'فشل في جلب البيانات' };
+        return { success: false, message: 'تعذر جلب البيانات. يرجى المحاولة لاحقاً.' };
     }
 }
 
@@ -999,9 +1021,10 @@ async function loadDashboardData() {
             document.getElementById('totalClicks').textContent = affiliateData.stats.totalClicks || 0;
             document.getElementById('totalOrders').textContent = affiliateData.stats.totalOrders || 0;
             
-            // حساب العمولة المؤكدة فقط (الطلبات المؤكدة والمكتملة)
-            const confirmedCommission = await calculateConfirmedCommission(session.id, affiliateData.products || []);
-            document.getElementById('totalCommission').textContent = confirmedCommission + ' ج.س';
+            // حساب العمولات
+            const commissions = await calculateCommissions(session.id, affiliateData.products || []);
+            document.getElementById('totalCommission').textContent = commissions.unpaid + ' ج.س';
+            document.getElementById('paidCommission').textContent = commissions.paid + ' ج.س';
             
             // تحديث تفصيل الطلبات
             document.getElementById('pendingOrdersCount').textContent = affiliateData.stats.pendingOrders || 0;
@@ -1024,30 +1047,35 @@ async function loadDashboardData() {
     }
 }
 
-// دالة جديدة لحساب العمولة المؤكدة فقط
-async function calculateConfirmedCommission(affiliateId, products) {
+// دالة لحساب العمولة المدفوعة وغير المدفوعة
+async function calculateCommissions(affiliateId, products) {
     try {
         const ordersData = await getAffiliateOrders(affiliateId);
         
         if (!ordersData.success || !ordersData.orders || ordersData.orders.length === 0) {
-            return 0;
+            return { paid: 0, unpaid: 0 };
         }
         
-        let totalConfirmedCommission = 0;
+        let paid = 0;
+        let unpaid = 0;
         
         for (let order of ordersData.orders) {
             // حساب العمولة فقط للطلبات المؤكدة والمكتملة
             if (order.status === 'confirmed' || order.status === 'delivered') {
                 const commission = calculateOrderCommission(order, products);
-                totalConfirmedCommission += commission;
+                if (order.affiliate_status === 'paid') {
+                    paid += commission;
+                } else {
+                    unpaid += commission;
+                }
             }
         }
         
-        return totalConfirmedCommission;
+        return { paid, unpaid };
         
     } catch (error) {
-        console.error('خطأ في حساب العمولة المؤكدة:', error);
-        return 0;
+        console.error('خطأ في حساب العمولات:', error);
+        return { paid: 0, unpaid: 0 };
     }
 }
 
@@ -1126,11 +1154,19 @@ async function loadAllOrders(affiliateId, products) {
                 const shortProducts = productsText.length > 30 ? productsText.substring(0, 30) + '...' : productsText;
                 
                 const row = document.createElement('tr');
+                let commissionDisplay = '--';
+                if (order.status === 'confirmed' || order.status === 'delivered') {
+                    commissionDisplay = commission + ' ج.س';
+                    if (order.affiliate_status === 'paid') {
+                        commissionDisplay += '<br><small style="color: #28a745;">(تم الدفع)</small>';
+                    }
+                }
+
                 row.innerHTML = `
                     <td class="text-truncate" title="${productsText}">${shortProducts}</td>
                     <td>${formatDateEnglish(order.created_at)}</td>
                     <td><span class="${statusClass}">${statusText}</span></td>
-                    <td class="commission">${(order.status === 'confirmed' || order.status === 'delivered') ? commission + ' ج.س' : '--'}</td>
+                    <td class="commission">${commissionDisplay}</td>
                 `;
                 tableBody.appendChild(row);
             }

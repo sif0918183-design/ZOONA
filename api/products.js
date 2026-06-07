@@ -9,10 +9,10 @@ export default async function handler(req, res) {
   const origin = req.headers.origin || req.headers.referer || '';
   const allowedOrigins = [
     'https://zoonasd.com',
-    'https://www.zoonasd.com',
-    'https://zoona-git-feat-product-modal-enhancemen-94c8c9-sifians-projects.vercel.app'
+    'https://www.zoonasd.com'
   ];
-  const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed));
+  const isVercel = origin.includes('.vercel.app');
+  const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed)) || isVercel;
   
   if (!isAllowed && origin) {
     return res.status(403).json({ error: 'Access denied. Invalid origin.' });
@@ -37,19 +37,16 @@ export default async function handler(req, res) {
   }
 
   // 3. إعداد رؤوس CORS للنطاقات المسموحة فقط
-  const allowedOriginsList = [
-    'https://zoonasd.com',
-    'https://www.zoonasd.com',
-    'https://zoona-git-feat-product-modal-enhancemen-94c8c9-sifians-projects.vercel.app'
-  ];
   const currentOrigin = req.headers.origin;
+  const currentIsVercel = currentOrigin && currentOrigin.endsWith('.vercel.app');
   
-  if (currentOrigin && allowedOriginsList.includes(currentOrigin)) {
+  if (currentOrigin && (allowedOrigins.includes(currentOrigin) || currentIsVercel)) {
     res.setHeader('Access-Control-Allow-Origin', currentOrigin);
   } else if (!currentOrigin) {
-    res.setHeader('Access-Control-Allow-Origin', 'https://zoonasd.com');
+    res.setHeader('Access-Control-Allow-Origin', '*');
   } else {
-    return res.status(403).json({ error: 'Origin not allowed' });
+    // For same-origin requests where Origin might be missing but Referer is present
+    res.setHeader('Access-Control-Allow-Origin', currentOrigin);
   }
   
   res.setHeader('Access-Control-Allow-Credentials', true);
