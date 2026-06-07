@@ -752,7 +752,9 @@
     </div>
 </div>
 
-<script>
+<script type="module">
+import { supabase } from '../assets/js/affiliate-tracking.js';
+
 // ========== إعدادات Vercel ==========
 const API_BASE_URL = 'https://orders-9vxn.vercel.app/api/orders';
 
@@ -991,13 +993,30 @@ async function loadDashboardData() {
     document.getElementById('affiliateIdDisplay').textContent = session.id;
     
     try {
+
         // جلب بيانات المسوق
         const affiliateData = await getAffiliateData(session.id);
         
         if (affiliateData.success) {
-            // تحديث الإحصائيات
-            document.getElementById('totalClicks').textContent = affiliateData.stats.totalClicks || 0;
-            document.getElementById('totalOrders').textContent = affiliateData.stats.totalOrders || 0;
+            // جلب الإحصائيات الحقيقية من نظام التتبع الجديد (Supabase)
+            let realClicks = 0;
+            let realOrders = 0;
+
+            if (supabase) {
+                const { data: trackingStats } = await supabase
+                    .from('affiliate_tracking_links')
+                    .select('click_count, order_count')
+                    .eq('affiliate_id', session.id);
+
+                if (trackingStats) {
+                    realClicks = trackingStats.reduce((sum, item) => sum + (item.click_count || 0), 0);
+                    realOrders = trackingStats.reduce((sum, item) => sum + (item.order_count || 0), 0);
+                }
+            }
+
+            // تحديث الإحصائيات (تفضيل الإحصائيات الحقيقية من نظام التتبع الجديد)
+            document.getElementById('totalClicks').textContent = realClicks || affiliateData.stats.totalClicks || 0;
+            document.getElementById('totalOrders').textContent = realOrders || affiliateData.stats.totalOrders || 0;
             
             // حساب العمولة المؤكدة فقط (الطلبات المؤكدة والمكتملة)
             const confirmedCommission = await calculateConfirmedCommission(session.id, affiliateData.products || []);
@@ -1407,6 +1426,13 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         showAuth();
     }
+
+// Attach globally for inline HTML event handlers
+window.generateTrackingLink = generateTrackingLink;
+window.copyToClipboard = copyToClipboard;
+window.copyAffiliateId = copyAffiliateId;
+window.logout = logout;
+window.refreshData = refreshData;
 });
 
 // تحديث تلقائي كل 30 ثانية
