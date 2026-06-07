@@ -10,7 +10,11 @@ if (!admin.apps.length) {
 export default async function handler(req, res) {
   // 1. التحقق من النطاق
   const origin = req.headers.origin || req.headers.referer || '';
-  const allowedOrigins = ['https://zoonasd.com', 'https://www.zoonasd.com'];
+  const allowedOrigins = [
+    'https://zoonasd.com',
+    'https://www.zoonasd.com',
+    'https://zoona-git-fix-affiliate-marketing-syste-10e4dc-sifians-projects.vercel.app'
+  ];
   const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed));
   
   if (!isAllowed && origin) {
@@ -18,10 +22,14 @@ export default async function handler(req, res) {
   }
 
   // 2. Set CORS headers for allowed origins only
-  const allowedOriginsList = ['https://zoonasd.com', 'https://www.zoonasd.com'];
+  const allowedOriginsList = [
+    'https://zoonasd.com',
+    'https://www.zoonasd.com',
+    'https://zoona-git-fix-affiliate-marketing-syste-10e4dc-sifians-projects.vercel.app'
+  ];
   const currentOrigin = req.headers.origin;
   
-  if (currentOrigin && allowedOriginsList.includes(currentOrigin)) {
+  if (currentOrigin && allowedOriginsList.some(allowed => currentOrigin.startsWith(allowed))) {
     res.setHeader('Access-Control-Allow-Origin', currentOrigin);
   } else if (!currentOrigin) {
     res.setHeader('Access-Control-Allow-Origin', 'https://zoonasd.com');

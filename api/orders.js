@@ -6,7 +6,11 @@
 export default async function handler(req, res) {
   // 1. إعداد رؤوس CORS
   const origin = req.headers.origin || req.headers.referer || '';
-  const allowedOrigins = ['https://zoonasd.com', 'https://www.zoonasd.com'];
+  const allowedOrigins = [
+    'https://zoonasd.com',
+    'https://www.zoonasd.com',
+    'https://zoona-git-fix-affiliate-marketing-syste-10e4dc-sifians-projects.vercel.app'
+  ];
   const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed)) || !origin;
 
   if (origin && !isAllowed) {
@@ -43,7 +47,7 @@ export default async function handler(req, res) {
     }
   }
 
-  const { action } = req.query || body;
+  const action = req.query.action || body.action;
   const effectiveAction = action || (req.method === 'GET' ? (req.query.affiliateId ? 'get_affiliate_orders' : 'get_all_orders') : '');
 
   try {
