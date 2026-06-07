@@ -12,7 +12,11 @@ function hashPassword(password) {
 
 export default async function handler(req, res) {
   // CORS Configuration
-  const allowedOrigins = ['https://zoonasd.com', 'https://www.zoonasd.com'];
+  const allowedOrigins = [
+    'https://zoonasd.com',
+    'https://www.zoonasd.com',
+    'https://zoona-git-fix-affiliate-tracking-system-3aafe9-sifians-projects.vercel.app'
+  ];
   const origin = req.headers.origin;
 
   if (origin && allowedOrigins.includes(origin)) {
