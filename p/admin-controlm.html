@@ -667,39 +667,35 @@
         async function checkLoginStatus() {
             const loginData = localStorage.getItem('admin_login');
             if (loginData) {
-                const { timestamp, password } = JSON.parse(loginData);
-                const now = new Date().getTime();
-                const oneMonth = 30 * 24 * 60 * 60 * 1000;
-                
-                if (now - timestamp < oneMonth) {
-                    // التحقق من أن المعرف صحيح عن طريق جلب بيانات المسوقين
-                    const isValid = await verifyAffiliateId(password);
-                    if (isValid) {
-                        isLoggedIn = true;
-                        showAdminPanel();
-                        return;
+                try {
+                    const { timestamp, password } = JSON.parse(loginData);
+                    const now = new Date().getTime();
+                    const oneMonth = 30 * 24 * 60 * 60 * 1000;
+
+                    if (now - timestamp < oneMonth) {
+                        const isValid = await verifyAffiliateId(password);
+                        if (isValid) {
+                            isLoggedIn = true;
+                            showAdminPanel();
+                            return;
+                        }
                     }
+                } catch (e) {
+                    console.error("Session parse error", e);
                 }
                 localStorage.removeItem('admin_login');
             }
             showLoginPanel();
         }
 
-        // التحقق من صحة معرف المسوق
-        async function verifyAffiliateId(affiliateId) {
+        // التحقق من صحة كلمة مرور المسؤول
+        async function verifyAffiliateId(password) {
             try {
-                // جلب بيانات المسوقين للتحقق من وجود المعرف
-                const response = await fetch(`${API_URL}?action=get_affiliates_stats`);
+                const response = await fetch(`${API_URL}?action=verify_admin&password=${encodeURIComponent(password)}`);
                 const result = await response.json();
-                
-                if (result.success && result.affiliates) {
-                    // البحث عن المعرف في قائمة المسوقين
-                    const affiliateExists = result.affiliates.some(aff => aff.affiliate_id === affiliateId);
-                    return affiliateExists;
-                }
-                return false;
+                return result.success === true;
             } catch (error) {
-                console.error('خطأ في التحقق من المعرف:', error);
+                console.error('خطأ في التحقق:', error);
                 return false;
             }
         }

@@ -33,7 +33,7 @@ export default async function handler(req, res) {
   // 2. جلب متغيرات البيئة
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_KEY = process.env.SUPABASE_KEY;
-  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'zoona2025'; // Fallback to default if not set
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'zoona2025';
 
   if (!SUPABASE_URL || !SUPABASE_KEY) {
     return res.status(500).json({ error: 'Supabase credentials missing' });
@@ -74,6 +74,15 @@ export default async function handler(req, res) {
   try {
     switch (effectiveAction) {
       // ─── مسار المسوقين ───
+
+      case 'verify_admin': {
+        const providedPass = req.query.password || body.password;
+        if (providedPass === ADMIN_PASSWORD) {
+          return res.status(200).json({ success: true });
+        } else {
+          return res.status(401).json({ success: false, message: 'Invalid admin password' });
+        }
+      }
 
       case 'register_affiliate': {
         const { name, email, phone, password } = body;
