@@ -845,18 +845,13 @@
         }
 
         // دالة محسنة للحصول على قيمة العمولة من المنتج
-        function getProductCommission(order, products) {
-            // إذا كان هناك عمولة محددة مسبقاً في الطلب (بواسطة المدير)
-            if (order.commission !== undefined && order.commission !== null && order.commission !== "" && Number(order.commission) > 0) {
-                return Number(order.commission);
-            }
-
-            const orderProducts = order.order_products;
+        function getProductCommission(orderProducts, products) {
             if (!orderProducts || !Array.isArray(orderProducts) || orderProducts.length === 0 || !products || products.length === 0) {
                 return 0;
             }
             
             let totalCommission = 0;
+
             orderProducts.forEach(orderProduct => {
                 if (!orderProduct.product_name) return;
                 
@@ -868,14 +863,19 @@
                 };
                 
                 const cleanOrderProduct = cleanText(orderProduct.product_name);
+
                 const product = products.find(p => {
                     if (!p.name) return false;
+
                     const cleanProductName = cleanText(p.name);
+
                     const orderWords = cleanOrderProduct.split(' ');
                     const productWords = cleanProductName.split(' ');
+
                     const commonWords = orderWords.filter(word => 
                         productWords.some(pWord => pWord.includes(word) || word.includes(pWord))
                     );
+
                     return commonWords.length >= 2;
                 });
                 
@@ -1011,7 +1011,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             
             filteredOrders.forEach(order => {
                 const affiliate = affiliates.find(aff => aff.affiliate_id === order.affiliate_id);
-                const commission = getProductCommission(order, products);
+                const commission = getProductCommission(order.order_products, products);
                 
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -1041,29 +1041,31 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                             : 'غير محدد'}
                     </td>
                     <td>${formatDateEnglish(order.created_at)}</td>
-                    <td><span class="status-badge status-${getStatusClass(order.status)}">${getStatusText(order.status)}</span></td>
                     <td>
-                        <div class="commission-display" style="cursor: pointer;" onclick="editOrderCommission('${order.order_id}', ${commission})" title="تعديل العمولة">
-                            ${commission > 0 ? commission.toLocaleString() + ' ج.س' : '0'} <i class="fas fa-edit" style="font-size: 10px; opacity: 0.5;"></i>
+                        <span class="status-badge status-${getStatusClass(order.status)}">${getStatusText(order.status)}</span>
+                        ${order.affiliate_status === 'paid' ? '<br><small style="color:var(--success-color)">تم الدفع للمسوق</small>' : ''}
+                    </td>
+                    <td class="commission-display">
+                        <div id="comm-container-${order.order_id}">
+                            ${commission > 0 ? commission.toLocaleString() + ' ج.س' : '--'}
                         </div>
-                        <div style="font-size: 10px; margin-top: 4px;">
-                            ${order.affiliate_status === 'paid' ?
-                                '<span style="color: #38a169;"><i class="fas fa-check-double"></i> مدفوعة</span>' :
-                                '<span style="color: #e53e3e;"><i class="fas fa-clock"></i> مستحقة</span>'}
-                        </div>
+                        <input type="number" id="edit-comm-${order.order_id}" value="${commission}" style="display:none; width:80px; font-size:0.8rem; padding:2px;">
                     </td>
                     <td>
                         <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-                            <button class="btn btn-success btn-sm" onclick="updateOrderStatus('${order.order_id}', 'delivered')" title="تم التوصيل" ${order.status === 'delivered' ? 'disabled' : ''}>
-                                <i class="fas fa-truck"></i>
+                            <button class="btn btn-success btn-sm" onclick="updateOrderStatus('${order.order_id}', 'delivered')" ${['delivered', 'completed', 'تم التوصيل', 'مكتمل'].includes(order.status) ? 'disabled' : ''} title="تم التوصيل">
+                                <i class="fas fa-check"></i>
                             </button>
-                            <button class="btn btn-primary btn-sm" onclick="updateCommissionPayment('${order.order_id}', '${order.affiliate_status === 'paid' ? 'unpaid' : 'paid'}')" title="${order.affiliate_status === 'paid' ? 'تحديد كغير مدفوع' : 'تحديد كمدفوع'}" style="background: ${order.affiliate_status === 'paid' ? '#909399' : '#38a169'};">
-                                <i class="fas fa-money-bill-wave"></i>
-                            </button>
-                            <button class="btn btn-danger btn-sm" onclick="updateOrderStatus('${order.order_id}', 'cancelled')" title="إلغاء الطلب" ${order.status === 'cancelled' ? 'disabled' : ''}>
+                            <button class="btn btn-danger btn-sm" onclick="updateOrderStatus('${order.order_id}', 'cancelled')" ${order.status === 'cancelled' ? 'disabled' : ''} title="إلغاء">
                                 <i class="fas fa-times"></i>
                             </button>
-                            <button class="btn btn-primary btn-sm" onclick="copyOrderSummary(${JSON.stringify(order).replace(/"/g, '&quot;')})" title="نسخ ملخص الطلب" style="background: #3182ce;">
+                            <button class="btn btn-warning btn-sm" onclick="markAsPaid('${order.order_id}')" ${order.affiliate_status === 'paid' ? 'disabled' : ''} title="تعليق كمدفوع">
+                                <i class="fas fa-money-bill-wave"></i>
+                            </button>
+                            <button class="btn btn-primary btn-sm" onclick="toggleEditComm('${order.order_id}')" title="تعديل العمولة">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-primary btn-sm" onclick="copyOrderSummary(${JSON.stringify(order).replace(/"/g, '&quot;')})" title="نسخ ملخص الطلب">
                                 <i class="fas fa-copy"></i>
                             </button>
                         </div>
@@ -1102,10 +1104,8 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             }
         }
 
-        // دالة تحديث حالة دفع العمولة
-        async function updateCommissionPayment(orderId, newAffiliateStatus) {
-            if (!confirm(`هل تريد علامة هذه العمولة كـ ${newAffiliateStatus === 'paid' ? 'مدفوعة' : 'غير مدفوعة'}؟`)) return;
-
+        async function markAsPaid(orderId) {
+            if(!confirm('هل تم دفع العمولة للمسوق بالفعل؟')) return;
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
@@ -1113,26 +1113,31 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     body: JSON.stringify({
                         action: 'update_commission_payment',
                         orderId: orderId,
-                        affiliateStatus: newAffiliateStatus
+                        affiliateStatus: 'paid'
                     })
                 });
-
                 const result = await response.json();
-                if (!result.success) throw new Error(result.error || 'خطأ في تحديث حالة الدفع');
-
+                if (!result.success) throw new Error(result.error);
                 loadOrders();
-                alert(`تم تحديث حالة العمولة للطلب ${orderId} بنجاح`);
+                alert('تم تحديد العمولة كمدفوعة');
             } catch (error) {
-                console.error('خطأ في تحديث حالة دفع العمولة:', error);
-                alert('حدث خطأ أثناء تحديث حالة الدفع');
+                alert('حدث خطأ: ' + error.message);
             }
         }
 
-        // دالة تعديل عمولة طلب محدد
-        async function editOrderCommission(orderId, currentCommission) {
-            const newCommission = prompt("أدخل قيمة العمولة الجديدة لهذا الطلب (بالجنيه السوداني):", currentCommission || 0);
-            if (newCommission === null || newCommission === "") return;
+        function toggleEditComm(orderId) {
+            const container = document.getElementById(`comm-container-${orderId}`);
+            const input = document.getElementById(`edit-comm-${orderId}`);
+            if (input.style.display === 'none') {
+                input.style.display = 'block';
+                container.style.display = 'none';
+                input.focus();
+                input.onblur = () => saveManualComm(orderId, input.value);
+                input.onkeypress = (e) => { if(e.key === 'Enter') saveManualComm(orderId, input.value); };
+            }
+        }
 
+        async function saveManualComm(orderId, val) {
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
@@ -1140,19 +1145,14 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     body: JSON.stringify({
                         action: 'update_order_status',
                         orderId: orderId,
-                        commission: Number(newCommission)
+                        commission: Number(val)
                     })
                 });
-
                 const result = await response.json();
-                if (!result.success) throw new Error(result.error || 'خطأ في تحديث العمولة');
-
-                loadOrders();
-                alert(`تم تحديث عمولة الطلب ${orderId} إلى ${newCommission} ج.س`);
-            } catch (error) {
-                console.error('خطأ في تحديث العمولة:', error);
-                alert('حدث خطأ أثناء تحديث العمولة');
-            }
+                if (result.success) {
+                    loadOrders();
+                }
+            } catch (e) { console.error(e); }
         }
 
         // دوال إدارة المسوقين
@@ -1199,8 +1199,8 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             
             // إجمالي العمولة
             const totalCommission = affiliates.reduce((sum, aff) => {
-                const commStats = calculateAffiliateCommission(aff.affiliate_id);
-                return sum + commStats.total;
+                const affiliateCommission = calculateAffiliateCommission(aff.affiliate_id);
+                return sum + affiliateCommission;
             }, 0);
             
             document.getElementById('totalAffiliates').textContent = totalAffiliates;
@@ -1213,22 +1213,21 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
         function calculateAffiliateCommission(affiliateId) {
             const affiliateOrders = allOrders.filter(order => 
                 order.affiliate_id === affiliateId &&
-                ['delivered', 'completed', 'confirmed', 'تم التوصيل', 'مكتمل'].includes(order.status)
+                ['delivered', 'completed', 'تم التوصيل', 'مكتمل'].includes(order.status ? order.status.toLowerCase() : '')
             );
             
-            let stats = { total: 0, paid: 0, pending: 0 };
-
+            let totalCommission = 0;
             affiliateOrders.forEach(order => {
-                const commission = getProductCommission(order, allProducts);
-                stats.total += commission;
-                if (order.affiliate_status === 'paid') {
-                    stats.paid += commission;
+                let commission = 0;
+                if (order.commission) {
+                    commission = Number(order.commission);
                 } else {
-                    stats.pending += commission;
+                    commission = getProductCommission(order.order_products, allProducts);
                 }
+                totalCommission += commission;
             });
             
-            return stats;
+            return totalCommission;
         }
 
         // عرض بيانات المسوقين
@@ -1255,8 +1254,8 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             
             filteredAffiliates.forEach(affiliate => {
                 const affiliateOrders = allOrders.filter(order => order.affiliate_id === affiliate.affiliate_id);
-                const confirmedOrders = affiliateOrders.filter(order => ['delivered', 'completed', 'confirmed', 'تم التوصيل', 'مكتمل'].includes(order.status)).length;
-                const commStats = calculateAffiliateCommission(affiliate.affiliate_id);
+                const confirmedOrders = affiliateOrders.filter(order => ['delivered', 'completed', 'تم التوصيل', 'مكتمل'].includes(order.status ? order.status.toLowerCase() : '')).length;
+                const totalCommission = calculateAffiliateCommission(affiliate.affiliate_id);
                 
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -1276,13 +1275,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                         <span style="font-weight: 700; color: #38a169;">${affiliateOrders.length}</span>
                         <br><small>(${confirmedOrders} مؤكدة)</small>
                     </td>
-                    <td>
-                        <div class="commission-display">${commStats.total.toLocaleString()} ج.س</div>
-                        <div style="font-size: 10px; color: #666;">
-                            مدفوع: ${commStats.paid.toLocaleString()}<br>
-                            مستحق: ${commStats.pending.toLocaleString()}
-                        </div>
-                    </td>
+                    <td class="commission-display">${totalCommission > 0 ? totalCommission + ' ج.س' : '--'}</td>
                     <td>
                         <span class="status-badge status-${getStatusClass(affiliate.status)}">
                             ${getStatusText(affiliate.status)}
@@ -1327,8 +1320,8 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
 
                 const affiliate = result.affiliate;
                 const affiliateOrders = allOrders.filter(order => order.affiliate_id === affiliateId);
-                const confirmedOrders = affiliateOrders.filter(order => ['delivered', 'completed', 'confirmed', 'تم التوصيل', 'مكتمل'].includes(order.status)).length;
-                const commStats = calculateAffiliateCommission(affiliateId);
+                const confirmedOrders = affiliateOrders.filter(order => ['delivered', 'completed', 'تم التوصيل', 'مكتمل'].includes(order.status ? order.status.toLowerCase() : '')).length;
+                const totalCommission = calculateAffiliateCommission(affiliateId);
                 
                 const detailsContent = document.getElementById('affiliateDetailsContent');
                 const detailsSection = document.getElementById('affiliateDetails');
@@ -1363,12 +1356,8 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                         <span class="detail-value" style="color: #38a169; font-weight: 700;">${affiliateOrders.length} (${confirmedOrders} مؤكدة)</span>
                     </div>
                     <div class="detail-item">
-                        <span class="detail-label"> تفصيل العمولات:</span>
-                        <span class="detail-value">
-                            إجمالي: ${commStats.total.toLocaleString()} ج.س<br>
-                            مدفوع: ${commStats.paid.toLocaleString()} ج.س<br>
-                            مستحق: <span class="commission-display">${commStats.pending.toLocaleString()} ج.س</span>
-                        </span>
+                        <span class="detail-label"> العمولة المستحقة:</span>
+                        <span class="detail-value commission-display">${totalCommission} ج.س</span>
                     </div>
                     ${affiliateOrders.length > 0 ? `
                     <div class="detail-item">

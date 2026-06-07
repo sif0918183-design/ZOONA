@@ -854,7 +854,7 @@
             let affiliateId = urlParams.get('ref');
             
             if (!affiliateId || affiliateId === 'direct') {
-                affiliateId = localStorage.getItem('currentAffiliateId');
+                affiliateId = localStorage.getItem('affiliateId');
             }
             
             if ((!affiliateId || affiliateId === 'direct') && cartItems.length > 0) {

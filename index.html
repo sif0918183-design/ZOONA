@@ -1055,10 +1055,18 @@ window.addEventListener('DOMContentLoaded', () => {
   // تتبع النقرة إذا كان هناك معرف مسوق ولم يتم تتبعها في هذه الجلسة
   const currentRef = getAffiliateId();
   if (currentRef && currentRef !== 'direct' && !sessionStorage.getItem('affiliateTracked')) {
+    const path = window.location.pathname;
+    const productName = path === '/' ? 'الرئيسية' : (path.split('/').pop() || 'الرئيسية');
+
     fetch('/api/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'track_click', affiliateId: currentRef })
+      body: JSON.stringify({
+        action: 'track_affiliate_click',
+        affiliateId: currentRef,
+        productName: productName,
+        trackingUrl: window.location.href
+      })
     }).then(() => {
       sessionStorage.setItem('affiliateTracked', 'true');
     }).catch(e => console.error('Error tracking click:', e));
@@ -2032,10 +2040,10 @@ function getAffiliateId() {
   const p = new URLSearchParams(window.location.search);
   const ref = p.get('ref');
   if (ref && ref !== 'null' && ref !== 'undefined') {
-    localStorage.setItem('currentAffiliateId', ref);
+    localStorage.setItem('affiliateId', ref);
     return ref;
   }
-  return localStorage.getItem('currentAffiliateId') || 'direct';
+  return localStorage.getItem('affiliateId') || 'direct';
 }
 
 // ── Service Worker ──
