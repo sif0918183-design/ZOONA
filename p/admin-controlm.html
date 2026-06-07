@@ -652,7 +652,7 @@
     </div>
 
     <script>
-        const API_URL = 'https://orders-9vxn.vercel.app/api/orders';
+        const API_URL = '/api/orders';
         
         let debugMode = false;
         let currentAffiliateDetails = null;
@@ -1042,10 +1042,22 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     </td>
                     <td>${formatDateEnglish(order.created_at)}</td>
                     <td><span class="status-badge status-${getStatusClass(order.status)}">${getStatusText(order.status)}</span></td>
-                    <td class="commission-display">${commission > 0 ? commission.toLocaleString() + ' ج.س' : '--'}</td>
+                    <td class="commission-display">
+                        ${commission > 0 ? `
+                            ${commission.toLocaleString()} ج.س
+                            <div style="margin-top: 5px;">
+                                <button class="btn ${order.affiliate_status === 'paid' ? 'btn-success' : 'btn-warning'} btn-sm"
+                                        onclick="updatePayoutStatus('${order.order_id}', '${order.affiliate_status === 'paid' ? 'unpaid' : 'paid'}')"
+                                        title="${order.affiliate_status === 'paid' ? 'تغيير إلى غير مدفوع' : 'تعليم كمدفوع'}">
+                                    <i class="fas ${order.affiliate_status === 'paid' ? 'fa-check-circle' : 'fa-money-bill-wave'}"></i>
+                                    ${order.affiliate_status === 'paid' ? 'تم السداد' : 'سداد؟'}
+                                </button>
+                            </div>
+                        ` : '--'}
+                    </td>
                     <td>
                         <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-                            <button class="btn btn-success btn-sm" onclick="updateOrderStatus('${order.order_id}', 'delivered')" ${order.status === 'delivered' ? 'disabled' : ''}>
+                            <button class="btn btn-success btn-sm" onclick="updateOrderStatus('${order.order_id}', 'delivered')" ${order.status === 'delivered' ? 'disabled' : ''} title="تم التوصيل">
                                 <i class="fas fa-check"></i>
                             </button>
                             <button class="btn btn-danger btn-sm" onclick="updateOrderStatus('${order.order_id}', 'cancelled')" ${order.status === 'cancelled' ? 'disabled' : ''}>
@@ -1087,6 +1099,38 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             } catch (error) {
                 console.error('خطأ في تحديث حالة الطلب:', error);
                 alert('حدث خطأ في تحديث حالة الطلب');
+            }
+        }
+
+        async function updatePayoutStatus(orderId, newStatus) {
+            if (!confirm(`هل أنت متأكد من تغيير حالة سداد العمولة إلى: ${newStatus === 'paid' ? 'تم السداد' : 'لم يتم السداد'}؟`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'update_payout_status',
+                        orderId: orderId,
+                        status: newStatus
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.error || 'خطأ في تحديث حالة السداد');
+                }
+
+                loadOrders();
+                alert(`تم تحديث حالة السداد للطلب ${orderId} بنجاح`);
+            } catch (error) {
+                console.error('خطأ في تحديث حالة السداد:', error);
+                alert('حدث خطأ في تحديث حالة السداد');
             }
         }
 

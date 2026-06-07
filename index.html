@@ -1124,6 +1124,7 @@ async function loadProducts(forceRefresh = false) {
     filteredProducts = [...allProducts];
     renderProducts(filteredProducts);
     checkUrlForProduct();
+    initAffiliateTracking();
   } catch(e) {
     console.error('Error loading products:', e);
     // Try to use stale cache
@@ -1586,7 +1587,7 @@ function goCheckout() {
 }
 
 // ── Orders API Functions (Vercel) ──
-const ORDERS_API_URL = 'https://orders-9vxn.vercel.app/api/orders';
+const ORDERS_API_URL = '/api/orders';
 
 function getUserId() {
   const storedUserId = localStorage.getItem('zoonaUserId');
@@ -2015,11 +2016,51 @@ function showToast(msg, type = '') {
   toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3000);
 }
 
-// ── Affiliate ──
+// ── Affiliate Tracking ──
+function initAffiliateTracking() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const ref = urlParams.get('ref');
+
+  if (ref) {
+    // Save to localStorage for persistence across pages (checkout, etc.)
+    localStorage.setItem('currentAffiliateId', ref);
+
+    // Check sessionStorage to track click only once per session
+    if (sessionStorage.getItem('affiliateTracked') !== ref) {
+      console.log('Tracking click for affiliate:', ref);
+
+      // Determine what product was clicked (if any)
+      const path = window.location.pathname;
+      const slug = path.split('/').filter(p => p.length > 0).pop();
+      const product = allProducts.find(p => slugify(p.name) === slug);
+
+      fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'track_click',
+          affiliateId: ref,
+          productName: product ? product.name : 'Home Page',
+          trackingUrl: window.location.href
+        })
+      }).then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            sessionStorage.setItem('affiliateTracked', ref);
+            console.log('✅ Click tracked successfully');
+          }
+        }).catch(err => console.error('❌ Tracking error:', err));
+    }
+  }
+}
+
 function getAffiliateId() {
   const p = new URLSearchParams(window.location.search);
   const ref = p.get('ref');
-  if (ref) { localStorage.setItem('currentAffiliateId', ref); return ref; }
+  if (ref) {
+    localStorage.setItem('currentAffiliateId', ref);
+    return ref;
+  }
   return localStorage.getItem('currentAffiliateId') || 'direct';
 }
 

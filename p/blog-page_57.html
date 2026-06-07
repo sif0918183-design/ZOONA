@@ -669,7 +669,7 @@
             <div class="stat-card">
                 <i class="fas fa-mouse-pointer"></i>
                 <div class="stat-number" id="totalClicks">0</div>
-                <div>النقرات</div>
+                <div>إجمالي النقرات</div>
             </div>
             
             <div class="stat-card">
@@ -683,20 +683,38 @@
                 <div class="stat-number" id="totalCommission">0 ج.س</div>
                 <div>العمولة المؤكدة</div>
             </div>
+
+            <!-- New stats for paid vs unpaid commissions -->
+            <div class="stat-card extended">
+                <div style="margin-bottom: 10px;">
+                    <i class="fas fa-wallet"></i>
+                    ملخص الأرباح
+                </div>
+                <div class="stat-details">
+                    <div class="stat-detail">
+                        <div class="detail-number" id="unpaidCommission">0 ج.س</div>
+                        <div class="detail-label">في انتظار السداد</div>
+                    </div>
+                    <div class="stat-detail">
+                        <div class="detail-number" id="paidCommission">0 ج.س</div>
+                        <div class="detail-label">تم سدادها</div>
+                    </div>
+                </div>
+            </div>
             
             <div class="stat-card extended">
                 <div style="margin-bottom: 10px;">
                     <i class="fas fa-chart-pie"></i>
-                    تفصيل الطلبات
+                    حالات الطلبات
                 </div>
                 <div class="stat-details">
                     <div class="stat-detail">
                         <div class="detail-number" id="pendingOrdersCount">0</div>
-                        <div class="detail-label">معلقة</div>
+                        <div class="detail-label">معلقة/قيد المعالجة</div>
                     </div>
                     <div class="stat-detail">
                         <div class="detail-number" id="confirmedOrdersCount">0</div>
-                        <div class="detail-label">مؤكدة</div>
+                        <div class="detail-label">تم التوصيل/مؤكدة</div>
                     </div>
                     <div class="stat-detail">
                         <div class="detail-number" id="cancelledOrdersCount">0</div>
@@ -754,7 +772,7 @@
 
 <script>
 // ========== إعدادات Vercel ==========
-const API_BASE_URL = 'https://orders-9vxn.vercel.app/api/orders';
+const API_BASE_URL = '/api/orders';
 
 // ========== دوال النظام الأساسية ==========
 
@@ -991,63 +1009,41 @@ async function loadDashboardData() {
     document.getElementById('affiliateIdDisplay').textContent = session.id;
     
     try {
-        // جلب بيانات المسوق
-        const affiliateData = await getAffiliateData(session.id);
+        // جلب بيانات المسوق الحقيقية من قاعدة البيانات
+        const res = await fetch(`${API_BASE_URL}?action=get_affiliate_data&affiliateId=${session.id}`);
+        const data = await res.json();
         
-        if (affiliateData.success) {
-            // تحديث الإحصائيات
-            document.getElementById('totalClicks').textContent = affiliateData.stats.totalClicks || 0;
-            document.getElementById('totalOrders').textContent = affiliateData.stats.totalOrders || 0;
+        if (data.success) {
+            // تحديث الإحصائيات من البيانات الحقيقية
+            document.getElementById('totalClicks').textContent = data.stats.totalClicks || 0;
+            document.getElementById('totalOrders').textContent = data.stats.totalOrders || 0;
             
-            // حساب العمولة المؤكدة فقط (الطلبات المؤكدة والمكتملة)
-            const confirmedCommission = await calculateConfirmedCommission(session.id, affiliateData.products || []);
-            document.getElementById('totalCommission').textContent = confirmedCommission + ' ج.س';
+            // العمولة المؤكدة هي مجموع (غير المدفوع + المدفوع)
+            const confirmedTotal = (data.commissionSummary.confirmed || 0) + (data.commissionSummary.paid || 0);
+            document.getElementById('totalCommission').textContent = confirmedTotal.toLocaleString() + ' ج.س';
+
+            // تحديث ملخص الأرباح
+            document.getElementById('unpaidCommission').textContent = (data.commissionSummary.confirmed || 0).toLocaleString() + ' ج.س';
+            document.getElementById('paidCommission').textContent = (data.commissionSummary.paid || 0).toLocaleString() + ' ج.س';
             
             // تحديث تفصيل الطلبات
-            document.getElementById('pendingOrdersCount').textContent = affiliateData.stats.pendingOrders || 0;
-            document.getElementById('confirmedOrdersCount').textContent = affiliateData.stats.confirmedOrders || 0;
-            document.getElementById('cancelledOrdersCount').textContent = affiliateData.stats.cancelledOrders || 0;
+            document.getElementById('pendingOrdersCount').textContent = data.stats.pendingOrders || 0;
+            document.getElementById('confirmedOrdersCount').textContent = data.stats.confirmedOrders || 0;
+            document.getElementById('cancelledOrdersCount').textContent = data.stats.cancelledOrders || 0;
             
-            // تحميل قائمة المنتجات
-            await loadProductsList(affiliateData.products || []);
+            // تحميل قائمة المنتجات للرابط
+            await loadProductsList(data.products || []);
             
-            // تحميل الطلبات
-            await loadAllOrders(session.id, affiliateData.products || []);
+            // تحميل جدول الطلبات
+            await loadAllOrders(session.id, data.products || []);
         } else {
-            console.error('فشل في جلب بيانات المسوق:', affiliateData.message);
-            showMessage('error', 'فشل في تحميل البيانات: ' + affiliateData.message);
+            console.error('فشل في جلب بيانات المسوق:', data.error);
+            showMessage('error', 'فشل في تحميل البيانات: ' + data.error);
         }
         
     } catch (error) {
         console.error('خطأ في تحميل البيانات:', error);
         showMessage('error', 'حدث خطأ أثناء تحميل البيانات');
-    }
-}
-
-// دالة جديدة لحساب العمولة المؤكدة فقط
-async function calculateConfirmedCommission(affiliateId, products) {
-    try {
-        const ordersData = await getAffiliateOrders(affiliateId);
-        
-        if (!ordersData.success || !ordersData.orders || ordersData.orders.length === 0) {
-            return 0;
-        }
-        
-        let totalConfirmedCommission = 0;
-        
-        for (let order of ordersData.orders) {
-            // حساب العمولة فقط للطلبات المؤكدة والمكتملة
-            if (order.status === 'confirmed' || order.status === 'delivered') {
-                const commission = calculateOrderCommission(order, products);
-                totalConfirmedCommission += commission;
-            }
-        }
-        
-        return totalConfirmedCommission;
-        
-    } catch (error) {
-        console.error('خطأ في حساب العمولة المؤكدة:', error);
-        return 0;
     }
 }
 
