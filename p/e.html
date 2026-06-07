@@ -786,7 +786,8 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import { recordAffiliateOrder, getSavedAffiliateId } from '../assets/js/affiliate-tracking.js';
         // ========== دوال API للعمل مع Vercel ==========
         
         // متغيرات النظام
@@ -850,25 +851,11 @@
         // ========== دوال إدارة معرف المسوق ==========
         
         function getAffiliateId() {
-            const urlParams = new URLSearchParams(window.location.search);
-            let affiliateId = urlParams.get('ref');
-            
-            if (!affiliateId || affiliateId === 'direct') {
-                affiliateId = localStorage.getItem('currentAffiliateId');
-            }
-            
-            if ((!affiliateId || affiliateId === 'direct') && cartItems.length > 0) {
-                const productWithAffiliate = cartItems.find(item => item.affiliateId && item.affiliateId !== 'direct');
-                if (productWithAffiliate) {
-                    affiliateId = productWithAffiliate.affiliateId;
-                }
-            }
-            
+            const affiliateId = getSavedAffiliateId();
             if (affiliateId && affiliateId !== 'direct' && affiliateId !== 'null' && affiliateId !== 'undefined') {
                 console.log('✅ تم العثور على معرف المسوق:', affiliateId);
                 return affiliateId;
             }
-            
             console.log('ℹ️ لم يتم العثور على معرف مسوق - استخدام direct');
             return 'direct';
         }
@@ -901,6 +888,7 @@
             }
         }
         
+
         async function createNewOrder(orderData) {
             try {
                 const response = await fetch('https://orders-9vxn.vercel.app/api/orders', {
@@ -933,6 +921,16 @@
 
                 const result = await response.json();
                 console.log('✅ تم إنشاء الطلب عبر API:', result.message);
+
+                // تسجيل الطلب للمسوق إذا وجد
+                const affiliateId = getAffiliateId();
+                if (affiliateId && affiliateId !== 'direct') {
+                    const firstProductName = (orderData.products && orderData.products.length > 0)
+                        ? orderData.products[0].name
+                        : 'Multiple Products';
+                    await recordAffiliateOrder(affiliateId, firstProductName);
+                }
+
                 return result;
 
             } catch (error) {
