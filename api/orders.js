@@ -56,7 +56,6 @@ export default async function handler(req, res) {
 
       case 'register_affiliate': {
         const { name, email, phone, password } = body;
-        // توليد معرف مسوق فريد
         const affiliateId = name.toLowerCase().replace(/\s+/g, '') + Math.floor(1000 + Math.random() * 9000);
 
         const response = await fetch(`${SUPABASE_URL}/rest/v1/affiliates`, {
@@ -72,7 +71,7 @@ export default async function handler(req, res) {
             name,
             email,
             phone,
-            password, // في نظام الإنتاج يجب تشفيرها
+            password,
             status: 'active',
             total_clicks: 0,
             registration_date: new Date().toISOString()
@@ -99,7 +98,6 @@ export default async function handler(req, res) {
         const affId = body.affiliateId || req.query.affiliateId;
         if (!affId || affId === 'direct') return res.status(200).json({ success: true, message: 'Direct visit' });
 
-        // 1. تسجيل النقرة في جدول affiliate_clicks
         await fetch(`${SUPABASE_URL}/rest/v1/affiliate_clicks`, {
           method: 'POST',
           headers: {
@@ -115,8 +113,6 @@ export default async function handler(req, res) {
           })
         });
 
-        // 2. تحديث عداد النقرات في جدول affiliates
-        // جلب العدد الحالي أولاً
         const getAff = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?affiliate_id=eq.${affId}&select=total_clicks`, {
           headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
         });
@@ -145,13 +141,11 @@ export default async function handler(req, res) {
         const data = await response.json();
         if (data.length === 0) return res.status(404).json({ success: false, message: 'المسوق غير موجود' });
 
-        // جلب المنتجات المتاحة للتسويق (من جدول products)
-        const productsResp = await fetch(`${SUPABASE_URL}/rest/v1/products?select=name,commission,id`, {
+        const productsResp = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_tracking_links?select=*&order=created_at.desc`, {
           headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
         });
         const products = await productsResp.json();
 
-        // جلب ملخص الطلبات
         const ordersResp = await fetch(`${SUPABASE_URL}/rest/v1/orders?affiliate_id=eq.${affId}&select=status`, {
           headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
         });
@@ -161,7 +155,7 @@ export default async function handler(req, res) {
           totalClicks: data[0].total_clicks || 0,
           totalOrders: ordersData.length,
           pendingOrders: ordersData.filter(o => ['new', 'processing', 'pending'].includes(o.status)).length,
-          confirmedOrders: ordersData.filter(o => ['delivered', 'completed', 'confirmed'].includes(o.status)).length,
+          confirmedOrders: ordersData.filter(o => ['delivered', 'completed', 'confirmed', 'تم التوصيل', 'مكتمل'].includes(o.status)).length,
           cancelledOrders: ordersData.filter(o => o.status === 'cancelled').length
         };
 
@@ -182,31 +176,56 @@ export default async function handler(req, res) {
           shipping_cost: body.shippingCost,
           total_amount: body.total,
           address: body.address,
-          location_data: body.location, // JSON
-          order_products: body.products, // JSON
+          location_link: body.location ? (typeof body.location === 'string' ? body.location : body.location.link) : '',
           affiliate_id: body.affiliateId || 'direct',
           status: 'new',
           affiliate_status: 'unpaid',
           created_at: new Date().toISOString()
         };
 
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
+        // 1. إنشاء الطلب في جدول orders
+        const orderResponse = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
           method: 'POST',
           headers: {
             'apikey': SUPABASE_KEY,
             'Authorization': `Bearer ${SUPABASE_KEY}`,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
           },
           body: JSON.stringify(orderData)
         });
 
-        if (!response.ok) throw new Error(await response.text());
+        if (!orderResponse.ok) throw new Error(await orderResponse.text());
+        const createdOrder = await orderResponse.json();
+
+        // 2. إدراج المنتجات في جدول order_products
+        if (body.products && Array.isArray(body.products)) {
+          const orderProducts = body.products.map(p => ({
+            order_id: body.orderId,
+            product_id: p.id,
+            product_name: p.name,
+            quantity: p.quantity,
+            price: p.price,
+            created_at: new Date().toISOString()
+          }));
+
+          await fetch(`${SUPABASE_URL}/rest/v1/order_products`, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(orderProducts)
+          });
+        }
+
         return res.status(201).json({ success: true, message: 'Order created successfully' });
       }
 
       case 'get_affiliate_orders': {
         const affId = req.query.affiliateId;
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/orders?affiliate_id=eq.${affId}&select=*&order=created_at.desc`, {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/orders?affiliate_id=eq.${affId}&select=*,order_products(*)&order=created_at.desc`, {
           headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
         });
         const data = await response.json();
@@ -215,7 +234,7 @@ export default async function handler(req, res) {
 
       case 'get_user_orders': {
         const uId = req.query.userId;
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/orders?user_id=eq.${uId}&select=*&order=created_at.desc`, {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/orders?user_id=eq.${uId}&select=*,order_products(*)&order=created_at.desc`, {
           headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
         });
         const data = await response.json();
@@ -225,7 +244,7 @@ export default async function handler(req, res) {
       // ─── مسار الإدارة (Admin) ───
 
       case 'get_all_orders': {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/orders?select=*&order=created_at.desc`, {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/orders?select=*,order_products(*)&order=created_at.desc`, {
           headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
         });
         const orders = await response.json();
@@ -235,12 +254,58 @@ export default async function handler(req, res) {
         });
         const affiliates = await affResp.json();
 
-        const prodResp = await fetch(`${SUPABASE_URL}/rest/v1/products?select=name,commission`, {
+        const prodResp = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_tracking_links?select=*`, {
           headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
         });
         const products = await prodResp.json();
 
         return res.status(200).json({ success: true, orders, affiliates, products });
+      }
+
+      case 'get_all_products': {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_tracking_links?select=*&order=created_at.desc`, {
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        });
+        const data = await response.json();
+        return res.status(200).json({ success: true, products: data });
+      }
+
+      case 'save_product': {
+        const { id, name, url, commission, status } = body;
+        const productData = {
+          name,
+          url,
+          commission: Number(commission),
+          status,
+          updated_at: new Date().toISOString()
+        };
+
+        let resp;
+        if (id) {
+          resp = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_tracking_links?id=eq.${id}`, {
+            method: 'PATCH',
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(productData)
+          });
+        } else {
+          resp = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_tracking_links`, {
+            method: 'POST',
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...productData, created_at: new Date().toISOString() })
+          });
+        }
+        if (!resp.ok) throw new Error(await resp.text());
+        return res.status(200).json({ success: true });
+      }
+
+      case 'delete_product': {
+        const { id } = body;
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_tracking_links?id=eq.${id}`, {
+          method: 'DELETE',
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        });
+        if (!response.ok) throw new Error(await response.text());
+        return res.status(200).json({ success: true });
       }
 
       case 'get_affiliates_stats': {
@@ -253,6 +318,13 @@ export default async function handler(req, res) {
 
       case 'update_order_status': {
         const { orderId, status } = body;
+        const updateData = { status, updated_at: new Date().toISOString() };
+
+        // Handle direct commission update if provided
+        if (body.commission !== undefined) {
+          updateData.commission = Number(body.commission);
+        }
+
         const response = await fetch(`${SUPABASE_URL}/rest/v1/orders?order_id=eq.${orderId}`, {
           method: 'PATCH',
           headers: {
@@ -260,14 +332,14 @@ export default async function handler(req, res) {
             'Authorization': `Bearer ${SUPABASE_KEY}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ status, updated_at: new Date().toISOString() })
+          body: JSON.stringify(updateData)
         });
         if (!response.ok) throw new Error(await response.text());
         return res.status(200).json({ success: true });
       }
 
       case 'update_commission_payment': {
-        const { orderId, affiliateStatus } = body; // affiliateStatus: 'paid' or 'unpaid'
+        const { orderId, affiliateStatus } = body;
         const response = await fetch(`${SUPABASE_URL}/rest/v1/orders?order_id=eq.${orderId}`, {
           method: 'PATCH',
           headers: {
@@ -282,7 +354,6 @@ export default async function handler(req, res) {
       }
 
       case 'update_affiliate_status': {
-        // This is for toggling affiliate account status (active/inactive)
         const { affiliateId, status } = body;
         const response = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?affiliate_id=eq.${affiliateId}`, {
           method: 'PATCH',

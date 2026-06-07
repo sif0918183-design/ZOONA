@@ -1016,7 +1016,7 @@ async function loadDashboardData() {
                 stats.pendingComm += commission;
             }
             // العمولات المؤكدة: طلبات تم تسليمها ولكن لم تُدفع بعد للمسوق
-            else if (['delivered', 'completed', 'confirmed'].includes(order.status)) {
+            else if (['delivered', 'completed', 'confirmed', 'تم التوصيل', 'مكتمل'].includes(order.status)) {
                 if (order.affiliate_status === 'paid') {
                     stats.paidComm += commission;
                 } else {
@@ -1058,7 +1058,7 @@ async function displayOrdersInTable(orders, products) {
             const commission = calculateOrderCommission(order, products);
             let statusClass = 'status-pending', statusText = 'معلق';
 
-            if (['delivered', 'completed', 'confirmed'].includes(order.status)) {
+            if (['delivered', 'completed', 'confirmed', 'تم التوصيل', 'مكتمل'].includes(order.status)) {
                 statusClass = 'status-confirmed';
                 statusText = order.affiliate_status === 'paid' ? 'مدفوع' : 'مؤكد';
             } else if (order.status === 'cancelled') {
@@ -1140,6 +1140,8 @@ async function loadAllOrders(affiliateId, products) {
                 switch(order.status) {
                     case 'confirmed':
                     case 'delivered':
+                case 'تم التوصيل':
+                case 'مكتمل':
                         statusClass = 'status-confirmed';
                         statusText = 'مؤكد';
                         break;
@@ -1187,10 +1189,14 @@ async function loadAllOrders(affiliateId, products) {
 }
 
 function calculateOrderCommission(order, products) {
+    // إذا كان هناك عمولة محددة مسبقاً في الطلب (بواسطة المدير)
+    if (order.commission !== undefined && order.commission !== null && order.commission !== "" && Number(order.commission) > 0) {
+        return Number(order.commission);
+    }
+
     if (!order || !products || !Array.isArray(products)) return 0;
     
     let totalCommission = 0;
-    
     if (order.order_products && Array.isArray(order.order_products)) {
         order.order_products.forEach(orderProduct => {
             if (!orderProduct.product_name) return;
@@ -1207,10 +1213,6 @@ function calculateOrderCommission(order, products) {
         });
     }
     
-    // إذا لم نجد تطابق، نستخدم النظام القديم (5%)
-    if (totalCommission === 0 && order.total_amount) {
-                totalCommission = Math.round((order.total_amount - (order.shipping_cost || 0)) * 0.05);
-    }
     
     return totalCommission;
 }

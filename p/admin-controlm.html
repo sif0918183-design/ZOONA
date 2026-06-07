@@ -845,13 +845,18 @@
         }
 
         // دالة محسنة للحصول على قيمة العمولة من المنتج
-        function getProductCommission(orderProducts, products) {
+        function getProductCommission(order, products) {
+            // إذا كان هناك عمولة محددة مسبقاً في الطلب (بواسطة المدير)
+            if (order.commission !== undefined && order.commission !== null && order.commission !== "" && Number(order.commission) > 0) {
+                return Number(order.commission);
+            }
+
+            const orderProducts = order.order_products;
             if (!orderProducts || !Array.isArray(orderProducts) || orderProducts.length === 0 || !products || products.length === 0) {
                 return 0;
             }
             
             let totalCommission = 0;
-            
             orderProducts.forEach(orderProduct => {
                 if (!orderProduct.product_name) return;
                 
@@ -863,19 +868,14 @@
                 };
                 
                 const cleanOrderProduct = cleanText(orderProduct.product_name);
-                
                 const product = products.find(p => {
                     if (!p.name) return false;
-                    
                     const cleanProductName = cleanText(p.name);
-                    
                     const orderWords = cleanOrderProduct.split(' ');
                     const productWords = cleanProductName.split(' ');
-                    
                     const commonWords = orderWords.filter(word => 
                         productWords.some(pWord => pWord.includes(word) || word.includes(pWord))
                     );
-                    
                     return commonWords.length >= 2;
                 });
                 
@@ -1011,7 +1011,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             
             filteredOrders.forEach(order => {
                 const affiliate = affiliates.find(aff => aff.affiliate_id === order.affiliate_id);
-                const commission = getProductCommission(order.order_products, products);
+                const commission = getProductCommission(order, products);
                 
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -1043,7 +1043,9 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     <td>${formatDateEnglish(order.created_at)}</td>
                     <td><span class="status-badge status-${getStatusClass(order.status)}">${getStatusText(order.status)}</span></td>
                     <td>
-                        <div class="commission-display">${commission > 0 ? commission.toLocaleString() + ' ج.س' : '--'}</div>
+                        <div class="commission-display" style="cursor: pointer;" onclick="editOrderCommission('${order.order_id}', ${commission})" title="تعديل العمولة">
+                            ${commission > 0 ? commission.toLocaleString() + ' ج.س' : '0'} <i class="fas fa-edit" style="font-size: 10px; opacity: 0.5;"></i>
+                        </div>
                         <div style="font-size: 10px; margin-top: 4px;">
                             ${order.affiliate_status === 'paid' ?
                                 '<span style="color: #38a169;"><i class="fas fa-check-double"></i> مدفوعة</span>' :
@@ -1126,6 +1128,33 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             }
         }
 
+        // دالة تعديل عمولة طلب محدد
+        async function editOrderCommission(orderId, currentCommission) {
+            const newCommission = prompt("أدخل قيمة العمولة الجديدة لهذا الطلب (بالجنيه السوداني):", currentCommission || 0);
+            if (newCommission === null || newCommission === "") return;
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'update_order_status',
+                        orderId: orderId,
+                        commission: Number(newCommission)
+                    })
+                });
+
+                const result = await response.json();
+                if (!result.success) throw new Error(result.error || 'خطأ في تحديث العمولة');
+
+                loadOrders();
+                alert(`تم تحديث عمولة الطلب ${orderId} إلى ${newCommission} ج.س`);
+            } catch (error) {
+                console.error('خطأ في تحديث العمولة:', error);
+                alert('حدث خطأ أثناء تحديث العمولة');
+            }
+        }
+
         // دوال إدارة المسوقين
         async function loadAffiliates() {
             if (!isLoggedIn) return;
@@ -1184,13 +1213,13 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
         function calculateAffiliateCommission(affiliateId) {
             const affiliateOrders = allOrders.filter(order => 
                 order.affiliate_id === affiliateId &&
-                ['delivered', 'completed', 'confirmed'].includes(order.status)
+                ['delivered', 'completed', 'confirmed', 'تم التوصيل', 'مكتمل'].includes(order.status)
             );
             
             let stats = { total: 0, paid: 0, pending: 0 };
 
             affiliateOrders.forEach(order => {
-                const commission = getProductCommission(order.order_products, allProducts);
+                const commission = getProductCommission(order, allProducts);
                 stats.total += commission;
                 if (order.affiliate_status === 'paid') {
                     stats.paid += commission;
@@ -1226,7 +1255,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             
             filteredAffiliates.forEach(affiliate => {
                 const affiliateOrders = allOrders.filter(order => order.affiliate_id === affiliate.affiliate_id);
-                const confirmedOrders = affiliateOrders.filter(order => ['delivered', 'completed', 'confirmed'].includes(order.status)).length;
+                const confirmedOrders = affiliateOrders.filter(order => ['delivered', 'completed', 'confirmed', 'تم التوصيل', 'مكتمل'].includes(order.status)).length;
                 const commStats = calculateAffiliateCommission(affiliate.affiliate_id);
                 
                 const row = document.createElement('tr');
@@ -1298,7 +1327,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
 
                 const affiliate = result.affiliate;
                 const affiliateOrders = allOrders.filter(order => order.affiliate_id === affiliateId);
-                const confirmedOrders = affiliateOrders.filter(order => ['delivered', 'completed', 'confirmed'].includes(order.status)).length;
+                const confirmedOrders = affiliateOrders.filter(order => ['delivered', 'completed', 'confirmed', 'تم التوصيل', 'مكتمل'].includes(order.status)).length;
                 const commStats = calculateAffiliateCommission(affiliateId);
                 
                 const detailsContent = document.getElementById('affiliateDetailsContent');
