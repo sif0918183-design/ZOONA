@@ -1052,6 +1052,18 @@ window.addEventListener('DOMContentLoaded', () => {
     initPullToRefresh();
   }, 100);
 
+  // تتبع النقرة إذا كان هناك معرف مسوق ولم يتم تتبعها في هذه الجلسة
+  const currentRef = getAffiliateId();
+  if (currentRef && currentRef !== 'direct' && !sessionStorage.getItem('affiliateTracked')) {
+    fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'track_click', affiliateId: currentRef })
+    }).then(() => {
+      sessionStorage.setItem('affiliateTracked', 'true');
+    }).catch(e => console.error('Error tracking click:', e));
+  }
+
   setTimeout(() => {
     document.getElementById('splash').style.opacity = '0';
     setTimeout(() => {
@@ -2019,7 +2031,10 @@ function showToast(msg, type = '') {
 function getAffiliateId() {
   const p = new URLSearchParams(window.location.search);
   const ref = p.get('ref');
-  if (ref) { localStorage.setItem('currentAffiliateId', ref); return ref; }
+  if (ref && ref !== 'null' && ref !== 'undefined') {
+    localStorage.setItem('currentAffiliateId', ref);
+    return ref;
+  }
   return localStorage.getItem('currentAffiliateId') || 'direct';
 }
 
