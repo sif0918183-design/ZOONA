@@ -4,18 +4,27 @@
  */
 
 // التحقق من النطاق المسموح
-const ALLOWED_ORIGINS = ['https://zoonasd.com', 'https://www.zoonasd.com'];
+const ALLOWED_ORIGINS = [
+  'https://zoonasd.com',
+  'https://www.zoonasd.com',
+  'https://zoona-git-fix-affiliate-marketing-syste-10e4dc-sifians-projects.vercel.app'
+];
 
 function isOriginAllowed(origin) {
   if (!origin) return false;
-  return ALLOWED_ORIGINS.includes(origin);
+  return ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed));
 }
 
 export default async function handler(req, res) {
   // 1. التحقق من النطاق
   const origin = req.headers.origin || req.headers.referer || '';
-  const allowedOrigins = ['https://zoonasd.com', 'https://www.zoonasd.com'];
-  const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed));
+  const allowedOrigins = [
+    'http://localhost:3000', 'http://localhost:5000', 'http://127.0.0.1:3000', 'http://127.0.0.1:5000',
+    'https://zoonasd.com',
+    'https://www.zoonasd.com',
+    'https://zoona-git-fix-affiliate-marketing-syste-10e4dc-sifians-projects.vercel.app'
+  ];
+  const isAllowed = origin.endsWith('.vercel.app') || allowedOrigins.some(allowed => origin.startsWith(allowed)) || !origin;
   
   if (!isAllowed && origin) {
     return res.status(403).json({ error: 'Access denied. Invalid origin.' });
@@ -41,10 +50,14 @@ export default async function handler(req, res) {
   }
 
   // 3. إعداد رؤوس CORS للنطاقات المسموحة فقط
-  const allowedOriginsList = ['https://zoonasd.com', 'https://www.zoonasd.com'];
+  const allowedOriginsList = [
+    'https://zoonasd.com',
+    'https://www.zoonasd.com',
+    'https://zoona-git-fix-affiliate-marketing-syste-10e4dc-sifians-projects.vercel.app'
+  ];
   const currentOrigin = req.headers.origin;
   
-  if (currentOrigin && allowedOriginsList.includes(currentOrigin)) {
+  if (currentOrigin && allowedOriginsList.some(allowed => currentOrigin.startsWith(allowed))) {
     res.setHeader('Access-Control-Allow-Origin', currentOrigin);
   } else if (!currentOrigin) {
     // للطلبات من المتصفح مباشرة
@@ -104,7 +117,7 @@ export default async function handler(req, res) {
           bodyData = req.body;
         }
       }
-      fetchOptions.body = JSON.stringify(bodyData);
+      let cleanBody = { ...bodyData }; delete cleanBody.adminPassword; fetchOptions.body = JSON.stringify(cleanBody);
     } 
     else if (req.method === 'PATCH') {
       // تحديث منتج موجود
@@ -121,8 +134,8 @@ export default async function handler(req, res) {
           bodyData = req.body;
         }
       }
-      fetchOptions.body = JSON.stringify({
-        ...bodyData,
+      let cleanBody = { ...bodyData }; delete cleanBody.adminPassword; fetchOptions.body = JSON.stringify({
+        ...cleanBody,
         updated_at: new Date().toISOString()
       });
     } 

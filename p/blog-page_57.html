@@ -754,7 +754,7 @@
 
 <script>
 // ========== إعدادات Vercel ==========
-const API_BASE_URL = 'https://orders-9vxn.vercel.app/api/orders';
+const API_BASE_URL = '/api/orders';
 
 // ========== دوال النظام الأساسية ==========
 
@@ -993,26 +993,58 @@ async function loadDashboardData() {
     try {
         // جلب بيانات المسوق
         const affiliateData = await getAffiliateData(session.id);
-        
-        if (affiliateData.success) {
+        const ordersData = await getAffiliateOrders(session.id);
+
+        if (affiliateData.success && ordersData.success) {
+            const products = affiliateData.products || [];
+            const orders = ordersData.orders || [];
+
+            let stats = {
+                clicks: affiliateData.stats.totalClicks || 0,
+                orders: orders.length,
+                pending: 0,
+                confirmed: 0,
+                cancelled: 0,
+                pendingComm: 0,
+                confirmedComm: 0,
+                paidComm: 0
+            };
+
+            orders.forEach(order => {
+                const status = order.status ? order.status.toLowerCase() : '';
+                const affStatus = order.affiliate_status ? order.affiliate_status.toLowerCase() : '';
+                const commission = calculateOrderCommission(order, products);
+
+                if (status === 'cancelled') {
+                    stats.cancelled++;
+                } else if (['delivered', 'completed', 'confirmed', 'تم التوصيل', 'مكتمل'].includes(status)) {
+                    stats.confirmed++;
+                    if (affStatus === 'paid') {
+                        stats.paidComm += commission;
+                    } else {
+                        stats.confirmedComm += commission;
+                    }
+                } else {
+                    stats.pending++;
+                    stats.pendingComm += commission;
+                }
+            });
+
             // تحديث الإحصائيات
-            document.getElementById('totalClicks').textContent = affiliateData.stats.totalClicks || 0;
-            document.getElementById('totalOrders').textContent = affiliateData.stats.totalOrders || 0;
-            
-            // حساب العمولة المؤكدة فقط (الطلبات المؤكدة والمكتملة)
-            const confirmedCommission = await calculateConfirmedCommission(session.id, affiliateData.products || []);
-            document.getElementById('totalCommission').textContent = confirmedCommission + ' ج.س';
-            
+            document.getElementById('totalClicks').textContent = stats.clicks;
+            document.getElementById('totalOrders').textContent = stats.orders;
+            document.getElementById('totalCommission').textContent = stats.confirmedComm.toLocaleString() + ' ج.س';
+
             // تحديث تفصيل الطلبات
-            document.getElementById('pendingOrdersCount').textContent = affiliateData.stats.pendingOrders || 0;
-            document.getElementById('confirmedOrdersCount').textContent = affiliateData.stats.confirmedOrders || 0;
-            document.getElementById('cancelledOrdersCount').textContent = affiliateData.stats.cancelledOrders || 0;
-            
+            document.getElementById('pendingOrdersCount').textContent = stats.pending;
+            document.getElementById('confirmedOrdersCount').textContent = stats.confirmed;
+            document.getElementById('cancelledOrdersCount').textContent = stats.cancelled;
+
             // تحميل قائمة المنتجات
-            await loadProductsList(affiliateData.products || []);
-            
+            await loadProductsList(products);
+
             // تحميل الطلبات
-            await loadAllOrders(session.id, affiliateData.products || []);
+            await displayOrdersInTable(orders, products);
         } else {
             console.error('فشل في جلب بيانات المسوق:', affiliateData.message);
             showMessage('error', 'فشل في تحميل البيانات: ' + affiliateData.message);
@@ -1024,31 +1056,53 @@ async function loadDashboardData() {
     }
 }
 
-// دالة جديدة لحساب العمولة المؤكدة فقط
-async function calculateConfirmedCommission(affiliateId, products) {
-    try {
-        const ordersData = await getAffiliateOrders(affiliateId);
+async function displayOrdersInTable(orders, products) {
+    const tableBody = document.getElementById('ordersBody');
+    const loadingElement = document.getElementById('ordersLoading');
+    const tableElement = document.getElementById('ordersTable');
+
+    if (!orders || orders.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 30px; color: #6c757d;">لا توجد طلبات حتى الآن</td></tr>`;
+    } else {
+        tableBody.innerHTML = '';
+        const sortedOrders = [...orders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         
-        if (!ordersData.success || !ordersData.orders || ordersData.orders.length === 0) {
-            return 0;
-        }
-        
-        let totalConfirmedCommission = 0;
-        
-        for (let order of ordersData.orders) {
-            // حساب العمولة فقط للطلبات المؤكدة والمكتملة
-            if (order.status === 'confirmed' || order.status === 'delivered') {
-                const commission = calculateOrderCommission(order, products);
-                totalConfirmedCommission += commission;
+        sortedOrders.forEach(order => {
+            const commission = calculateOrderCommission(order, products);
+            let statusClass = 'status-pending', statusText = 'معلق';
+            const status = order.status ? order.status.toLowerCase() : '';
+            const affStatus = order.affiliate_status ? order.affiliate_status.toLowerCase() : '';
+
+            if (['delivered', 'completed', 'confirmed', 'تم التوصيل', 'مكتمل'].includes(status)) {
+                statusClass = 'status-confirmed';
+                statusText = affStatus === 'paid' ? 'مدفوع' : 'مؤكد';
+            } else if (status === 'cancelled') {
+                statusClass = 'status-cancelled';
+                statusText = 'ملغى';
+            } else if (status === 'new') {
+                statusText = 'جديد';
+            } else if (status === 'processing') {
+                statusText = 'قيد المعالجة';
             }
-        }
-        
-        return totalConfirmedCommission;
-        
-    } catch (error) {
-        console.error('خطأ في حساب العمولة المؤكدة:', error);
-        return 0;
+
+            let productsText = 'لا توجد منتجات';
+            if (order.order_products && Array.isArray(order.order_products)) {
+                productsText = order.order_products.map(p => `${p.product_name} (${p.quantity})`).join('، ');
+            }
+            const shortProducts = productsText.length > 25 ? productsText.substring(0, 25) + '...' : productsText;
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td title="${productsText}">${shortProducts}</td>
+                <td>${formatDateEnglish(order.created_at)}</td>
+                <td><span class="${statusClass}">${statusText}</span></td>
+                <td class="commission">${commission.toLocaleString()} ج.س</td>
+            `;
+            tableBody.appendChild(row);
+        });
     }
+    loadingElement.style.display = 'none';
+    tableElement.style.display = 'table';
 }
 
 async function loadProductsList(products) {
@@ -1073,83 +1127,16 @@ async function loadProductsList(products) {
     });
 }
 
-async function loadAllOrders(affiliateId, products) {
-    const loadingElement = document.getElementById('ordersLoading');
-    const tableElement = document.getElementById('ordersTable');
-    const tableBody = document.getElementById('ordersBody');
-    
-    try {
-        const ordersData = await getAffiliateOrders(affiliateId);
-        
-        if (!ordersData.success || !ordersData.orders || ordersData.orders.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 30px; color: #6c757d;">لا توجد طلبات حتى الآن</td></tr>`;
-        } else {
-            tableBody.innerHTML = '';
-            
-            // ترتيب الطلبات من الأحدث إلى الأقدم
-            const sortedOrders = [...ordersData.orders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-            
-            for (let order of sortedOrders) {
-                // حساب العمولة
-                const commission = calculateOrderCommission(order, products);
-                
-                let statusClass, statusText;
-                
-                // تحديد لون وحالة الطلب
-                switch(order.status) {
-                    case 'confirmed':
-                    case 'delivered':
-                        statusClass = 'status-confirmed';
-                        statusText = 'مؤكد';
-                        break;
-                    case 'cancelled':
-                        statusClass = 'status-cancelled';
-                        statusText = 'ملغى';
-                        break;
-                    case 'pending':
-                    case 'new':
-                    case 'processing':
-                    default:
-                        statusClass = 'status-pending';
-                        statusText = order.status === 'new' ? 'جديد' : 
-                                    order.status === 'processing' ? 'قيد المعالجة' : 'معلق';
-                }
-                
-                // عرض المنتجات
-                let productsText = 'لا توجد منتجات';
-                if (order.order_products && Array.isArray(order.order_products)) {
-                    productsText = order.order_products.map(product => 
-                        `${product.product_name || 'غير معروف'} (${product.quantity || 1})`
-                    ).join('، ');
-                }
-                
-                const shortProducts = productsText.length > 30 ? productsText.substring(0, 30) + '...' : productsText;
-                
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td class="text-truncate" title="${productsText}">${shortProducts}</td>
-                    <td>${formatDateEnglish(order.created_at)}</td>
-                    <td><span class="${statusClass}">${statusText}</span></td>
-                    <td class="commission">${(order.status === 'confirmed' || order.status === 'delivered') ? commission + ' ج.س' : '--'}</td>
-                `;
-                tableBody.appendChild(row);
-            }
-        }
-        
-    } catch (error) {
-        console.error('خطأ في تحميل الطلبات:', error);
-        tableBody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 30px; color: #dc3545;">خطأ في تحميل الطلبات</td></tr>`;
-    }
-    
-    loadingElement.style.display = 'none';
-    tableElement.style.display = 'table';
-}
 
 function calculateOrderCommission(order, products) {
+    // إذا كان هناك عمولة محددة مسبقاً في الطلب (بواسطة المدير)
+    if (order.commission !== undefined && order.commission !== null && order.commission !== "" && Number(order.commission) > 0) {
+        return Number(order.commission);
+    }
+
     if (!order || !products || !Array.isArray(products)) return 0;
     
     let totalCommission = 0;
-    
     if (order.order_products && Array.isArray(order.order_products)) {
         order.order_products.forEach(orderProduct => {
             if (!orderProduct.product_name) return;

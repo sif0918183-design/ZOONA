@@ -652,7 +652,7 @@
     </div>
 
     <script>
-        const API_URL = 'https://orders-9vxn.vercel.app/api/orders';
+        const API_URL = '/api/orders';
         
         let debugMode = false;
         let currentAffiliateDetails = null;
@@ -667,39 +667,35 @@
         async function checkLoginStatus() {
             const loginData = localStorage.getItem('admin_login');
             if (loginData) {
-                const { timestamp, password } = JSON.parse(loginData);
-                const now = new Date().getTime();
-                const oneMonth = 30 * 24 * 60 * 60 * 1000;
-                
-                if (now - timestamp < oneMonth) {
-                    // التحقق من أن المعرف صحيح عن طريق جلب بيانات المسوقين
-                    const isValid = await verifyAffiliateId(password);
-                    if (isValid) {
-                        isLoggedIn = true;
-                        showAdminPanel();
-                        return;
+                try {
+                    const { timestamp, password } = JSON.parse(loginData);
+                    const now = new Date().getTime();
+                    const oneMonth = 30 * 24 * 60 * 60 * 1000;
+
+                    if (now - timestamp < oneMonth) {
+                        const isValid = await verifyAffiliateId(password);
+                        if (isValid) {
+                            isLoggedIn = true;
+                            showAdminPanel();
+                            return;
+                        }
                     }
+                } catch (e) {
+                    console.error("Session parse error", e);
                 }
                 localStorage.removeItem('admin_login');
             }
             showLoginPanel();
         }
 
-        // التحقق من صحة معرف المسوق
-        async function verifyAffiliateId(affiliateId) {
+        // التحقق من صحة كلمة مرور المسؤول
+        async function verifyAffiliateId(password) {
             try {
-                // جلب بيانات المسوقين للتحقق من وجود المعرف
-                const response = await fetch(`${API_URL}?action=get_affiliates_stats`);
+                const response = await fetch(`${API_URL}?action=verify_admin&password=${encodeURIComponent(password)}`);
                 const result = await response.json();
-                
-                if (result.success && result.affiliates) {
-                    // البحث عن المعرف في قائمة المسوقين
-                    const affiliateExists = result.affiliates.some(aff => aff.affiliate_id === affiliateId);
-                    return affiliateExists;
-                }
-                return false;
+                return result.success === true;
             } catch (error) {
-                console.error('خطأ في التحقق من المعرف:', error);
+                console.error('خطأ في التحقق:', error);
                 return false;
             }
         }
@@ -794,7 +790,8 @@
             tableElement.style.display = 'none';
             
             try {
-                const response = await fetch(`${API_URL}?action=get_all_orders`);
+                const loginData = JSON.parse(localStorage.getItem('admin_login') || '{}');
+                const response = await fetch(`${API_URL}?action=get_all_orders&adminPassword=${encodeURIComponent(loginData.password)}`);
                 const result = await response.json();
                 
                 if (!result.success) {
@@ -851,7 +848,7 @@
             }
             
             let totalCommission = 0;
-            
+
             orderProducts.forEach(orderProduct => {
                 if (!orderProduct.product_name) return;
                 
@@ -863,19 +860,19 @@
                 };
                 
                 const cleanOrderProduct = cleanText(orderProduct.product_name);
-                
+
                 const product = products.find(p => {
                     if (!p.name) return false;
-                    
+
                     const cleanProductName = cleanText(p.name);
-                    
+
                     const orderWords = cleanOrderProduct.split(' ');
                     const productWords = cleanProductName.split(' ');
-                    
+
                     const commonWords = orderWords.filter(word => 
                         productWords.some(pWord => pWord.includes(word) || word.includes(pWord))
                     );
-                    
+
                     return commonWords.length >= 2;
                 });
                 
@@ -1041,15 +1038,29 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                             : 'غير محدد'}
                     </td>
                     <td>${formatDateEnglish(order.created_at)}</td>
-                    <td><span class="status-badge status-${getStatusClass(order.status)}">${getStatusText(order.status)}</span></td>
-                    <td class="commission-display">${commission > 0 ? commission.toLocaleString() + ' ج.س' : '--'}</td>
+                    <td>
+                        <span class="status-badge status-${getStatusClass(order.status)}">${getStatusText(order.status)}</span>
+                        ${order.affiliate_status === 'paid' ? '<br><small style="color:var(--success-color)">تم الدفع للمسوق</small>' : ''}
+                    </td>
+                    <td class="commission-display">
+                        <div id="comm-container-${order.order_id}">
+                            ${commission > 0 ? commission.toLocaleString() + ' ج.س' : '--'}
+                        </div>
+                        <input type="number" id="edit-comm-${order.order_id}" value="${commission}" style="display:none; width:80px; font-size:0.8rem; padding:2px;">
+                    </td>
                     <td>
                         <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-                            <button class="btn btn-success btn-sm" onclick="updateOrderStatus('${order.order_id}', 'delivered')" ${order.status === 'delivered' ? 'disabled' : ''}>
+                            <button class="btn btn-success btn-sm" onclick="updateOrderStatus('${order.order_id}', 'delivered')" ${['delivered', 'completed', 'تم التوصيل', 'مكتمل'].includes(order.status) ? 'disabled' : ''} title="تم التوصيل">
                                 <i class="fas fa-check"></i>
                             </button>
-                            <button class="btn btn-danger btn-sm" onclick="updateOrderStatus('${order.order_id}', 'cancelled')" ${order.status === 'cancelled' ? 'disabled' : ''}>
+                            <button class="btn btn-danger btn-sm" onclick="updateOrderStatus('${order.order_id}', 'cancelled')" ${order.status === 'cancelled' ? 'disabled' : ''} title="إلغاء">
                                 <i class="fas fa-times"></i>
+                            </button>
+                            <button class="btn btn-warning btn-sm" onclick="markAsPaid('${order.order_id}')" ${order.affiliate_status === 'paid' ? 'disabled' : ''} title="تعليق كمدفوع">
+                                <i class="fas fa-money-bill-wave"></i>
+                            </button>
+                            <button class="btn btn-primary btn-sm" onclick="toggleEditComm('${order.order_id}')" title="تعديل العمولة">
+                                <i class="fas fa-edit"></i>
                             </button>
                             <button class="btn btn-primary btn-sm" onclick="copyOrderSummary(${JSON.stringify(order).replace(/"/g, '&quot;')})" title="نسخ ملخص الطلب">
                                 <i class="fas fa-copy"></i>
@@ -1064,6 +1075,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
         // دالة تحديث حالة الطلب
         async function updateOrderStatus(orderId, newStatus) {
             try {
+                const loginData = JSON.parse(localStorage.getItem('admin_login') || '{}');
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
@@ -1071,6 +1083,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     },
                     body: JSON.stringify({
                         action: 'update_order_status',
+                        adminPassword: loginData.password,
                         orderId: orderId,
                         status: newStatus
                     })
@@ -1090,6 +1103,61 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             }
         }
 
+        async function markAsPaid(orderId) {
+            if(!confirm('هل تم دفع العمولة للمسوق بالفعل؟')) return;
+            try {
+                const loginData = JSON.parse(localStorage.getItem('admin_login') || '{}');
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'update_commission_payment',
+                        adminPassword: loginData.password,
+                        orderId: orderId,
+                        affiliateStatus: 'paid'
+                    })
+                });
+                const result = await response.json();
+                if (!result.success) throw new Error(result.error);
+                loadOrders();
+                alert('تم تحديد العمولة كمدفوعة');
+            } catch (error) {
+                alert('حدث خطأ: ' + error.message);
+            }
+        }
+
+        function toggleEditComm(orderId) {
+            const container = document.getElementById(`comm-container-${orderId}`);
+            const input = document.getElementById(`edit-comm-${orderId}`);
+            if (input.style.display === 'none') {
+                input.style.display = 'block';
+                container.style.display = 'none';
+                input.focus();
+                input.onblur = () => saveManualComm(orderId, input.value);
+                input.onkeypress = (e) => { if(e.key === 'Enter') saveManualComm(orderId, input.value); };
+            }
+        }
+
+        async function saveManualComm(orderId, val) {
+            try {
+                const loginData = JSON.parse(localStorage.getItem('admin_login') || '{}');
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'update_order_status',
+                        adminPassword: loginData.password,
+                        orderId: orderId,
+                        commission: Number(val)
+                    })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    loadOrders();
+                }
+            } catch (e) { console.error(e); }
+        }
+
         // دوال إدارة المسوقين
         async function loadAffiliates() {
             if (!isLoggedIn) return;
@@ -1101,7 +1169,8 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             tableElement.style.display = 'none';
             
             try {
-                const response = await fetch(`${API_URL}?action=get_affiliates_stats`);
+                const loginData = JSON.parse(localStorage.getItem('admin_login') || '{}');
+                const response = await fetch(`${API_URL}?action=get_affiliates_stats&adminPassword=${encodeURIComponent(loginData.password)}`);
                 const result = await response.json();
                 
                 if (!result.success) {
@@ -1147,12 +1216,18 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
         // حساب العمولة الإجمالية لمسوق معين
         function calculateAffiliateCommission(affiliateId) {
             const affiliateOrders = allOrders.filter(order => 
-                order.affiliate_id === affiliateId && order.status === 'delivered'
+                order.affiliate_id === affiliateId &&
+                ['delivered', 'completed', 'تم التوصيل', 'مكتمل'].includes(order.status ? order.status.toLowerCase() : '')
             );
             
             let totalCommission = 0;
             affiliateOrders.forEach(order => {
-                const commission = getProductCommission(order.order_products, allProducts);
+                let commission = 0;
+                if (order.commission) {
+                    commission = Number(order.commission);
+                } else {
+                    commission = getProductCommission(order.order_products, allProducts);
+                }
                 totalCommission += commission;
             });
             
@@ -1183,7 +1258,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             
             filteredAffiliates.forEach(affiliate => {
                 const affiliateOrders = allOrders.filter(order => order.affiliate_id === affiliate.affiliate_id);
-                const confirmedOrders = affiliateOrders.filter(order => order.status === 'delivered').length;
+                const confirmedOrders = affiliateOrders.filter(order => ['delivered', 'completed', 'تم التوصيل', 'مكتمل'].includes(order.status ? order.status.toLowerCase() : '')).length;
                 const totalCommission = calculateAffiliateCommission(affiliate.affiliate_id);
                 
                 const row = document.createElement('tr');
@@ -1249,7 +1324,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
 
                 const affiliate = result.affiliate;
                 const affiliateOrders = allOrders.filter(order => order.affiliate_id === affiliateId);
-                const confirmedOrders = affiliateOrders.filter(order => order.status === 'delivered').length;
+                const confirmedOrders = affiliateOrders.filter(order => ['delivered', 'completed', 'تم التوصيل', 'مكتمل'].includes(order.status ? order.status.toLowerCase() : '')).length;
                 const totalCommission = calculateAffiliateCommission(affiliateId);
                 
                 const detailsContent = document.getElementById('affiliateDetailsContent');
@@ -1313,6 +1388,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
         async function toggleAffiliateStatus(affiliateId, currentStatus) {
             try {
                 const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+                const loginData = JSON.parse(localStorage.getItem('admin_login') || '{}');
                 
                 const response = await fetch(API_URL, {
                     method: 'POST',
@@ -1321,6 +1397,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     },
                     body: JSON.stringify({
                         action: 'update_affiliate_status',
+                        adminPassword: loginData.password,
                         affiliateId: affiliateId,
                         status: newStatus
                     })
@@ -1357,7 +1434,8 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             tableElement.style.display = 'none';
             
             try {
-                const response = await fetch(`${API_URL}?action=get_all_products`);
+                const loginData = JSON.parse(localStorage.getItem('admin_login') || '{}');
+                const response = await fetch(`${API_URL}?action=get_all_products&adminPassword=${encodeURIComponent(loginData.password)}`);
                 const result = await response.json();
                 
                 if (!result.success) {
@@ -1462,6 +1540,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             }
             
             try {
+                const loginData = JSON.parse(localStorage.getItem('admin_login') || '{}');
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
@@ -1469,6 +1548,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     },
                     body: JSON.stringify({
                         action: 'delete_product',
+                        adminPassword: loginData.password,
                         id: productId
                     })
                 });
@@ -1491,6 +1571,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
         // إضافة أو تحديث منتج
         async function saveProduct(productData) {
             try {
+                const loginData = JSON.parse(localStorage.getItem('admin_login') || '{}');
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
@@ -1498,6 +1579,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     },
                     body: JSON.stringify({
                         action: 'save_product',
+                        adminPassword: loginData.password,
                         ...productData
                     })
                 });
