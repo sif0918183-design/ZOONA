@@ -104,6 +104,11 @@ export default async function handler(req, res) {
           bodyData = req.body;
         }
       }
+      // Sanitize input: remove administrative fields before sending to Supabase
+      if (bodyData && typeof bodyData === 'object') {
+        delete bodyData.adminPassword;
+        delete bodyData.action;
+      }
       fetchOptions.body = JSON.stringify(bodyData);
     } 
     else if (req.method === 'PATCH') {
@@ -120,6 +125,11 @@ export default async function handler(req, res) {
         } catch (e) {
           bodyData = req.body;
         }
+      }
+      // Sanitize input: remove administrative fields before sending to Supabase
+      if (bodyData && typeof bodyData === 'object') {
+        delete bodyData.adminPassword;
+        delete bodyData.action;
       }
       fetchOptions.body = JSON.stringify({
         ...bodyData,
