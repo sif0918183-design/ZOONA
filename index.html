@@ -204,7 +204,24 @@ html, body {
   position:absolute; top:8px; right:8px; background:var(--red); color:#fff;
   font-size:11px; font-weight:800; padding:3px 7px; border-radius:6px;
 }
-.product-info { padding:10px; flex:1; display:flex; flex-direction:column; }
+.product-info { padding:10px; flex:1; display:flex; flex-direction:column; position:relative; }
+.out-of-stock-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+}
+.out-of-stock-text {
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 800;
+}
 .product-name { font-size:13px; font-weight:700; color:#222; line-height:1.4; margin-bottom:6px; }
 .product-prices { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
 .product-price { font-size:14px; font-weight:800; color:var(--red); }
@@ -1161,14 +1178,15 @@ function renderProducts(products) {
         ${p.discount ? `<div class="product-discount-badge">-${p.discount}%</div>` : ''}
       </div>
       <div class="product-info">
+        ${p.is_out_of_stock ? `<div class="out-of-stock-overlay"><div class="out-of-stock-text">نفذت الكمية</div></div>` : ''}
         <div class="product-label">${p.category}</div>
         <div class="product-name">${p.name}</div>
         <div class="product-prices">
           <span class="product-price">${p.price.toLocaleString()} SDG</span>
           ${(p.oldPrice || p.old_price) ? `<span class="product-old-price">${(p.oldPrice || p.old_price).toLocaleString()} SDG</span>` : ''}
         </div>
-        <button class="add-to-cart-btn" id="cartBtn-${p.id}" onclick="addToCart(event, ${p.id})">
-          <i class="fas fa-cart-plus"></i> إضافة إلى السلة
+        <button class="add-to-cart-btn" id="cartBtn-${p.id}" onclick="addToCart(event, ${p.id})" ${p.is_out_of_stock ? 'disabled style="filter:grayscale(1);"' : ''}>
+          <i class="fas fa-cart-plus"></i> ${p.is_out_of_stock ? 'نفذت الكمية' : 'إضافة إلى السلة'}
         </button>
       </div>
     </div>
@@ -1333,12 +1351,18 @@ function openModal(id, fromPopState = false) {
 
   const inCart = cart.find(x => x.id === id);
   const addBtn = document.getElementById('modalAddBtn');
-  if (inCart) {
+  if (p.is_out_of_stock) {
+    addBtn.innerHTML = '<i class="fas fa-exclamation-circle"></i> نفذت الكمية حالياً';
+    addBtn.style.background = '#666';
+    addBtn.disabled = true;
+  } else if (inCart) {
     addBtn.innerHTML = '<i class="fas fa-check"></i> موجود في السلة';
     addBtn.style.background = 'linear-gradient(135deg,#2e7d32,#1b5e20)';
+    addBtn.disabled = false;
   } else {
     addBtn.innerHTML = '<i class="fas fa-cart-plus"></i> إضافة إلى السلة';
     addBtn.style.background = '';
+    addBtn.disabled = false;
   }
 
   if (!fromPopState) {
