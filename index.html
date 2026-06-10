@@ -2255,16 +2255,22 @@ async function recordAffiliateClick(affiliateId, productName = 'default') {
 
     try {
         // أولاً: تحديث جدول affiliate_tracking_links وزيادة العداد
-        // نستخدم rpc('increment') لزيادة عداد النقرات كما في الكود الأصلي
+        // ملاحظة: نستخدم تحديثاً مباشراً للوقت، وزيادة العداد تتم في الغالب عبر RPC منفصل
+        // أو تريجر في قاعدة البيانات لضمان دقة العد
         const { error: linkError } = await supabase
             .from('affiliate_tracking_links')
             .update({
-                click_count: supabase.rpc('increment', { column: 'click_count', value: 1 }),
                 updated_at: new Date().toISOString()
             })
             .eq('affiliate_id', affiliateId)
             .eq('product_name', productName)
             .eq('is_active', true);
+
+        // استدعاء RPC لزيادة العداد بشكل ذري إذا كان متوفراً
+        await supabase.rpc('increment_affiliate_link_clicks', {
+            aff_id: affiliateId,
+            prod_name: productName
+        });
 
         if (linkError) console.error('خطأ تحديث رابط التتبع:', linkError);
 
