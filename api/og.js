@@ -75,7 +75,7 @@ async function getProducts() {
     return productsCache;
   }
   try {
-    const fetchUrl = `${url}/rest/v1/products?select=id,name,category,image,description,price&order=id.desc`;
+    const fetchUrl = `${url}/rest/v1/products?select=id,name,category,image,description,price,is_out_of_stock&order=id.desc`;
     const res = await fetch(fetchUrl, {
       headers: {
         'apikey': key,
@@ -153,7 +153,7 @@ export default async function handler(req, res) {
           "priceCurrency": "SDG",
           "price": product.price,
           "itemCondition": "https://schema.org/NewCondition",
-          "availability": "https://schema.org/InStock",
+          "availability": product.is_out_of_stock ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
           "seller": {
             "@type": "Organization",
             "name": "ZOONA"

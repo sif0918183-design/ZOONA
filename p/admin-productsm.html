@@ -372,7 +372,13 @@ textarea.form-control{resize:vertical;min-height:80px}
         </select>
       </div>
 
-      
+      <!-- Out of Stock Status -->
+      <div class="form-group" style="display:flex; align-items:center; gap:10px; background:#fff3e0; padding:12px; border-radius:12px; border:1px solid #ffe0b2; margin-bottom:20px;">
+        <input type="checkbox" id="fOutOfStock" style="width:22px; height:22px; cursor:pointer; accent-color:var(--red);">
+        <label for="fOutOfStock" style="font-size:14px; font-weight:800; color:#e65100; cursor:pointer; margin:0;">
+          <i class="fas fa-exclamation-triangle"></i> تصنيف المنتج كمنتج (نفذت الكمية)
+        </label>
+      </div>
 
       <!-- Delivery Cities Section -->
       <div class="form-group">
@@ -642,8 +648,9 @@ function renderProducts() {
     return;
   }
   grid.innerHTML = filtered.map(p => `
-    <div class="prod-card">
+    <div class="prod-card" style="${p.is_out_of_stock ? 'opacity:0.8;' : ''}">
       <img class="prod-img" src="${p.image || '../assets/splash-logo.png'}" alt="${p.name}" onerror="this.src='../assets/splash-logo.png'">
+      ${p.is_out_of_stock ? `<div class="prod-badge" style="background:#666; right:auto; left:8px;">نفذت الكمية</div>` : ''}
       ${p.discount ? `<div class="prod-badge">-${p.discount}%</div>` : ''}
       <div class="prod-body">
         <div class="prod-cat">${p.category}</div>
@@ -684,6 +691,7 @@ function openEditModal(id) {
   document.getElementById('fDiscount').value = p.discount || '';
   document.getElementById('fDesc').value = p.description || '';
   document.getElementById('fWarehouse').value = p.warehouse || 'الخرطوم';
+  document.getElementById('fOutOfStock').checked = p.is_out_of_stock || false;
   document.getElementById('fImage').value = p.image || '';
 
   // Load delivery cities from database
@@ -716,6 +724,7 @@ function closeFormModal(e) {
 
 function resetForm() {
   document.getElementById('productForm').reset();
+  document.getElementById('fOutOfStock').checked = false;
   document.getElementById('fImage').value = '';
   document.getElementById('imgPreview').style.display = 'none';
   document.getElementById('urlPreview').style.display = 'none';
@@ -849,6 +858,7 @@ async function submitForm(e) {
     discount: Number(document.getElementById('fDiscount').value) || null,
     description: document.getElementById('fDesc').value.trim(),
     warehouse: document.getElementById('fWarehouse').value,
+    is_out_of_stock: document.getElementById('fOutOfStock').checked,
     image: image,
     delivery_cities: deliveryCities
   };

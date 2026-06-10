@@ -112,6 +112,8 @@ const server = http.createServer(async (req, res) => {
       category: body.category || 'عام',
       description: body.description || '',
       warehouse: body.warehouse || 'الخرطوم',
+      is_out_of_stock: body.is_out_of_stock || false,
+      delivery_cities: body.delivery_cities || []
     };
     products.push(product);
     writeProducts(products);
@@ -136,6 +138,8 @@ const server = http.createServer(async (req, res) => {
       category: body.category ?? products[idx].category,
       description: body.description ?? products[idx].description,
       warehouse: body.warehouse ?? products[idx].warehouse,
+      is_out_of_stock: body.is_out_of_stock ?? products[idx].is_out_of_stock,
+      delivery_cities: body.delivery_cities ?? products[idx].delivery_cities
     };
     writeProducts(products);
     return sendJSON(res, 200, products[idx]);
