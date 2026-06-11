@@ -18,7 +18,8 @@ const ALLOWED_ORIGINS = [
     'https://zoona-git-fix-affiliate-marketing-syste-10e4dc-sifians-projects.vercel.app',
     'https://zoona-git-feature-affiliate-tracking-in-16c497-sifians-projects.vercel.app',
     'https://zoona-git-feature-affiliate-tracking-12-83b8b3-sifians-projects.vercel.app',
-    'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app'
+    'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app',
+    'https://zoona-git-feat-local-orders-api-4665680-ca81a9-sifians-projects.vercel.app'
 ];
 
 const ALLOWED_HOSTS = [
