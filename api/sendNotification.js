@@ -1,3 +1,4 @@
+import { isOriginAllowed } from './_origin';
 import admin from 'firebase-admin';
 import serviceAccount from '../../serviceAccount.json'; // تأكد من المسار
 
@@ -10,18 +11,18 @@ if (!admin.apps.length) {
 export default async function handler(req, res) {
   // 1. التحقق من النطاق
   const origin = req.headers.origin || req.headers.referer || '';
-  const allowedOrigins = ['https://zoonasd.com', 'https://www.zoonasd.com', 'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app', 'https://zoona-git-feat-local-orders-api-4665680-ca81a9-sifians-projects.vercel.app'];
-  const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed));
+  const allowedOrigins = ['https://zoonasd.com', 'https://www.zoonasd.com', 'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app'];
+  const isAllowed = isOriginAllowed(req);
   
-  if (!isAllowed && origin) {
+  if (!isAllowed) {
     return res.status(403).json({ error: 'Access denied. Invalid origin.' });
   }
 
   // 2. Set CORS headers for allowed origins only
-  const allowedOriginsList = ['https://zoonasd.com', 'https://www.zoonasd.com', 'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app', 'https://zoona-git-feat-local-orders-api-4665680-ca81a9-sifians-projects.vercel.app'];
+  const allowedOriginsList = ['https://zoonasd.com', 'https://www.zoonasd.com', 'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app'];
   const currentOrigin = req.headers.origin;
   
-  if (currentOrigin && allowedOriginsList.includes(currentOrigin)) {
+  if (isOriginAllowed(req)) {
     res.setHeader('Access-Control-Allow-Origin', currentOrigin);
   } else if (!currentOrigin) {
     res.setHeader('Access-Control-Allow-Origin', 'https://zoonasd.com');
