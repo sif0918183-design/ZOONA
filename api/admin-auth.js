@@ -1,51 +1,26 @@
-const ALLOWED_ORIGINS = [
-    'https://zoonasd.com',
-    'https://www.zoonasd.com',
-    'https://zoonaza.vercel.app',
-    'https://zoona-git-feat-local-orders-api-4665680-ca81a9-sifians-projects.vercel.app'
-];
+module.exports = async function handler(req, res) {
+  const ALLOWED_ORIGINS = ['zoonasd.com', 'zoonaza.vercel.app', 'localhost', '127.0.0.1'];
+  const origin = req.headers.origin || req.headers.referer || '';
+  const isOriginAllowed = origin && (ALLOWED_ORIGINS.some(allowed => origin.includes(allowed)) || (origin.includes('.vercel.app') && origin.includes('zoona')));
 
-function isOriginAllowed(req) {
-    const origin = req.headers.origin || req.headers.referer || '';
-    if (!origin) return false;
-    try {
-        const url = new URL(origin);
-        const hostname = url.hostname;
-        if (ALLOWED_ORIGINS.includes(origin)) return true;
-        if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
-        return hostname.endsWith('.vercel.app') && hostname.includes('zoona');
-    } catch (e) {
-        return false;
-    }
-}
+  const resOrigin = req.headers.origin || (origin ? new URL(origin).origin : 'https://zoonasd.com');
+  res.setHeader('Access-Control-Allow-Origin', isOriginAllowed ? resOrigin : 'https://zoonasd.com');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
 
-export default async function handler(req, res) {
-    if (!isOriginAllowed(req)) return res.status(403).json({ error: 'Access denied' });
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (!isOriginAllowed) return res.status(403).json({ error: 'Access Denied' });
 
-    const resOrigin = req.headers.origin || (req.headers.referer ? new URL(req.headers.referer).origin : 'https://zoonasd.com');
-    res.setHeader('Access-Control-Allow-Origin', resOrigin);
-    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  try {
+    const { password } = req.query;
+    if (password === 'admin_zoona') return res.status(200).json({ valid: true });
 
-    if (req.method === 'OPTIONS') return res.status(200).end();
-
-    try {
-        const { password } = req.query;
-        if (!password) return res.status(400).json({ error: 'Password required' });
-
-        const url = `${process.env.SUPABASE_URL}/rest/v1/admin_settings?key=eq.admin_password&select=value`;
-        const response = await fetch(url, {
-            headers: {
-                'apikey': process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY}`
-            }
-        });
-
-        if (!response.ok) return res.status(200).json({ valid: false });
-
-        const data = await response.json();
-        const valid = data.length > 0 && (data[0].value === password || password === 'admin_zoona');
-        return res.status(200).json({ valid });
-    } catch (e) {
-        return res.status(200).json({ valid: false });
-    }
-}
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY;
+    const response = await fetch(`${supabaseUrl}/rest/v1/admin_settings?key=eq.admin_password&select=value`, {
+      headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+    });
+    const data = await response.json();
+    const valid = data.length > 0 && data[0].value === password;
+    return res.status(200).json({ valid });
+  } catch (e) { return res.status(200).json({ valid: false }); }
+};

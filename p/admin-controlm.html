@@ -689,7 +689,7 @@
         async function verifyAffiliateId(affiliateId) {
             try {
                 // جلب بيانات المسوقين للتحقق من وجود المعرف
-                const response = await fetch(`${API_URL}?action=get_affiliates_stats&adminPassword=${JSON.parse(localStorage.getItem('admin_login')).password}`);
+                const response = await fetch(`${API_URL}?action=get_affiliates_stats`);
                 const result = await response.json();
                 
                 if (result.success && result.affiliates) {
@@ -794,7 +794,7 @@
             tableElement.style.display = 'none';
             
             try {
-                const response = await fetch(`${API_URL}?action=get_all_orders&adminPassword=${JSON.parse(localStorage.getItem('admin_login')).password}`);
+                const response = await fetch(`${API_URL}?action=get_all_orders`);
                 const result = await response.json();
                 
                 if (!result.success) {
@@ -1070,7 +1070,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        action: 'update_order_status', adminPassword: JSON.parse(localStorage.getItem('admin_login')).password,
+                        action: 'update_order_status',
                         orderId: orderId,
                         status: newStatus
                     })
@@ -1101,7 +1101,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             tableElement.style.display = 'none';
             
             try {
-                const response = await fetch(`${API_URL}?action=get_affiliates_stats&adminPassword=${JSON.parse(localStorage.getItem('admin_login')).password}`);
+                const response = await fetch(`${API_URL}?action=get_affiliates_stats`);
                 const result = await response.json();
                 
                 if (!result.success) {
@@ -1357,7 +1357,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             tableElement.style.display = 'none';
             
             try {
-                const response = await fetch(`${API_URL}?action=get_all_products_admin&adminPassword=${JSON.parse(localStorage.getItem('admin_login')).password}`);
+                const response = await fetch(`${API_URL}?action=get_all_products`);
                 const result = await response.json();
                 
                 if (!result.success) {
@@ -1468,7 +1468,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        action: 'delete_product', adminPassword: JSON.parse(localStorage.getItem('admin_login')).password,
+                        action: 'delete_product',
                         id: productId
                     })
                 });
@@ -1497,7 +1497,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        action: 'save_product', adminPassword: JSON.parse(localStorage.getItem('admin_login')).password,
+                        action: 'save_product',
                         ...productData
                     })
                 });
