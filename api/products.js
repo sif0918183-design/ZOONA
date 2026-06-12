@@ -1,116 +1,54 @@
-/**
- * Vercel API: /api/products
- * يقوم بجلب المنتجات من Supabase وإخفاء المفاتيح عن المتصفح.
- */
+const ALLOWED_ORIGINS = [
+    'https://zoonasd.com',
+    'https://www.zoonasd.com',
+    'https://zoonaza.vercel.app',
+    'https://zoona-git-feat-local-orders-api-4665680-ca81a9-sifians-projects.vercel.app'
+];
 
-// التحقق من النطاق المسموح
+function isOriginAllowed(req) {
+    const origin = req.headers.origin || req.headers.referer || '';
+    if (!origin) return false;
+    try {
+        const url = new URL(origin);
+        const hostname = url.hostname;
+        if (ALLOWED_ORIGINS.includes(origin)) return true;
+        if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
+        return hostname.endsWith('.vercel.app') && hostname.includes('zoona');
+    } catch (e) {
+        return false;
+    }
+}
+
 export default async function handler(req, res) {
-  // 1. التحقق من النطاق
-  const origin = req.headers.origin || req.headers.referer || '';
-  const allowedOrigins = [
-    'https://zoonasd.com',
-    'https://www.zoonasd.com',
-    'https://zoona-git-feat-local-orders-api-4665680-ca81a9-sifians-projects.vercel.app',
-    'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app'
-  ];
-  const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed)) || origin.includes('localhost') || (origin.endsWith('.vercel.app') && origin.includes('zoona'));
-  
-  if (!isAllowed && origin) {
-    return res.status(403).json({ error: 'Access denied. Invalid origin.' });
-  }
+    if (!isOriginAllowed(req)) return res.status(403).json({ error: 'Access denied' });
+    if (req.method !== 'GET') return res.status(405).end();
 
-  // 2. التحقق من طريقة الطلب (GET فقط)
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', ['GET']);
-    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
-  }
+    const resOrigin = req.headers.origin || (req.headers.referer ? new URL(req.headers.referer).origin : 'https://zoonasd.com');
+    res.setHeader('Access-Control-Allow-Origin', resOrigin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
-  // 2. جلب متغيرات البيئة
-  const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SUPABASE_KEY = process.env.SUPABASE_KEY;
+    if (req.method === 'OPTIONS') return res.status(200).end();
 
-  if (!SUPABASE_URL || !SUPABASE_KEY) {
-    console.error('Supabase credentials missing. SUPABASE_URL:', !!SUPABASE_URL, 'SUPABASE_KEY:', !!SUPABASE_KEY);
-    return res.status(500).json({ 
-      error: 'Server configuration error',
-      details: 'Please set SUPABASE_URL and SUPABASE_KEY environment variables in Vercel project settings.'
-    });
-  }
+    try {
+        const { id } = req.query;
+        const supabaseUrl = process.env.SUPABASE_URL;
+        const supabaseKey = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY;
 
-  // 3. إعداد رؤوس CORS للنطاقات المسموحة فقط
-  const allowedOriginsList = [
-    'https://zoonasd.com',
-    'https://www.zoonasd.com',
-    'https://zoona-git-feat-local-orders-api-4665680-ca81a9-sifians-projects.vercel.app',
-    'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app'
-  ];
-  const currentOrigin = req.headers.origin;
-  
-  if (currentOrigin && allowedOriginsList.includes(currentOrigin) || (currentOrigin && (currentOrigin.includes('localhost') || (currentOrigin.endsWith('.vercel.app') && currentOrigin.includes('zoona'))))) {
-    res.setHeader('Access-Control-Allow-Origin', currentOrigin);
-  } else if (!currentOrigin) {
-    res.setHeader('Access-Control-Allow-Origin', 'https://zoonasd.com');
-  } else {
-    return res.status(403).json({ error: 'Origin not allowed' });
-  }
-  
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
+        const fetchUrl = id ? `${supabaseUrl}/rest/v1/products?id=eq.${id}&select=*` : `${supabaseUrl}/rest/v1/products?select=*&order=id.desc`;
 
-  // التعامل مع طلب OPTIONS (Preflight)
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+        const response = await fetch(fetchUrl, {
+            headers: {
+                'apikey': supabaseKey,
+                'Authorization': `Bearer ${supabaseKey}`
+            }
+        });
 
-  try {
-    const { id } = req.query;
-    let fetchUrl = '';
-
-    // 4. بناء الرابط بناءً على وجود معرف المنتج (ID)
-    if (id) {
-      // جلب منتج واحد محدد
-      fetchUrl = `${SUPABASE_URL}/rest/v1/products?id=eq.${id}&select=*`;
-    } else {
-      // جلب جميع المنتجات مرتبة تنازلياً حسب ID
-      fetchUrl = `${SUPABASE_URL}/rest/v1/products?select=*&order=id.desc`;
+        const data = await response.json();
+        res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+        return res.status(200).json(id ? (data[0] || null) : data);
+    } catch (error) {
+        return res.status(500).json({ error: 'Database error' });
     }
-
-    // 5. طلب البيانات من Supabase
-    const response = await fetch(fetchUrl, {
-      method: 'GET',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Supabase API error: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-
-    // 6. إعداد التخزين المؤقت (Cache-Control)
-    // s-maxage=60: يتم التخزين في الـ CDN لمدة دقيقة واحدة
-    // stale-while-revalidate: يسمح بتقديم نسخة قديمة بينما يتم تحديثها في الخلفية
-    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
-
-    // 7. إرجاع النتيجة
-    // إذا كان الطلب بـ ID، نعيد الكائن الأول من المصفوفة (أو null إذا لم يوجد)
-    if (id) {
-      return res.status(200).json(data.length > 0 ? data[0] : null);
-    }
-
-    return res.status(200).json(data);
-
-  } catch (error) {
-    console.error('Error fetching products:', error.message);
-    return res.status(500).json({ error: 'Failed to fetch products from database' });
-  }
 }

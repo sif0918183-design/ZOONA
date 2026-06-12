@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   const origin = req.headers.origin || req.headers.referer || '';
   const allowedOrigins = ['https://zoonasd.com', 'https://www.zoonasd.com',
     'https://zoona-git-feat-local-orders-api-4665680-ca81a9-sifians-projects.vercel.app', 'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app'];
-  const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed)) || origin.includes('localhost') || (origin.endsWith('.vercel.app') && origin.includes('zoona'));
+  const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed)) || origin.includes('localhost') || (origin.endsWith('.vercel.app') && origin.includes('zoona')) || origin.includes('localhost') || (origin.endsWith('.vercel.app') && origin.includes('zoona'));
   
   if (!isAllowed && origin) {
     return res.status(403).json({ error: 'Access denied. Invalid origin.' });
@@ -31,7 +31,7 @@ export default async function handler(req, res) {
     'https://zoona-git-feat-local-orders-api-4665680-ca81a9-sifians-projects.vercel.app', 'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app'];
   const currentOrigin = req.headers.origin;
   
-  if (currentOrigin && allowedOriginsList.includes(currentOrigin) || (currentOrigin && (currentOrigin.includes('localhost') || (currentOrigin.endsWith('.vercel.app') && currentOrigin.includes('zoona'))))) {
+  if (currentOrigin && allowedOriginsList.includes(currentOrigin) || (currentOrigin && (currentOrigin.includes('localhost') || (currentOrigin.endsWith('.vercel.app') && currentOrigin.includes('zoona')))) || (currentOrigin && (currentOrigin.includes('localhost') || (currentOrigin.endsWith('.vercel.app') && currentOrigin.includes('zoona'))))) {
     res.setHeader('Access-Control-Allow-Origin', currentOrigin);
   } else if (!currentOrigin) {
     res.setHeader('Access-Control-Allow-Origin', 'https://zoonasd.com');

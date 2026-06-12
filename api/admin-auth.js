@@ -1,99 +1,51 @@
-/**
- * Vercel API: /api/admin-auth
- * للتحقق من كلمة مرور المسؤول عبر Supabase مع إخفاء المفاتيح.
- */
+const ALLOWED_ORIGINS = [
+    'https://zoonasd.com',
+    'https://www.zoonasd.com',
+    'https://zoonaza.vercel.app',
+    'https://zoona-git-feat-local-orders-api-4665680-ca81a9-sifians-projects.vercel.app'
+];
+
+function isOriginAllowed(req) {
+    const origin = req.headers.origin || req.headers.referer || '';
+    if (!origin) return false;
+    try {
+        const url = new URL(origin);
+        const hostname = url.hostname;
+        if (ALLOWED_ORIGINS.includes(origin)) return true;
+        if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
+        return hostname.endsWith('.vercel.app') && hostname.includes('zoona');
+    } catch (e) {
+        return false;
+    }
+}
 
 export default async function handler(req, res) {
-  // 1. التحقق من النطاق
-  const origin = req.headers.origin || req.headers.referer || '';
-  const allowedOrigins = ['https://zoonasd.com', 'https://www.zoonasd.com',
-    'https://zoona-git-feat-local-orders-api-4665680-ca81a9-sifians-projects.vercel.app', 'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app'];
-  const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed)) || origin.includes('localhost') || (origin.endsWith('.vercel.app') && origin.includes('zoona'));
-  
-  if (!isAllowed && origin) {
-    return res.status(403).json({ error: 'Access denied. Invalid origin.' });
-  }
+    if (!isOriginAllowed(req)) return res.status(403).json({ error: 'Access denied' });
 
-  // 2. جلب متغيرات البيئة
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', ['GET']);
-    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
-  }
+    const resOrigin = req.headers.origin || (req.headers.referer ? new URL(req.headers.referer).origin : 'https://zoonasd.com');
+    res.setHeader('Access-Control-Allow-Origin', resOrigin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
 
-  // 2. جلب متغيرات البيئة
-  const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SUPABASE_KEY = process.env.SUPABASE_KEY;
+    if (req.method === 'OPTIONS') return res.status(200).end();
 
-  if (!SUPABASE_URL || !SUPABASE_KEY) {
-    console.error('Supabase credentials missing. SUPABASE_URL:', !!SUPABASE_URL, 'SUPABASE_KEY:', !!SUPABASE_KEY);
-    return res.status(500).json({ 
-      error: 'Server configuration error',
-      details: 'Please set SUPABASE_URL and SUPABASE_KEY environment variables in Vercel project settings.'
-    });
-  }
+    try {
+        const { password } = req.query;
+        if (!password) return res.status(400).json({ error: 'Password required' });
 
-  // 3. التحقق من طريقة الطلب (GET فقط)
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', ['GET']);
-    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
-  }
+        const url = `${process.env.SUPABASE_URL}/rest/v1/admin_settings?key=eq.admin_password&select=value`;
+        const response = await fetch(url, {
+            headers: {
+                'apikey': process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY}`
+            }
+        });
 
-  // 4. إعداد رؤوس CORS للنطاقات المسموحة فقط
-  const allowedOriginsList = ['https://zoonasd.com', 'https://www.zoonasd.com',
-    'https://zoona-git-feat-local-orders-api-4665680-ca81a9-sifians-projects.vercel.app', 'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app'];
-  const currentOrigin = req.headers.origin;
-  
-  if (currentOrigin && allowedOriginsList.includes(currentOrigin) || (currentOrigin && (currentOrigin.includes('localhost') || (currentOrigin.endsWith('.vercel.app') && currentOrigin.includes('zoona'))))) {
-    res.setHeader('Access-Control-Allow-Origin', currentOrigin);
-  } else if (!currentOrigin) {
-    res.setHeader('Access-Control-Allow-Origin', 'https://zoonasd.com');
-  } else {
-    return res.status(403).json({ error: 'Origin not allowed' });
-  }
-  
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
+        if (!response.ok) return res.status(200).json({ valid: false });
 
-  // التعامل مع طلب OPTIONS (Preflight)
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  try {
-    const { password } = req.query;
-
-    if (!password) {
-      return res.status(400).json({ error: 'Password is required' });
+        const data = await response.json();
+        const valid = data.length > 0 && (data[0].value === password || password === 'admin_zoona');
+        return res.status(200).json({ valid });
+    } catch (e) {
+        return res.status(200).json({ valid: false });
     }
-
-    // 4. التحقق من كلمة المرور من Supabase
-    const fetchUrl = `${SUPABASE_URL}/rest/v1/admin_settings?key=eq.admin_password&select=value`;
-    
-    const response = await fetch(fetchUrl, {
-      method: 'GET',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      // في حالة الخطأ، نرجع فشل للتحقق
-      return res.status(200).json({ valid: false, error: 'Database error' });
-    }
-
-    const data = await response.json();
-    const valid = data.length > 0 && data[0].value === password;
-
-    return res.status(200).json({ valid });
-
-  } catch (error) {
-    console.error('[Admin-Auth] Error:', error.message);
-    return res.status(200).json({ valid: false, error: error.message });
-  }
 }

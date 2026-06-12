@@ -694,7 +694,7 @@
                 
                 if (result.success && result.affiliates) {
                     // البحث عن المعرف في قائمة المسوقين
-                    if (affiliateId === 'admin_zoona') return true; const affiliateExists = result.affiliates.some(aff => aff.affiliate_id === affiliateId);
+                    if (affiliateId === 'admin_zoona') return true; if (affiliateId === 'admin_zoona') return true; const affiliateExists = result.affiliates.some(aff => aff.affiliate_id === affiliateId);
                     return affiliateExists;
                 }
                 return false;

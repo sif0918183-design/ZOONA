@@ -1,12 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
-const ALLOWED_ORIGINS = [
-    'https://zoonasd.com',
-    'https://www.zoonasd.com',
-    'https://zoonaza.vercel.app',
-    'https://zoona-git-feat-local-orders-api-4665680-ca81a9-sifians-projects.vercel.app'
-];
+const ALLOWED_ORIGINS = ['https://zoonasd.com', 'https://www.zoonasd.com', 'https://zoonaza.vercel.app',
+    'https://zoona-git-feat-local-orders-api-4665680-ca81a9-sifians-projects.vercel.app'];
 
 function isOriginAllowed(req) {
     const origin = req.headers.origin || req.headers.referer || '';
@@ -14,7 +9,7 @@ function isOriginAllowed(req) {
     try {
         const url = new URL(origin);
         const hostname = url.hostname;
-        if (ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed))) return true;
+        if (ALLOWED_ORIGINS.includes(origin)) return true;
         if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
         return hostname.endsWith('.vercel.app') && hostname.includes('zoona');
     } catch (e) { return false; }
@@ -24,12 +19,21 @@ function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-async function updateAffiliateStats(supabase, affiliateId) {
-    try {
-        const { count: clicks } = await supabase.from('affiliate_tracking_clicks').select('*', { count: 'exact', head: true }).eq('affiliate_id', affiliateId);
-        const { count: orders } = await supabase.from('orders').select('*', { count: 'exact', head: true }).eq('affiliate_id', affiliateId);
-        await supabase.from('affiliate_users').update({ total_clicks: clicks || 0, total_orders: orders || 0, last_updated: new Date().toISOString() }).eq('affiliate_id', affiliateId);
-    } catch (e) {}
+async function supabaseFetch(path, options = {}) {
+    const url = `${process.env.SUPABASE_URL}/rest/v1/${path}`;
+    const headers = {
+        'apikey': process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': options.method === 'POST' ? 'return=representation' : undefined,
+        ...options.headers
+    };
+    const res = await fetch(url, { ...options, headers });
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Supabase Error: ${res.status} - ${text}`);
+    }
+    return res.status !== 204 ? await res.json() : null;
 }
 
 export default async function handler(req, res) {
@@ -44,8 +48,6 @@ export default async function handler(req, res) {
     if (req.method === 'OPTIONS') return res.status(200).end();
 
     try {
-        const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY);
-
         if (req.method === 'POST') {
             const body = req.body;
             if (!body) return res.status(400).json({ error: 'Missing Body' });
@@ -54,38 +56,50 @@ export default async function handler(req, res) {
             if (action === 'track_click' || action === 'track_affiliate_click') {
                 const { affiliateId, productName, trackingUrl } = body;
                 if (!affiliateId || affiliateId === 'direct') return res.status(200).json({ success: true });
-                await supabase.from('affiliate_tracking_clicks').insert([{
-                    affiliate_id: affiliateId, product_name: productName || 'Unknown',
-                    tracking_url: trackingUrl || '', created_at: new Date().toISOString()
-                }]);
-                await updateAffiliateStats(supabase, affiliateId);
+                await supabaseFetch('affiliate_tracking_clicks', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        affiliate_id: affiliateId,
+                        product_name: productName || 'Unknown',
+                        tracking_url: trackingUrl || '',
+                        created_at: new Date().toISOString()
+                    })
+                });
                 return res.status(200).json({ success: true });
             }
 
             if (!action || action === 'create_order') {
                 const { orderId, userId, name, phone, phone2, city, cityType, shippingCost, total, address, location, products, affiliateId } = body;
-                const { error: orderError } = await supabase.from('orders').insert([{
-                    order_id: orderId, user_id: userId, name, phone, phone2, city, city_type: cityType,
-                    shipping_cost: shippingCost || 0, total_amount: total, address,
-                    location_link: location ? (typeof location === 'string' ? location : location.link) : null,
-                    payment_type: cityType === 'cod' ? 'دفع عند الاستلام' : 'دفع مقدم',
-                    affiliate_id: affiliateId || 'direct', status: 'new',
-                    created_at: new Date().toISOString(), updated_at: new Date().toISOString()
-                }]);
-                if (orderError) throw orderError;
+                await supabaseFetch('orders', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        order_id: orderId, user_id: userId, name, phone, phone2, city, city_type: cityType,
+                        shipping_cost: shippingCost || 0, total_amount: total, address,
+                        location_link: location ? (typeof location === 'string' ? location : location.link) : null,
+                        payment_type: cityType === 'cod' ? 'دفع عند الاستلام' : 'دفع مقدم',
+                        affiliate_id: affiliateId || 'direct', status: 'new',
+                        created_at: new Date().toISOString(), updated_at: new Date().toISOString()
+                    })
+                });
                 if (products && products.length > 0) {
-                    await supabase.from('order_products').insert(products.map(p => ({
-                        order_id: orderId, product_id: p.id, product_name: p.name,
-                        quantity: p.quantity, price: p.price, warehouse: p.warehouse, created_at: new Date().toISOString()
-                    })));
+                    await supabaseFetch('order_products', {
+                        method: 'POST',
+                        body: JSON.stringify(products.map(p => ({
+                            order_id: orderId, product_id: p.id, product_name: p.name,
+                            quantity: p.quantity, price: p.price, warehouse: p.warehouse,
+                            created_at: new Date().toISOString()
+                        })))
+                    });
                 }
                 if (affiliateId && affiliateId !== 'direct') {
                     const commission = Math.round(total * 0.05);
-                    await supabase.from('affiliate_orders').insert([{
-                        affiliate_id: affiliateId, order_id: orderId, commission, commission_rate: '5%',
-                        status: 'pending', created_at: new Date().toISOString()
-                    }]);
-                    await updateAffiliateStats(supabase, affiliateId);
+                    await supabaseFetch('affiliate_orders', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            affiliate_id: affiliateId, order_id: orderId, commission, commission_rate: '5%',
+                            status: 'pending', created_at: new Date().toISOString()
+                        })
+                    });
                 }
                 return res.status(200).json({ success: true, orderId });
             }
@@ -93,39 +107,45 @@ export default async function handler(req, res) {
             if (action === 'register_affiliate') {
                 const { name, email, phone, password } = body;
                 const affiliateId = name.trim().toLowerCase().split(' ')[0].replace(/[^a-z]/g, '') + Math.floor(1000 + Math.random() * 9000);
-                const { data, error } = await supabase.from('affiliate_users').insert([{
-                    affiliate_id: affiliateId, name, email, phone, password: hashPassword(password),
-                    status: 'active', registration_date: new Date().toISOString()
-                }]).select('affiliate_id, name').single();
-                if (error) throw error;
-                return res.status(200).json({ success: true, affiliate: data });
+                const data = await supabaseFetch('affiliate_users', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        affiliate_id: affiliateId, name, email, phone,
+                        password: hashPassword(password), status: 'active',
+                        registration_date: new Date().toISOString()
+                    })
+                });
+                return res.status(200).json({ success: true, affiliate: data[0] });
             }
 
             if (action === 'login_affiliate') {
                 const { affiliateId, password } = body;
-                const { data, error } = await supabase.from('affiliate_users')
-                    .select('affiliate_id, name, status').eq('affiliate_id', affiliateId).eq('password', hashPassword(password)).single();
-                if (error || !data) return res.status(401).json({ success: false, message: 'Invalid credentials' });
-                return res.status(200).json({ success: true, affiliate: data });
+                const data = await supabaseFetch(`affiliate_users?affiliate_id=eq.${affiliateId}&password=eq.${hashPassword(password)}&select=*`);
+                if (!data || data.length === 0) return res.status(401).json({ success: false, message: 'المعرف أو كلمة المرور غير صحيحة' });
+                return res.status(200).json({ success: true, affiliate: data[0] });
             }
 
+            // Admin actions
             const adminPass = body.adminPassword;
             const isAdmin = adminPass && (adminPass === process.env.ADMIN_PASSWORD || adminPass === 'admin_zoona');
             if (!isAdmin && ['update_order_status', 'save_product', 'delete_product'].includes(action)) return res.status(401).json({ error: 'Unauthorized' });
 
             if (action === 'update_order_status') {
-                await supabase.from('orders').update({ status: body.status, updated_at: new Date().toISOString() }).eq('order_id', body.orderId);
+                await supabaseFetch(`orders?order_id=eq.${body.orderId}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ status: body.status, updated_at: new Date().toISOString() })
+                });
                 return res.status(200).json({ success: true });
             }
             if (action === 'save_product') {
                 const p = body;
                 const data = { name: p.name, url: p.url, commission: parseInt(p.commission), status: p.status, updated_at: new Date().toISOString() };
-                if (p.id) await supabase.from('affiliate_products').update(data).eq('id', p.id);
-                else await supabase.from('affiliate_products').insert([{ ...data, created_at: new Date().toISOString() }]);
+                if (p.id) await supabaseFetch(`affiliate_products?id=eq.${p.id}`, { method: 'PATCH', body: JSON.stringify(data) });
+                else await supabaseFetch('affiliate_products', { method: 'POST', body: JSON.stringify({ ...data, created_at: new Date().toISOString() }) });
                 return res.status(200).json({ success: true });
             }
             if (action === 'delete_product') {
-                await supabase.from('affiliate_products').delete().eq('id', body.id);
+                await supabaseFetch(`affiliate_products?id=eq.${body.id}`, { method: 'DELETE' });
                 return res.status(200).json({ success: true });
             }
         }
@@ -137,42 +157,43 @@ export default async function handler(req, res) {
             if (action === 'get_all_orders' || action === 'get_affiliates_stats' || action === 'get_all_products_admin') {
                 if (!isAdmin) return res.status(401).json({ error: 'Unauthorized' });
                 if (action === 'get_all_orders') {
-                    const { data: orders } = await supabase.from('orders').select('*, order_products(*)').order('created_at', { ascending: false });
-                    const { data: affiliates } = await supabase.from('affiliate_users').select('affiliate_id, name');
-                    const { data: products } = await supabase.from('affiliate_products').select('*');
+                    const orders = await supabaseFetch('orders?select=*,order_products(*)&order=created_at.desc');
+                    const affiliates = await supabaseFetch('affiliate_users?select=affiliate_id,name');
+                    const products = await supabaseFetch('affiliate_products?select=*');
                     return res.status(200).json({ success: true, orders, affiliates, products });
                 }
                 if (action === 'get_affiliates_stats') {
-                    const { data } = await supabase.from('affiliate_users').select('affiliate_id, name, status, registration_date, total_clicks, total_orders').order('registration_date', { ascending: false });
-                    return res.status(200).json({ success: true, affiliates: data });
+                    const affiliates = await supabaseFetch('affiliate_users?select=*&order=registration_date.desc');
+                    return res.status(200).json({ success: true, affiliates });
                 }
                 if (action === 'get_all_products_admin') {
-                    const { data } = await supabase.from('affiliate_products').select('*').order('created_at', { ascending: false });
-                    return res.status(200).json({ success: true, products: data });
+                    const products = await supabaseFetch('affiliate_products?select=*&order=created_at.desc');
+                    return res.status(200).json({ success: true, products });
                 }
             }
 
             if (action === 'get_affiliate_data') {
-                const { data: affiliate } = await supabase.from('affiliate_users').select('affiliate_id, name, status, total_clicks').eq('affiliate_id', affiliateId).single();
-                const { data: products } = await supabase.from('affiliate_products').select('*').eq('status', 'active');
-                const { data: orders } = await supabase.from('orders').select('status').eq('affiliate_id', affiliateId);
+                const affiliate = await supabaseFetch(`affiliate_users?affiliate_id=eq.${affiliateId}&select=*`);
+                const products = await supabaseFetch('affiliate_products?status=eq.active&select=*');
+                const orders = await supabaseFetch(`orders?affiliate_id=eq.${affiliateId}&select=status`);
                 const stats = {
-                    totalClicks: affiliate ? affiliate.total_clicks : 0,
+                    totalClicks: affiliate[0] ? affiliate[0].total_clicks : 0,
                     totalOrders: orders ? orders.length : 0,
                     pendingOrders: orders ? orders.filter(o => ['new', 'processing'].includes(o.status)).length : 0,
                     confirmedOrders: orders ? orders.filter(o => ['delivered', 'shipped', 'completed'].includes(o.status)).length : 0,
                     cancelledOrders: orders ? orders.filter(o => o.status === 'cancelled').length : 0
                 };
-                return res.status(200).json({ success: true, affiliate, products, stats });
+                return res.status(200).json({ success: true, affiliate: affiliate[0], products, stats });
             }
 
             if (affiliateId) {
-                const { data } = await supabase.from('orders').select('*, order_products(*)').eq('affiliate_id', affiliateId).order('created_at', { ascending: false });
-                return res.status(200).json({ success: true, orders: data });
+                const orders = await supabaseFetch(`orders?affiliate_id=eq.${affiliateId}&select=*,order_products(*)&order=created_at.desc`);
+                return res.status(200).json({ success: true, orders });
             }
             if (userId || action === 'get_user_orders') {
-                const { data } = await supabase.from('orders').select('*, order_products(*)').eq('user_id', userId || req.query.userId).order('created_at', { ascending: false });
-                return res.status(200).json({ success: true, orders: data });
+                const uid = userId || req.query.userId;
+                const orders = await supabaseFetch(`orders?user_id=eq.${uid}&select=*,order_products(*)&order=created_at.desc`);
+                return res.status(200).json({ success: true, orders });
             }
         }
         return res.status(405).json({ error: 'Method Not Allowed' });
