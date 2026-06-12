@@ -1,22 +1,23 @@
-import { isOriginAllowed } from './_origin';
 // Vercel API endpoint for saving FCM tokens
 // Uses environment variables for JSONBIN credentials
 
 export default async function handler(req, res) {
   // 1. التحقق من النطاق
   const origin = req.headers.origin || req.headers.referer || '';
-  const allowedOrigins = ['https://zoonasd.com', 'https://www.zoonasd.com', 'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app'];
-  const isAllowed = isOriginAllowed(req);
+  const allowedOrigins = ['https://zoonasd.com', 'https://www.zoonasd.com',
+    'https://zoona-git-feat-local-orders-api-4665680-ca81a9-sifians-projects.vercel.app', 'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app'];
+  const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed)) || origin.includes('localhost') || (origin.endsWith('.vercel.app') && origin.includes('zoona'));
   
-  if (!isAllowed) {
+  if (!isAllowed && origin) {
     return res.status(403).json({ error: 'Access denied. Invalid origin.' });
   }
 
   // 2. Set CORS headers for allowed origins only
-  const allowedOriginsList = ['https://zoonasd.com', 'https://www.zoonasd.com', 'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app'];
+  const allowedOriginsList = ['https://zoonasd.com', 'https://www.zoonasd.com',
+    'https://zoona-git-feat-local-orders-api-4665680-ca81a9-sifians-projects.vercel.app', 'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app'];
   const currentOrigin = req.headers.origin;
   
-  if (isOriginAllowed(req)) {
+  if (currentOrigin && allowedOriginsList.includes(currentOrigin) || (currentOrigin && (currentOrigin.includes('localhost') || (currentOrigin.endsWith('.vercel.app') && currentOrigin.includes('zoona'))))) {
     res.setHeader('Access-Control-Allow-Origin', currentOrigin);
   } else if (!currentOrigin) {
     res.setHeader('Access-Control-Allow-Origin', 'https://zoonasd.com');

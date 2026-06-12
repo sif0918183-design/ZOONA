@@ -1,7 +1,8 @@
 const ALLOWED_ORIGINS = [
     'https://zoonasd.com',
     'https://www.zoonasd.com',
-    'https://zoonaza.vercel.app'
+    'https://zoonaza.vercel.app',
+    'https://zoona-git-feat-local-orders-api-4665680-ca81a9-sifians-projects.vercel.app'
 ];
 
 export function isOriginAllowed(req) {

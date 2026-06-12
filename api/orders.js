@@ -1,18 +1,42 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
-import { isOriginAllowed } from './_origin';
+
+const ALLOWED_ORIGINS = [
+    'https://zoonasd.com',
+    'https://www.zoonasd.com',
+    'https://zoonaza.vercel.app',
+    'https://zoona-git-feat-local-orders-api-4665680-ca81a9-sifians-projects.vercel.app'
+];
+
+function isOriginAllowed(req) {
+    const origin = req.headers.origin || req.headers.referer || '';
+    if (!origin) return false;
+    try {
+        const url = new URL(origin);
+        const hostname = url.hostname;
+        if (ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed))) return true;
+        if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
+        return hostname.endsWith('.vercel.app') && hostname.includes('zoona');
+    } catch (e) { return false; }
+}
 
 function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-export default async function handler(req, res) {
-    if (!isOriginAllowed(req)) {
-        return res.status(403).json({ error: 'Access Denied' });
-    }
+async function updateAffiliateStats(supabase, affiliateId) {
+    try {
+        const { count: clicks } = await supabase.from('affiliate_tracking_clicks').select('*', { count: 'exact', head: true }).eq('affiliate_id', affiliateId);
+        const { count: orders } = await supabase.from('orders').select('*', { count: 'exact', head: true }).eq('affiliate_id', affiliateId);
+        await supabase.from('affiliate_users').update({ total_clicks: clicks || 0, total_orders: orders || 0, last_updated: new Date().toISOString() }).eq('affiliate_id', affiliateId);
+    } catch (e) {}
+}
 
-    const resOrigin = req.headers.origin || (req.headers.referer ? new URL(req.headers.referer).origin : 'https://zoonasd.com');
-    res.setHeader('Access-Control-Allow-Origin', resOrigin);
+export default async function handler(req, res) {
+    if (!isOriginAllowed(req)) return res.status(403).json({ error: 'Access Denied' });
+
+    const origin = req.headers.origin || (req.headers.referer ? new URL(req.headers.referer).origin : 'https://zoonasd.com');
+    res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
     res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -31,11 +55,10 @@ export default async function handler(req, res) {
                 const { affiliateId, productName, trackingUrl } = body;
                 if (!affiliateId || affiliateId === 'direct') return res.status(200).json({ success: true });
                 await supabase.from('affiliate_tracking_clicks').insert([{
-                    affiliate_id: affiliateId,
-                    product_name: productName || 'Unknown',
-                    tracking_url: trackingUrl || '',
-                    created_at: new Date().toISOString()
+                    affiliate_id: affiliateId, product_name: productName || 'Unknown',
+                    tracking_url: trackingUrl || '', created_at: new Date().toISOString()
                 }]);
+                await updateAffiliateStats(supabase, affiliateId);
                 return res.status(200).json({ success: true });
             }
 
@@ -53,9 +76,16 @@ export default async function handler(req, res) {
                 if (products && products.length > 0) {
                     await supabase.from('order_products').insert(products.map(p => ({
                         order_id: orderId, product_id: p.id, product_name: p.name,
-                        quantity: p.quantity, price: p.price, warehouse: p.warehouse,
-                        created_at: new Date().toISOString()
+                        quantity: p.quantity, price: p.price, warehouse: p.warehouse, created_at: new Date().toISOString()
                     })));
+                }
+                if (affiliateId && affiliateId !== 'direct') {
+                    const commission = Math.round(total * 0.05);
+                    await supabase.from('affiliate_orders').insert([{
+                        affiliate_id: affiliateId, order_id: orderId, commission, commission_rate: '5%',
+                        status: 'pending', created_at: new Date().toISOString()
+                    }]);
+                    await updateAffiliateStats(supabase, affiliateId);
                 }
                 return res.status(200).json({ success: true, orderId });
             }
@@ -64,9 +94,8 @@ export default async function handler(req, res) {
                 const { name, email, phone, password } = body;
                 const affiliateId = name.trim().toLowerCase().split(' ')[0].replace(/[^a-z]/g, '') + Math.floor(1000 + Math.random() * 9000);
                 const { data, error } = await supabase.from('affiliate_users').insert([{
-                    affiliate_id: affiliateId, name, email, phone,
-                    password: hashPassword(password), status: 'active',
-                    registration_date: new Date().toISOString()
+                    affiliate_id: affiliateId, name, email, phone, password: hashPassword(password),
+                    status: 'active', registration_date: new Date().toISOString()
                 }]).select('affiliate_id, name').single();
                 if (error) throw error;
                 return res.status(200).json({ success: true, affiliate: data });
@@ -80,12 +109,9 @@ export default async function handler(req, res) {
                 return res.status(200).json({ success: true, affiliate: data });
             }
 
-            // Admin actions
             const adminPass = body.adminPassword;
             const isAdmin = adminPass && (adminPass === process.env.ADMIN_PASSWORD || adminPass === 'admin_zoona');
-            if (!isAdmin && ['update_order_status', 'save_product', 'delete_product'].includes(action)) {
-                return res.status(401).json({ error: 'Unauthorized' });
-            }
+            if (!isAdmin && ['update_order_status', 'save_product', 'delete_product'].includes(action)) return res.status(401).json({ error: 'Unauthorized' });
 
             if (action === 'update_order_status') {
                 await supabase.from('orders').update({ status: body.status, updated_at: new Date().toISOString() }).eq('order_id', body.orderId);
@@ -150,7 +176,5 @@ export default async function handler(req, res) {
             }
         }
         return res.status(405).json({ error: 'Method Not Allowed' });
-    } catch (e) {
-        return res.status(500).json({ success: false, error: e.message });
-    }
+    } catch (e) { return res.status(500).json({ success: false, error: e.message }); }
 }
