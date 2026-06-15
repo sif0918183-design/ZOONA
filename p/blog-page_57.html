@@ -582,6 +582,50 @@
             margin-top: 5px;
             display: none;
         }
+
+        .announcement-banner {
+            background: #fff8e1;
+            border: 1px solid #ffe082;
+            color: #5d4037;
+            padding: 15px;
+            margin: 20px 15px;
+            border-radius: var(--border-radius);
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .announcement-banner i {
+            font-size: 1.4rem;
+            color: var(--primary-color);
+            margin-top: 3px;
+        }
+        .announcement-banner-content {
+            flex: 1;
+        }
+        .announcement-banner-title {
+            font-weight: 700;
+            margin-bottom: 5px;
+            color: var(--dark-color);
+            font-size: 1rem;
+        }
+        .announcement-banner-text {
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        .facebook-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            color: #1877f2;
+            text-decoration: none;
+            font-weight: 700;
+            margin-top: 5px;
+            transition: var(--transition);
+        }
+        .facebook-link:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body class="mobile-optimized">
@@ -663,6 +707,19 @@
           <h1><i class="fas fa-chart-line"></i>حسابي</h1>
             <p>مرحباً <span id="userName">...</span></p>
             <div class="affiliate-id">معرف المسوق: <span id="affiliateIdDisplay">...</span></div>
+        </div>
+
+        <div class="announcement-banner">
+            <i class="fas fa-info-circle"></i>
+            <div class="announcement-banner-content">
+                <div class="announcement-banner-title">تنبيه هام للمسوقين</div>
+                <div class="announcement-banner-text">
+                    لم يتم بدأ عمل المسوقين بعد وسيبدأ العمل قريبا. سيتم إعلامكم عند بدأ العمل عبر منشور في صفحة متجر زونا الرسمية على فيسبوك.
+                </div>
+                <a href="https://web.facebook.com/people/ZOONA-%D8%B2%D9%88%D9%86%D8%A7/61581917511691/" class="facebook-link" target="_blank">
+                    <i class="fab fa-facebook"></i> تابع صفحتنا على فيسبوك لتبقى على اطلاع
+                </a>
+            </div>
         </div>
         
         <div class="stats-grid">
