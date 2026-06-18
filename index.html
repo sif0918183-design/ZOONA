@@ -1606,7 +1606,12 @@ function removeFromCart(idx) {
 
 function goCheckout() {
   if (cart.length === 0) { showToast('السلة فارغة!'); return; }
-  window.location.href = 'p/e.html';
+  const affiliateId = getAffiliateId();
+  if (affiliateId && affiliateId !== 'direct') {
+    window.location.href = `p/e.html?ref=${affiliateId}`;
+  } else {
+    window.location.href = 'p/e.html';
+  }
 }
 
 // ── Orders API Functions (Vercel) ──
@@ -2043,8 +2048,13 @@ function showToast(msg, type = '') {
 function getAffiliateId() {
   const p = new URLSearchParams(window.location.search);
   const ref = p.get('ref');
-  if (ref) { localStorage.setItem('currentAffiliateId', ref); return ref; }
-  return localStorage.getItem('currentAffiliateId') || 'direct';
+  if (ref) {
+    localStorage.setItem('currentAffiliateId', ref);
+    return ref;
+  }
+  const storedId = localStorage.getItem('currentAffiliateId');
+  if (storedId && storedId !== 'direct' && storedId !== 'null') return storedId;
+  return 'direct';
 }
 
 // ── Service Worker ──
@@ -2224,6 +2234,79 @@ function submitMerchantForm(event) {
 // ── Online/Offline ──
 window.addEventListener('offline', () => showToast('⚠️ أنت غير متصل بالإنترنت'));
 window.addEventListener('online', () => showToast('✅ تم استعادة الاتصال', 'green'));
+</script>
+
+<script type="module">
+// ===============================
+// إعداد Supabase للتتبع (النظام القديم)
+// ===============================
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+const SUPABASE_URL = 'https://yhujvalqfmnlyffvejbh.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlodWp2YWxxZm1ubHlmZnZlamJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNTc3OTcsImV4cCI6MjA3ODYzMzc5N30.mMG55moG7HdM-vDzT5R5HiD7kKdE_Jr9BkRio4MJGqw';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ===============================
+// دالة تسجيل النقر
+// ===============================
+async function recordAffiliateClick(affiliateId, productName = 'default') {
+    if (!affiliateId) return;
+
+    try {
+        // أولاً: تحديث جدول affiliate_tracking_links وزيادة العداد
+        // ملاحظة: نستخدم تحديثاً مباشراً للوقت، وزيادة العداد تتم في الغالب عبر RPC منفصل
+        // أو تريجر في قاعدة البيانات لضمان دقة العد
+        const { error: linkError } = await supabase
+            .from('affiliate_tracking_links')
+            .update({
+                updated_at: new Date().toISOString()
+            })
+            .eq('affiliate_id', affiliateId)
+            .eq('product_name', productName)
+            .eq('is_active', true);
+
+        // استدعاء RPC لزيادة العداد بشكل ذري إذا كان متوفراً
+        await supabase.rpc('increment_affiliate_link_clicks', {
+            aff_id: affiliateId,
+            prod_name: productName
+        });
+
+        if (linkError) console.error('خطأ تحديث رابط التتبع:', linkError);
+
+        // ثانياً: تسجيل النقرة في affiliate_tracking_clicks
+        const { error } = await supabase
+            .from('affiliate_tracking_clicks')
+            .insert([{
+                affiliate_id: affiliateId,
+                product_name: productName,
+                tracking_url: window.location.href,
+                click_type: 'direct',
+                user_agent: navigator.userAgent,
+                created_at: new Date().toISOString()
+            }]);
+
+        if (error) console.error('خطأ تسجيل النقرة:', error);
+        else console.log('تم تسجيل نقرة المسوق بنجاح');
+    } catch (err) {
+        console.error('خطأ غير متوقع:', err);
+    }
+}
+
+// ===============================
+// تنفيذ الكود عند تحميل الصفحة
+// ===============================
+window.addEventListener('DOMContentLoaded', () => {
+    // نستخدم الدالة العالمية لجلب المعرف
+    const affiliateId = window.getAffiliateId ? window.getAffiliateId() : (new URLSearchParams(window.location.search)).get('ref');
+    const productName = document.title || 'default';
+
+    // إذا وجد المعرف في الرابط (تجنب التسجيل المتكرر للنقرة عند التنقل الداخلي)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('ref')) {
+        recordAffiliateClick(urlParams.get('ref'), productName);
+    }
+});
 </script>
 
 </body>
