@@ -463,13 +463,19 @@ textarea.form-control{resize:vertical;min-height:80px}
 
 // Supabase API Endpoint (secured via server-side API)
 const API_BASE = '/api/admin-products';
-const ADMIN_PASS = 'zoona2025';
+
+// وظيفة مساعدة لجلب كلمة المرور المخزنة
+function getStoredAdminPassword() {
+  const session = localStorage.getItem('admin_auth_pass');
+  return session || null;
+}
 
 // Supabase client functions - now uses server API
 async function supabaseFetch(endpoint, options = {}) {
+  const adminPassword = getStoredAdminPassword();
   // Extract the table/endpoint from the original format
   let method = options.method || 'GET';
-  let url = API_BASE;
+  let url = `${API_BASE}?adminPassword=${encodeURIComponent(adminPassword)}`;
   let body = options.body;
   
   // Parse endpoint to get ID for PATCH/DELETE
@@ -520,12 +526,12 @@ async function supabaseFetch(endpoint, options = {}) {
 // Check admin password - now uses server API
 async function verifyAdminPassword(password) {
   try {
-    const response = await fetch(`/api/admin-auth?password=${encodeURIComponent(password)}`);
+    const response = await fetch(`/api/orders?action=verify_admin&password=${encodeURIComponent(password)}`);
     const data = await response.json();
-    return data.valid === true;
-  } catch {
-    // Fallback to local check if API fails
-    return password === ADMIN_PASS;
+    return data.success === true;
+  } catch (error) {
+    console.error('Error verifying password:', error);
+    return false;
   }
 }
 
@@ -538,15 +544,17 @@ let uploadedImageUrl = '';
 
 // Session configuration - 30 days persistence
 const SESSION_KEY = 'admin_auth';
+const SESSION_PASS_KEY = 'admin_auth_pass';
 const SESSION_EXPIRY_DAYS = 30;
 
-function setSession() {
+function setSession(password) {
   const expiry = new Date();
   expiry.setDate(expiry.getDate() + SESSION_EXPIRY_DAYS);
   localStorage.setItem(SESSION_KEY, JSON.stringify({
     auth: '1',
     expiry: expiry.getTime()
   }));
+  localStorage.setItem(SESSION_PASS_KEY, password);
 }
 
 function checkSession() {
@@ -559,21 +567,25 @@ function checkSession() {
     }
     // Clear expired session
     localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(SESSION_PASS_KEY);
   } catch {}
   return false;
 }
 
 function clearSession() {
   localStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(SESSION_PASS_KEY);
 }
 
 // ── Login ──
-function doLogin() {
+async function doLogin() {
   const pass = document.getElementById('passInput').value;
-  if (pass === ADMIN_PASS) {
+  const isValid = await verifyAdminPassword(pass);
+
+  if (isValid) {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('adminApp').style.display = 'block';
-    setSession();
+    setSession(pass);
     loadProducts();
   } else {
     document.getElementById('loginErr').style.display = 'block';

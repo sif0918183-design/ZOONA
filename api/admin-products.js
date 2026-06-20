@@ -4,7 +4,12 @@
  */
 
 // التحقق من النطاق المسموح
-const ALLOWED_ORIGINS = ['https://zoonasd.com', 'https://www.zoonasd.com', 'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app'];
+const ALLOWED_ORIGINS = [
+  'https://zoonasd.com',
+  'https://www.zoonasd.com',
+  'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app',
+  'https://zoona-git-feat-complete-affiliate-syste-30a731-sifians-projects.vercel.app'
+];
 
 function isOriginAllowed(origin) {
   if (!origin) return false;
@@ -14,7 +19,12 @@ function isOriginAllowed(origin) {
 export default async function handler(req, res) {
   // 1. التحقق من النطاق
   const origin = req.headers.origin || req.headers.referer || '';
-  const allowedOrigins = ['https://zoonasd.com', 'https://www.zoonasd.com', 'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app'];
+  const allowedOrigins = [
+    'https://zoonasd.com',
+    'https://www.zoonasd.com',
+    'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app',
+    'https://zoona-git-feat-complete-affiliate-syste-30a731-sifians-projects.vercel.app'
+  ];
   const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed));
   
   if (!isAllowed && origin) {
@@ -42,7 +52,12 @@ export default async function handler(req, res) {
   }
 
   // 3. إعداد رؤوس CORS للنطاقات المسموحة فقط
-  const allowedOriginsList = ['https://zoonasd.com', 'https://www.zoonasd.com', 'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app'];
+  const allowedOriginsList = [
+    'https://zoonasd.com',
+    'https://www.zoonasd.com',
+    'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app',
+    'https://zoona-git-feat-complete-affiliate-syste-30a731-sifians-projects.vercel.app'
+  ];
   const currentOrigin = req.headers.origin;
   
   if (currentOrigin && allowedOriginsList.includes(currentOrigin)) {

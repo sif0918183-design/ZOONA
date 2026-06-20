@@ -10,7 +10,8 @@ export default async function handler(req, res) {
     'https://zoonasd.com',
     'https://www.zoonasd.com',
     'http://localhost:3000',
-    'https://zoona-store.vercel.app'
+    'https://zoona-store.vercel.app',
+    'https://zoona-git-feat-complete-affiliate-syste-30a731-sifians-projects.vercel.app'
   ];
 
   const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed)) || !origin;
