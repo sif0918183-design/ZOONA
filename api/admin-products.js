@@ -31,6 +31,7 @@ export default async function handler(req, res) {
   // 2. جلب متغيرات البيئة
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_KEY = process.env.SUPABASE_KEY;
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
   if (!SUPABASE_URL || !SUPABASE_KEY) {
     console.error('Supabase credentials missing. SUPABASE_URL:', !!SUPABASE_URL, 'SUPABASE_KEY:', !!SUPABASE_KEY);
@@ -67,6 +68,18 @@ export default async function handler(req, res) {
 
   try {
     const { id } = req.query;
+    // Handle both string and object body
+    let bodyData = req.body || {};
+    if (typeof req.body === 'string') {
+      try { bodyData = JSON.parse(req.body); } catch (e) { }
+    }
+    const adminPassword = req.query.adminPassword || bodyData.adminPassword;
+
+    // التحقق من الصلاحيات
+    if (!ADMIN_PASSWORD || adminPassword !== ADMIN_PASSWORD) {
+      return res.status(401).json({ success: false, error: 'غير مصرح لك بالقيام بهذا الإجراء' });
+    }
+
     const baseUrl = `${SUPABASE_URL}/rest/v1/products`;
     let fetchUrl = '';
     let fetchOptions = {

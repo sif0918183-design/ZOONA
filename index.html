@@ -1062,11 +1062,15 @@ let deferredPrompt = null;
 
 // ── Init ──
 window.addEventListener('DOMContentLoaded', () => {
+  // Capture affiliate ID immediately
+  getAffiliateId();
+
   // Show splash then load app
   setTimeout(() => {
     loadProducts();
     initRotatingMessages();
     initPullToRefresh();
+    recordAffiliateClick();
   }, 100);
 
   setTimeout(() => {
@@ -1610,7 +1614,7 @@ function goCheckout() {
 }
 
 // ── Orders API Functions (Vercel) ──
-const ORDERS_API_URL = 'https://orders-9vxn.vercel.app/api/orders';
+const ORDERS_API_URL = '/api/orders';
 
 function getUserId() {
   const storedUserId = localStorage.getItem('zoonaUserId');
@@ -2045,6 +2049,30 @@ function getAffiliateId() {
   const ref = p.get('ref');
   if (ref) { localStorage.setItem('currentAffiliateId', ref); return ref; }
   return localStorage.getItem('currentAffiliateId') || 'direct';
+}
+
+async function recordAffiliateClick() {
+  const p = new URLSearchParams(window.location.search);
+  const ref = p.get('ref');
+
+  if (ref && !sessionStorage.getItem('affiliate_click_recorded')) {
+    try {
+      await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'track_affiliate_click',
+          affiliateId: ref,
+          productName: document.title,
+          trackingUrl: window.location.href
+        })
+      });
+      sessionStorage.setItem('affiliate_click_recorded', 'true');
+      console.log('Affiliate click recorded for:', ref);
+    } catch (e) {
+      console.error('Error recording affiliate click:', e);
+    }
+  }
 }
 
 // ── Service Worker ──
