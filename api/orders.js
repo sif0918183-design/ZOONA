@@ -10,11 +10,12 @@ export default async function handler(req, res) {
     'https://zoonasd.com',
     'https://www.zoonasd.com',
     'http://localhost:3000',
-    'https://zoona-store.vercel.app',
-    'https://zoona-git-feat-complete-affiliate-syste-30a731-sifians-projects.vercel.app'
+    'https://zoona-git-feat-complete-affiliate-syste-30a731-sifians-projects.vercel.app',
+    'https://zoona-git-feat-complete-affiliate-system-v2-30a731-sifians-projects.vercel.app'
   ];
 
-  const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed)) || !origin;
+  const isVercelPreview = origin.endsWith('.vercel.app') && origin.includes('sifians-projects');
+  const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed)) || isVercelPreview || !origin;
 
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', origin || '*');
@@ -37,7 +38,10 @@ export default async function handler(req, res) {
 
   // 3. تحليل الطلب
   const method = req.method;
-  const body = req.body || {};
+  let body = req.body || {};
+  if (typeof body === 'string') {
+    try { body = JSON.parse(body); } catch (e) { console.error('Failed to parse body:', e); }
+  }
   const query = req.query || {};
   const data = { ...query, ...body };
   const { action, affiliateId, userId, id, orderId, password, adminPassword } = data;
@@ -60,6 +64,10 @@ export default async function handler(req, res) {
   }
 
   try {
+    // 5. التحقق من النطاق المضيف (Security check)
+    const host = req.headers.host || '';
+    console.log(`[Request] Origin: ${origin}, Host: ${host}, Action: ${action}`);
+
     // التحقق من الآدمن (تسجيل الدخول)
     if (action === 'verify_admin') {
       if (ADMIN_PASSWORD && password === ADMIN_PASSWORD) {
@@ -317,8 +325,18 @@ export default async function handler(req, res) {
 
       // تسجيل دخول مسوق
       if (action === 'login_affiliate') {
-        const { affiliateId, password } = body;
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_users?affiliate_id=eq.${affiliateId}&password_hash=eq.${password}&select=*`, {
+        const affId = (affiliateId || body.affiliateId || '').toLowerCase().trim();
+        const pwd = password || body.password;
+
+        console.log(`[Login] Attempt for: ${affId}`);
+
+        const params = new URLSearchParams({
+          affiliate_id: `eq.${affId}`,
+          password_hash: `eq.${pwd}`,
+          select: '*'
+        });
+
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_users?${params.toString()}`, {
           headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
         });
         const data = await response.json();

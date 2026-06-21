@@ -22,10 +22,13 @@ export default async function handler(req, res) {
   const allowedOrigins = [
     'https://zoonasd.com',
     'https://www.zoonasd.com',
-    'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app',
-    'https://zoona-git-feat-complete-affiliate-syste-30a731-sifians-projects.vercel.app'
+    'http://localhost:3000',
+    'https://zoona-git-feat-complete-affiliate-syste-30a731-sifians-projects.vercel.app',
+    'https://zoona-git-feat-complete-affiliate-system-v2-30a731-sifians-projects.vercel.app'
   ];
-  const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed));
+
+  const isVercelPreview = origin.endsWith('.vercel.app') && origin.includes('sifians-projects');
+  const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed)) || isVercelPreview || !origin;
   
   if (!isAllowed && origin) {
     return res.status(403).json({ error: 'Access denied. Invalid origin.' });
@@ -51,23 +54,8 @@ export default async function handler(req, res) {
     });
   }
 
-  // 3. إعداد رؤوس CORS للنطاقات المسموحة فقط
-  const allowedOriginsList = [
-    'https://zoonasd.com',
-    'https://www.zoonasd.com',
-    'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app',
-    'https://zoona-git-feat-complete-affiliate-syste-30a731-sifians-projects.vercel.app'
-  ];
-  const currentOrigin = req.headers.origin;
-  
-  if (currentOrigin && allowedOriginsList.includes(currentOrigin)) {
-    res.setHeader('Access-Control-Allow-Origin', currentOrigin);
-  } else if (!currentOrigin) {
-    // للطلبات من المتصفح مباشرة
-    res.setHeader('Access-Control-Allow-Origin', 'https://zoonasd.com');
-  } else {
-    return res.status(403).json({ error: 'Origin not allowed' });
-  }
+  // 3. إعداد رؤوس CORS
+  res.setHeader('Access-Control-Allow-Origin', isAllowed ? (req.headers.origin || '*') : 'https://zoonasd.com');
   
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
