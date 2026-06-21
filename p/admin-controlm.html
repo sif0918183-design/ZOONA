@@ -667,6 +667,7 @@
             let allOrders = [];
             let allAffiliates = [];
             let allProducts = [];
+            let allAffiliateOrders = [];
             let isLoggedIn = false;
 
             // ========== تعريف الدوال في النطاق العام ==========
@@ -854,9 +855,19 @@
                         console.error('خطأ في جلب المنتجات:', productsError);
                     }
                     
+                    // جلب تفاصيل عمولات المسوقين
+                    const { data: affOrders, error: affOrdersError } = await supabase
+                        .from('affiliate_orders')
+                        .select('*');
+
+                    if (affOrdersError) {
+                        console.error('خطأ في جلب عمولات المسوقين:', affOrdersError);
+                    }
+
                     allOrders = orders || [];
                     allAffiliates = affiliates || [];
                     allProducts = products || [];
+                    allAffiliateOrders = affOrders || [];
 
                     if (debugMode) {
                         document.getElementById('debugContent').innerHTML = `
@@ -1043,6 +1054,8 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                 filteredOrders.forEach(order => {
                     const affiliate = affiliates.find(aff => aff.affiliate_id === order.affiliate_id);
                     const commission = getProductCommission(order.order_products, products);
+                    const affiliateOrder = allAffiliateOrders.find(ao => ao.order_id === order.order_id);
+                    const isPaid = affiliateOrder && affiliateOrder.status === 'paid';
                     
                     const row = document.createElement('tr');
                     row.innerHTML = `
@@ -1073,18 +1086,25 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                         </td>
                         <td>${formatDateEnglish(order.created_at)}</td>
                         <td><span class="status-badge status-${getStatusClass(order.status)}">${getStatusText(order.status)}</span></td>
-                        <td class="commission-display">${commission > 0 ? commission.toLocaleString() + ' ج.س' : '--'}</td>
+                        <td class="commission-display">
+                            ${commission > 0 ? commission.toLocaleString() + ' ج.س' : '--'}
+                            ${isPaid ? '<br><span class="status-badge status-active" style="font-size:10px">تم الدفع</span>' : ''}
+                        </td>
                         <td>
                             <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-                                <button class="btn btn-success btn-sm" onclick="updateOrderStatus('${order.order_id}', 'delivered')" ${order.status === 'delivered' ? 'disabled' : ''}>
+                                <button class="btn btn-success btn-sm" onclick="updateOrderStatus('${order.order_id}', 'delivered')" ${order.status === 'delivered' ? 'disabled' : ''} title="تم التوصيل">
                                     <i class="fas fa-check"></i>
                                 </button>
-                                <button class="btn btn-danger btn-sm" onclick="updateOrderStatus('${order.order_id}', 'cancelled')" ${order.status === 'cancelled' ? 'disabled' : ''}>
+                                <button class="btn btn-danger btn-sm" onclick="updateOrderStatus('${order.order_id}', 'cancelled')" ${order.status === 'cancelled' ? 'disabled' : ''} title="إلغاء الطلب">
                                     <i class="fas fa-times"></i>
                                 </button>
                                 <button class="btn btn-primary btn-sm" onclick="copyOrderSummary(${JSON.stringify(order).replace(/"/g, '&quot;')})" title="نسخ ملخص الطلب">
                                     <i class="fas fa-copy"></i>
                                 </button>
+                                ${order.affiliate_id && order.affiliate_id !== 'direct' && !isPaid ? `
+                                <button class="btn btn-warning btn-sm" onclick="markCommissionPaid('${order.order_id}', '${order.affiliate_id}')" title="تحديد كمدفوع">
+                                    <i class="fas fa-money-bill"></i>
+                                </button>` : ''}
                             </div>
                         </td>
                     `;
@@ -1111,6 +1131,27 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                 } catch (error) {
                     console.error('خطأ في تحديث حالة الطلب:', error);
                     alert('حدث خطأ في تحديث حالة الطلب');
+                }
+            }
+
+            async function markCommissionPaid(orderId, affiliateId) {
+                if (!confirm('هل أنت متأكد من تمييز هذه العمولة كمدفوعة؟')) return;
+                try {
+                    const { data, error } = await supabase
+                        .from('affiliate_orders')
+                        .update({
+                            status: 'paid',
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('order_id', orderId);
+
+                    if (error) throw error;
+
+                    loadOrders();
+                    alert(`تم تمييز عمولة الطلب ${orderId} كمدفوعة بنجاح`);
+                } catch (error) {
+                    console.error('خطأ في تحديث حالة العمولة:', error);
+                    alert('حدث خطأ في تحديث حالة العمولة');
                 }
             }
 

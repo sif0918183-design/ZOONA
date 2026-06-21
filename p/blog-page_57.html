@@ -732,13 +732,19 @@
             <div class="stat-card">
                 <i class="fas fa-shopping-cart"></i>
                 <div class="stat-number" id="totalOrders">0</div>
-                <div>إجمالي الطلبات</div>
+                <div>الطلبات</div>
             </div>
             
             <div class="stat-card">
-                <i class="fas fa-money-bill-wave"></i>
+                <i class="fas fa-hourglass-half"></i>
                 <div class="stat-number" id="totalCommission">0 ج.س</div>
                 <div>العمولة المؤكدة</div>
+            </div>
+
+            <div class="stat-card" style="background: linear-gradient(135deg, #28a745 0%, #218838 100%);">
+                <i class="fas fa-check-double"></i>
+                <div class="stat-number" id="paidCommission">0 ج.س</div>
+                <div>عمولة مدفوعة</div>
             </div>
             
             <div class="stat-card extended">
@@ -1143,9 +1149,10 @@ async function loadDashboardData() {
             document.getElementById('totalClicks').textContent = affiliateData.stats.totalClicks || 0;
             document.getElementById('totalOrders').textContent = affiliateData.stats.totalOrders || 0;
             
-            // حساب العمولة المؤكدة فقط (الطلبات المؤكدة والمكتملة)
-            const confirmedCommission = await calculateConfirmedCommission(session.id, affiliateData.products || []);
-            document.getElementById('totalCommission').textContent = confirmedCommission + ' ج.س';
+            // حساب العمولة المؤكدة والمدفوعة
+            const commissionData = await calculateConfirmedCommission(session.id, affiliateData.products || []);
+            document.getElementById('totalCommission').textContent = commissionData.confirmed + ' ج.س';
+            document.getElementById('paidCommission').textContent = commissionData.paid + ' ج.س';
             
             // تحديث تفصيل الطلبات
             document.getElementById('pendingOrdersCount').textContent = affiliateData.stats.pendingOrders || 0;
@@ -1168,30 +1175,38 @@ async function loadDashboardData() {
     }
 }
 
-// دالة جديدة لحساب العمولة المؤكدة فقط
+// دالة جديدة لحساب العمولة المؤكدة والمدفوعة
 async function calculateConfirmedCommission(affiliateId, products) {
     try {
         const ordersData = await getAffiliateOrders(affiliateId);
+        const affOrdersResult = await supabaseRequest('affiliate_orders?select=*&affiliate_id=eq.' + encodeURIComponent(affiliateId));
         
         if (!ordersData.success || !ordersData.orders || ordersData.orders.length === 0) {
-            return 0;
+            return { confirmed: 0, paid: 0 };
         }
         
-        let totalConfirmedCommission = 0;
+        let confirmed = 0;
+        let paid = 0;
         
         for (let order of ordersData.orders) {
             // حساب العمولة فقط للطلبات المؤكدة والمكتملة
             if (order.status === 'confirmed' || order.status === 'delivered') {
                 const commission = calculateOrderCommission(order, products);
-                totalConfirmedCommission += commission;
+                const affOrder = affOrdersResult.find(ao => ao.order_id === order.order_id);
+
+                if (affOrder && affOrder.status === 'paid') {
+                    paid += commission;
+                } else {
+                    confirmed += commission;
+                }
             }
         }
         
-        return totalConfirmedCommission;
+        return { confirmed, paid };
         
     } catch (error) {
-        console.error('خطأ في حساب العمولة المؤكدة:', error);
-        return 0;
+        console.error('خطأ في حساب العمولة:', error);
+        return { confirmed: 0, paid: 0 };
     }
 }
 
@@ -1233,9 +1248,13 @@ async function loadAllOrders(affiliateId, products) {
             // ترتيب الطلبات من الأحدث إلى الأقدم
             const sortedOrders = [...ordersData.orders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
             
+            const affOrdersResult = await supabaseRequest('affiliate_orders?select=*&affiliate_id=eq.' + encodeURIComponent(affiliateId));
+
             for (let order of sortedOrders) {
                 // حساب العمولة
                 const commission = calculateOrderCommission(order, products);
+                const affOrder = affOrdersResult.find(ao => ao.order_id === order.order_id);
+                const isPaid = affOrder && affOrder.status === 'paid';
                 
                 let statusClass, statusText;
                 
@@ -1244,7 +1263,7 @@ async function loadAllOrders(affiliateId, products) {
                     case 'confirmed':
                     case 'delivered':
                         statusClass = 'status-confirmed';
-                        statusText = 'مؤكد';
+                        statusText = isPaid ? 'مدفوعة' : 'مؤكدة';
                         break;
                     case 'cancelled':
                         statusClass = 'status-cancelled';

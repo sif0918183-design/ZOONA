@@ -78,6 +78,7 @@
   <link rel="apple-touch-icon" href="icon/icon-152x152.png">
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -2224,6 +2225,73 @@ function submitMerchantForm(event) {
 // ── Online/Offline ──
 window.addEventListener('offline', () => showToast('⚠️ أنت غير متصل بالإنترنت'));
 window.addEventListener('online', () => showToast('✅ تم استعادة الاتصال', 'green'));
+
+// ── Affiliate Tracking ──
+async function recordAffiliateClick() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const ref = urlParams.get('ref');
+
+  if (ref) {
+    localStorage.setItem('currentAffiliateId', ref);
+
+    if (!sessionStorage.getItem('affiliate_click_recorded')) {
+      try {
+        const SUPABASE_URL = 'https://yhujvalqfmnlyffvejbh.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlodWp2YWxxZm1ubHlmZnZlamJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNTc3OTcsImV4cCI6MjA3ODYzMzc5N30.mMG55moG7HdM-vDzT5R5HiD7kKdE_Jr9BkRio4MJGqw';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const today = new Date().toISOString().split('T')[0];
+
+        // 1. Record/Update click in affiliate_clicks
+        const { data: existingClick, error: checkError } = await supabase
+          .from('affiliate_clicks')
+          .select('*')
+          .eq('affiliate_id', ref)
+          .eq('click_date', today)
+          .single();
+
+        if (existingClick) {
+          await supabase
+            .from('affiliate_clicks')
+            .update({
+              click_count: (existingClick.click_count || 0) + 1,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingClick.id);
+        } else {
+          await supabase
+            .from('affiliate_clicks')
+            .insert([{
+              affiliate_id: ref,
+              click_date: today,
+              click_count: 1,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }]);
+        }
+
+        // 2. Increment total_clicks in affiliate_users
+        const { data: user, error: userError } = await supabase
+          .from('affiliate_users')
+          .select('total_clicks')
+          .eq('affiliate_id', ref)
+          .single();
+
+        if (user) {
+          await supabase
+            .from('affiliate_users')
+            .update({ total_clicks: (user.total_clicks || 0) + 1 })
+            .eq('affiliate_id', ref);
+        }
+
+        sessionStorage.setItem('affiliate_click_recorded', 'true');
+      } catch (err) {
+        console.error('Affiliate tracking error:', err);
+      }
+    }
+  }
+}
+window.addEventListener('DOMContentLoaded', recordAffiliateClick);
 </script>
 
 </body>

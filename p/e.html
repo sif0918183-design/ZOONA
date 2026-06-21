@@ -1044,9 +1044,31 @@
                     }
                 }
 
-                // حساب العمولة (5% من الإجمالي)
-                const commission = Math.round(orderData.total * 0.05);
-                console.log('💰 حساب العمولة:', commission, 'SDG');
+                // جلب المنتجات لحساب العمولة بدقة
+                const { data: products, error: productsError } = await supabaseClient
+                    .from('products')
+                    .select('id, name, commission');
+
+                let totalCommission = 0;
+                let commissionDetail = "";
+
+                if (products && !productsError) {
+                    orderData.products.forEach(item => {
+                        const product = products.find(p => p.id == item.id || (p.name && item.name && p.name.trim() === item.name.trim()));
+                        if (product && product.commission) {
+                            totalCommission += product.commission * item.quantity;
+                        } else {
+                            // Fallback to 5% for this specific item if no commission set
+                            totalCommission += Math.round((item.price * item.quantity) * 0.05);
+                        }
+                    });
+                    commissionDetail = "Calculated from products";
+                } else {
+                    totalCommission = Math.round((orderData.total - (orderData.shippingCost || 0)) * 0.05);
+                    commissionDetail = "5% fallback (products fetch failed)";
+                }
+
+                console.log('💰 حساب العمولة:', totalCommission, 'SDG');
 
                 // حفظ طلب المسوق
                 const { error: orderError } = await supabaseClient
@@ -1054,8 +1076,8 @@
                     .insert([{
                         affiliate_id: orderData.affiliateId,
                         order_id: orderData.orderId,
-                        commission: commission,
-                        commission_rate: '5%',
+                        commission: totalCommission,
+                        commission_rate: commissionDetail,
                         status: 'pending',
                         created_at: new Date().toISOString(),
                         updated_at: new Date().toISOString()
