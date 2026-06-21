@@ -4,7 +4,12 @@
  */
 
 // التحقق من النطاق المسموح
-const ALLOWED_ORIGINS = ['https://zoonasd.com', 'https://www.zoonasd.com', 'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app'];
+const ALLOWED_ORIGINS = [
+  'https://zoonasd.com',
+  'https://www.zoonasd.com',
+  'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app',
+  'https://zoona-git-feat-complete-affiliate-syste-30a731-sifians-projects.vercel.app'
+];
 
 function isOriginAllowed(origin) {
   if (!origin) return false;
@@ -14,8 +19,16 @@ function isOriginAllowed(origin) {
 export default async function handler(req, res) {
   // 1. التحقق من النطاق
   const origin = req.headers.origin || req.headers.referer || '';
-  const allowedOrigins = ['https://zoonasd.com', 'https://www.zoonasd.com', 'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app'];
-  const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed));
+  const allowedOrigins = [
+    'https://zoonasd.com',
+    'https://www.zoonasd.com',
+    'http://localhost:3000',
+    'https://zoona-git-feat-complete-affiliate-syste-30a731-sifians-projects.vercel.app',
+    'https://zoona-git-feat-complete-affiliate-system-v2-30a731-sifians-projects.vercel.app'
+  ];
+
+  const isVercelPreview = origin.endsWith('.vercel.app') && origin.includes('sifians-projects');
+  const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed)) || isVercelPreview || !origin;
   
   if (!isAllowed && origin) {
     return res.status(403).json({ error: 'Access denied. Invalid origin.' });
@@ -31,6 +44,7 @@ export default async function handler(req, res) {
   // 2. جلب متغيرات البيئة
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_KEY = process.env.SUPABASE_KEY;
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
   if (!SUPABASE_URL || !SUPABASE_KEY) {
     console.error('Supabase credentials missing. SUPABASE_URL:', !!SUPABASE_URL, 'SUPABASE_KEY:', !!SUPABASE_KEY);
@@ -40,18 +54,8 @@ export default async function handler(req, res) {
     });
   }
 
-  // 3. إعداد رؤوس CORS للنطاقات المسموحة فقط
-  const allowedOriginsList = ['https://zoonasd.com', 'https://www.zoonasd.com', 'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app'];
-  const currentOrigin = req.headers.origin;
-  
-  if (currentOrigin && allowedOriginsList.includes(currentOrigin)) {
-    res.setHeader('Access-Control-Allow-Origin', currentOrigin);
-  } else if (!currentOrigin) {
-    // للطلبات من المتصفح مباشرة
-    res.setHeader('Access-Control-Allow-Origin', 'https://zoonasd.com');
-  } else {
-    return res.status(403).json({ error: 'Origin not allowed' });
-  }
+  // 3. إعداد رؤوس CORS
+  res.setHeader('Access-Control-Allow-Origin', isAllowed ? (req.headers.origin || '*') : 'https://zoonasd.com');
   
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
@@ -67,6 +71,18 @@ export default async function handler(req, res) {
 
   try {
     const { id } = req.query;
+    // Handle both string and object body
+    let bodyData = req.body || {};
+    if (typeof req.body === 'string') {
+      try { bodyData = JSON.parse(req.body); } catch (e) { }
+    }
+    const adminPassword = req.query.adminPassword || bodyData.adminPassword;
+
+    // التحقق من الصلاحيات
+    if (!ADMIN_PASSWORD || adminPassword !== ADMIN_PASSWORD) {
+      return res.status(401).json({ success: false, error: 'غير مصرح لك بالقيام بهذا الإجراء' });
+    }
+
     const baseUrl = `${SUPABASE_URL}/rest/v1/products`;
     let fetchUrl = '';
     let fetchOptions = {

@@ -519,6 +519,7 @@
                             <th>التاريخ</th>
                             <th>الحالة</th>
                             <th>العمولة</th>
+                            <th>دفع العمولة</th>
                             <th>الإجراءات</th>
                         </tr>
                     </thead>
@@ -652,7 +653,7 @@
     </div>
 
     <script>
-        const API_URL = 'https://orders-9vxn.vercel.app/api/orders';
+        const API_URL = '/api/orders';
         
         let debugMode = false;
         let currentAffiliateDetails = null;
@@ -663,6 +664,15 @@
         let isLoggedIn = false;
         let correctAffiliateId = null;
 
+        // وظيفة مساعدة لجلب كلمة المرور المخزنة
+        function getStoredAdminPassword() {
+            const loginData = localStorage.getItem('admin_login');
+            if (loginData) {
+                return JSON.parse(loginData).password;
+            }
+            return null;
+        }
+
         // نظام تسجيل الدخول - الحل المبسط
         async function checkLoginStatus() {
             const loginData = localStorage.getItem('admin_login');
@@ -672,8 +682,8 @@
                 const oneMonth = 30 * 24 * 60 * 60 * 1000;
                 
                 if (now - timestamp < oneMonth) {
-                    // التحقق من أن المعرف صحيح عن طريق جلب بيانات المسوقين
-                    const isValid = await verifyAffiliateId(password);
+                    // التحقق من كلمة المرور عبر API
+                    const isValid = await verifyAdminPassword(password);
                     if (isValid) {
                         isLoggedIn = true;
                         showAdminPanel();
@@ -685,21 +695,14 @@
             showLoginPanel();
         }
 
-        // التحقق من صحة معرف المسوق
-        async function verifyAffiliateId(affiliateId) {
+        // التحقق من صحة كلمة مرور الآدمن
+        async function verifyAdminPassword(password) {
             try {
-                // جلب بيانات المسوقين للتحقق من وجود المعرف
-                const response = await fetch(`${API_URL}?action=get_affiliates_stats`);
+                const response = await fetch(`${API_URL}?action=verify_admin&password=${encodeURIComponent(password)}`);
                 const result = await response.json();
-                
-                if (result.success && result.affiliates) {
-                    // البحث عن المعرف في قائمة المسوقين
-                    const affiliateExists = result.affiliates.some(aff => aff.affiliate_id === affiliateId);
-                    return affiliateExists;
-                }
-                return false;
+                return result.success === true;
             } catch (error) {
-                console.error('خطأ في التحقق من المعرف:', error);
+                console.error('خطأ في التحقق من كلمة المرور:', error);
                 return false;
             }
         }
@@ -726,12 +729,12 @@
             const errorElement = document.getElementById('loginError');
             
             if (!password) {
-                errorElement.textContent = 'يرجى إدخال معرف المسوق';
+                errorElement.textContent = 'يرجى إدخال كلمة المرور';
                 errorElement.style.display = 'block';
                 return;
             }
             
-            const isValid = await verifyAffiliateId(password);
+            const isValid = await verifyAdminPassword(password);
             
             if (isValid) {
                 const loginData = {
@@ -741,7 +744,7 @@
                 localStorage.setItem('admin_login', JSON.stringify(loginData));
                 showAdminPanel();
             } else {
-                errorElement.textContent = 'معرف المسوق غير صحيح';
+                errorElement.textContent = 'كلمة المرور غير صحيحة';
                 errorElement.style.display = 'block';
             }
         }
@@ -794,7 +797,8 @@
             tableElement.style.display = 'none';
             
             try {
-                const response = await fetch(`${API_URL}?action=get_all_orders`);
+                const password = getStoredAdminPassword();
+                const response = await fetch(`${API_URL}?action=get_all_orders&adminPassword=${encodeURIComponent(password)}`);
                 const result = await response.json();
                 
                 if (!result.success) {
@@ -1042,7 +1046,23 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     </td>
                     <td>${formatDateEnglish(order.created_at)}</td>
                     <td><span class="status-badge status-${getStatusClass(order.status)}">${getStatusText(order.status)}</span></td>
-                    <td class="commission-display">${commission > 0 ? commission.toLocaleString() + ' ج.س' : '--'}</td>
+                    <td class="commission-display">
+                        ${commission > 0 ?
+                            (order.affiliate_status === 'paid' ?
+                                `<div style="display:flex; flex-direction:column; align-items:flex-end;">
+                                    <span style="text-decoration:line-through; color:#888;">${commission.toLocaleString()} ج.س</span>
+                                    <span class="status-badge status-active" style="font-size:10px; padding:2px 6px; margin-top:2px;">تم الدفع</span>
+                                 </div>` :
+                                commission.toLocaleString() + ' ج.س')
+                            : '--'}
+                    </td>
+                    <td>
+                        ${(commission > 0 && (order.status === 'delivered' || order.status === 'completed')) ?
+                            `<button class="btn ${order.affiliate_status === 'paid' ? 'btn-warning' : 'btn-success'} btn-sm"
+                                onclick="updatePayoutStatus('${order.order_id}', '${order.affiliate_status === 'paid' ? 'unpaid' : 'paid'}')">
+                                ${order.affiliate_status === 'paid' ? 'إلغاء الدفع' : 'تأكيد الدفع'}
+                            </button>` : '--'}
+                    </td>
                     <td>
                         <div style="display: flex; gap: 5px; flex-wrap: wrap;">
                             <button class="btn btn-success btn-sm" onclick="updateOrderStatus('${order.order_id}', 'delivered')" ${order.status === 'delivered' ? 'disabled' : ''}>
@@ -1064,6 +1084,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
         // دالة تحديث حالة الطلب
         async function updateOrderStatus(orderId, newStatus) {
             try {
+                const password = getStoredAdminPassword();
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
@@ -1072,7 +1093,8 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     body: JSON.stringify({
                         action: 'update_order_status',
                         orderId: orderId,
-                        status: newStatus
+                        status: newStatus,
+                        adminPassword: password
                     })
                 });
                 
@@ -1090,6 +1112,34 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             }
         }
 
+        async function updatePayoutStatus(orderId, newStatus) {
+            if (!confirm(`هل تريد تغيير حالة دفع العمولة للطلب ${orderId}؟`)) return;
+            try {
+                const password = getStoredAdminPassword();
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'update_payout_status',
+                        orderId: orderId,
+                        status: newStatus,
+                        adminPassword: password
+                    })
+                });
+
+                const result = await response.json();
+                if (!result.success) throw new Error('فشل التحديث');
+
+                loadOrders();
+                alert('تم تحديث حالة الدفع بنجاح');
+            } catch (error) {
+                console.error('Error:', error);
+                alert('حدث خطأ أثناء تحديث حالة الدفع');
+            }
+        }
+
         // دوال إدارة المسوقين
         async function loadAffiliates() {
             if (!isLoggedIn) return;
@@ -1101,7 +1151,8 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             tableElement.style.display = 'none';
             
             try {
-                const response = await fetch(`${API_URL}?action=get_affiliates_stats`);
+                const password = getStoredAdminPassword();
+                const response = await fetch(`${API_URL}?action=get_affiliates_stats&adminPassword=${encodeURIComponent(password)}`);
                 const result = await response.json();
                 
                 if (!result.success) {
@@ -1313,6 +1364,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
         async function toggleAffiliateStatus(affiliateId, currentStatus) {
             try {
                 const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+                const password = getStoredAdminPassword();
                 
                 const response = await fetch(API_URL, {
                     method: 'POST',
@@ -1322,7 +1374,8 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     body: JSON.stringify({
                         action: 'update_affiliate_status',
                         affiliateId: affiliateId,
-                        status: newStatus
+                        status: newStatus,
+                        adminPassword: password
                     })
                 });
                 
@@ -1462,6 +1515,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             }
             
             try {
+                const password = getStoredAdminPassword();
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
@@ -1469,7 +1523,8 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     },
                     body: JSON.stringify({
                         action: 'delete_product',
-                        id: productId
+                        id: productId,
+                        adminPassword: password
                     })
                 });
                 
@@ -1491,6 +1546,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
         // إضافة أو تحديث منتج
         async function saveProduct(productData) {
             try {
+                const password = getStoredAdminPassword();
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
@@ -1498,6 +1554,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     },
                     body: JSON.stringify({
                         action: 'save_product',
+                        adminPassword: password,
                         ...productData
                     })
                 });
