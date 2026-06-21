@@ -1189,15 +1189,6 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     
                     if (affiliatesError) throw affiliatesError;
                     
-                    // جلب النقرات
-                    const { data: clicks, error: clicksError } = await supabase
-                        .from('affiliate_clicks')
-                        .select('*');
-                    
-                    if (clicksError) {
-                        console.error('خطأ في جلب النقرات:', clicksError);
-                    }
-                    
                     // جلب الطلبات
                     const { data: orders, error: ordersError } = await supabase
                         .from('orders')
@@ -1210,7 +1201,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     allAffiliates = affiliates || [];
                     allOrders = orders || [];
                     
-                    updateAffiliatesStats(affiliates || [], clicks || []);
+                    updateAffiliatesStats(affiliates || []);
                     displayAffiliates(affiliates || []);
                     
                 } catch (error) {
@@ -1223,12 +1214,12 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                 }
             }
 
-            function updateAffiliatesStats(affiliates, clicks) {
+            function updateAffiliatesStats(affiliates) {
                 const totalAffiliates = affiliates.length;
                 const activeAffiliates = affiliates.filter(aff => aff.status === 'active').length;
                 
-                // حساب النقرات من جدول affiliate_clicks
-                const totalClicks = clicks.reduce((sum, click) => sum + (click.click_count || 0), 0);
+                // حساب إجمالي النقرات من عمود total_clicks لجميع المسوقين
+                const totalClicks = affiliates.reduce((sum, aff) => sum + (aff.total_clicks || 0), 0);
                 
                 // حساب إجمالي العمولة (معلقة ومدفوعة)
                 let pendingCommission = 0;
