@@ -786,8 +786,15 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // ========== دوال API للعمل مع Vercel ==========
+        // ========== تكوين Supabase ==========
+        const SUPABASE_URL = 'https://yhujvalqfmnlyffvejbh.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlodWp2YWxxZm1ubHlmZnZlamJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNTc3OTcsImV4cCI6MjA3ODYzMzc5N30.mMG55moG7HdM-vDzT5R5HiD7kKdE_Jr9BkRio4MJGqw';
+        
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ========== دوال API للعمل مع Supabase مباشرة ==========
         
         // متغيرات النظام
         let cartItems = JSON.parse(localStorage.getItem('cartItems')) || [];
@@ -878,23 +885,45 @@
             
             if (currentAffiliateId !== 'direct') {
                 try {
-                    const response = await fetch('https://orders-9vxn.vercel.app/api/orders', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ 
-                            action: 'track_click',
-                            affiliateId: currentAffiliateId 
-                        })
-                    });
+                    // استخدام Supabase مباشرة لتسجيل النقرة
+                    const today = new Date().toISOString().split('T')[0];
+                    
+                    const { data: existingClick, error: checkError } = await supabaseClient
+                        .from('affiliate_clicks')
+                        .select('*')
+                        .eq('affiliate_id', currentAffiliateId)
+                        .eq('click_date', today)
+                        .single();
 
-                    if (!response.ok) {
-                        throw new Error('فشل في تتبع النقرة');
+                    if (checkError && checkError.code !== 'PGRST116') {
+                        throw new Error('خطأ في التحقق من النقرات: ' + checkError.message);
                     }
 
-                    const result = await response.json();
-                    console.log('✅ تم تتبع نقرة المسوق:', result.message);
+                    if (existingClick) {
+                        const { error: updateError } = await supabaseClient
+                            .from('affiliate_clicks')
+                            .update({ 
+                                click_count: existingClick.click_count + 1,
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('id', existingClick.id);
+
+                        if (updateError) throw new Error('خطأ في تحديث النقرة: ' + updateError.message);
+                    } else {
+                        const { error: insertError } = await supabaseClient
+                            .from('affiliate_clicks')
+                            .insert([{
+                                affiliate_id: currentAffiliateId,
+                                click_date: today,
+                                click_count: 1,
+                                created_at: new Date().toISOString(),
+                                updated_at: new Date().toISOString()
+                            }]);
+
+                        if (insertError) throw new Error('خطأ في إدخال النقرة: ' + insertError.message);
+                    }
+
+                    console.log('✅ تم تتبع نقرة المسوق بنجاح');
                 } catch (error) {
                     console.error('❌ خطأ في تتبع النقرة:', error);
                 }
@@ -903,46 +932,284 @@
         
         async function createNewOrder(orderData) {
             try {
-                const response = await fetch('https://orders-9vxn.vercel.app/api/orders', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'create_order',
-                        orderId: orderData.orderId,
-                        userId: orderData.userId,
+                console.log('📝 بدء إنشاء طلب جديد:', orderData.orderId);
+
+                // 1. إدخال الطلب الرئيسي
+                const { data: order, error: orderError } = await supabaseClient
+                    .from('orders')
+                    .insert([{
+                        order_id: orderData.orderId,
+                        user_id: orderData.userId,
                         name: orderData.name,
                         phone: orderData.phone,
-                        phone2: orderData.phone2,
+                        phone2: orderData.phone2 || null,
                         city: orderData.city,
-                        cityType: orderData.cityType,
-                        shippingCost: orderData.shippingCost,
-                        total: orderData.total,
+                        city_type: orderData.cityType,
+                        shipping_cost: orderData.shippingCost || 0,
+                        total_amount: orderData.total,
                         address: orderData.address,
-                        location: orderData.location,
-                        products: orderData.products,
-                        affiliateId: getAffiliateId()
-                    })
-                });
+                        location_lat: orderData.location?.lat || null,
+                        location_lng: orderData.location?.lng || null,
+                        location_link: orderData.location?.link || null,
+                        payment_type: orderData.cityType === 'cod' ? 'دفع عند الاستلام' : 'دفع مقدم',
+                        affiliate_id: orderData.affiliateId || 'direct',
+                        status: 'new',
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    }])
+                    .select();
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'فشل في إنشاء الطلب');
+                if (orderError) {
+                    console.error('❌ خطأ في إدخال الطلب:', orderError);
+                    throw new Error('خطأ في إدخال الطلب: ' + orderError.message);
                 }
 
-                const result = await response.json();
-                console.log('✅ تم إنشاء الطلب عبر API:', result.message);
-                return result;
+                console.log('✅ تم إدخال الطلب الرئيسي بنجاح');
+
+                // 2. إدخال منتجات الطلب
+                if (orderData.products && orderData.products.length > 0) {
+                    const orderProducts = orderData.products.map(item => ({
+                        order_id: orderData.orderId,
+                        product_id: item.id,
+                        product_name: item.name,
+                        quantity: item.quantity,
+                        price: item.price,
+                        warehouse: item.warehouse,
+                        created_at: new Date().toISOString()
+                    }));
+
+                    const { error: productsError } = await supabaseClient
+                        .from('order_products')
+                        .insert(orderProducts);
+
+                    if (productsError) {
+                        console.error('❌ خطأ في إدخال المنتجات:', productsError);
+                        throw new Error('خطأ في إدخال المنتجات: ' + productsError.message);
+                    }
+
+                    console.log('✅ تم إدخال', orderProducts.length, 'منتج بنجاح');
+                }
+
+                // 3. معالجة بيانات المسوق إذا كان موجوداً
+                if (orderData.affiliateId && orderData.affiliateId !== 'direct') {
+                    await saveAffiliateData(orderData);
+                    await updateAffiliateStats(orderData.affiliateId);
+                }
+
+                console.log('✅ تم إنشاء الطلب بنجاح:', orderData.orderId);
+                return { success: true, orderId: orderData.orderId };
 
             } catch (error) {
-                console.error('❌ Error in createNewOrder:', error);
+                console.error('❌ خطأ في إنشاء الطلب:', error);
                 throw error;
             }
         }
         
+        // ========== دوال إدارة بيانات المسوق ==========
+        
+        async function saveAffiliateData(orderData) {
+            try {
+                console.log('💰 معالجة بيانات المسوق:', orderData.affiliateId);
+
+                // التحقق من وجود المسوق
+                const { data: affiliateData, error: affiliateError } = await supabaseClient
+                    .from('affiliates')
+                    .select('*')
+                    .eq('affiliate_id', orderData.affiliateId)
+                    .single();
+
+                if (affiliateError && affiliateError.code !== 'PGRST116') {
+                    console.error('❌ خطأ في التحقق من المسوق:', affiliateError);
+                    throw affiliateError;
+                }
+
+                // إنشاء المسوق إذا لم يكن موجوداً
+                if (!affiliateData) {
+                    console.log('🆕 إنشاء مسوق جديد:', orderData.affiliateId);
+                    
+                    const { error: createError } = await supabaseClient
+                        .from('affiliates')
+                        .insert([{
+                            affiliate_id: orderData.affiliateId,
+                            name: `مسوق ${orderData.affiliateId}`,
+                            total_commission: 0,
+                            status: 'active',
+                            created_at: new Date().toISOString(),
+                            updated_at: new Date().toISOString()
+                        }]);
+
+                    if (createError) {
+                        console.error('❌ خطأ في إنشاء المسوق:', createError);
+                        throw createError;
+                    }
+                }
+
+                // حساب العمولة (5% من الإجمالي)
+                const commission = Math.round(orderData.total * 0.05);
+                console.log('💰 حساب العمولة:', commission, 'SDG');
+
+                // حفظ طلب المسوق
+                const { error: orderError } = await supabaseClient
+                    .from('affiliate_orders')
+                    .insert([{
+                        affiliate_id: orderData.affiliateId,
+                        order_id: orderData.orderId,
+                        commission: commission,
+                        commission_rate: '5%',
+                        status: 'pending',
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    }]);
+
+                if (orderError) {
+                    console.error('❌ خطأ في حفظ طلب المسوق:', orderError);
+                    throw orderError;
+                }
+
+                console.log('✅ تم حفظ بيانات المسوق بنجاح');
+
+            } catch (error) {
+                console.error('❌ خطأ في حفظ بيانات المسوق:', error);
+                throw error;
+            }
+        }
+
+        async function updateAffiliateStats(affiliateId) {
+            try {
+                console.log('📊 تحديث إحصائيات المسوق:', affiliateId);
+
+                // حساب عدد النقرات
+                const { data: clicks, error: clicksError } = await supabaseClient
+                    .from('affiliate_clicks')
+                    .select('id')
+                    .eq('affiliate_id', affiliateId);
+
+                if (clicksError) {
+                    console.error('❌ خطأ في حساب النقرات:', clicksError);
+                }
+
+                // حساب عدد الطلبات
+                const { data: orders, error: ordersError } = await supabaseClient
+                    .from('orders')
+                    .select('id')
+                    .eq('affiliate_id', affiliateId);
+
+                if (ordersError) {
+                    console.error('❌ خطأ في حساب الطلبات:', ordersError);
+                }
+
+                // حساب العمولة المؤكدة
+                const confirmedCommission = await calculateConfirmedCommission(affiliateId);
+
+                // تحديث بيانات المسوق
+                const { error: updateError } = await supabaseClient
+                    .from('affiliate_users')
+                    .update({
+                        total_clicks: clicks ? clicks.length : 0,
+                        total_orders: orders ? orders.length : 0,
+                        total_commission: confirmedCommission,
+                        last_updated: new Date().toISOString()
+                    })
+                    .eq('affiliate_id', affiliateId);
+
+                if (updateError) {
+                    console.error('❌ خطأ في تحديث إحصائيات المسوق:', updateError);
+                }
+
+                console.log('✅ تم تحديث إحصائيات المسوق بنجاح');
+
+            } catch (error) {
+                console.error('❌ خطأ في تحديث الإحصائيات:', error);
+            }
+        }
+
+        async function calculateConfirmedCommission(affiliateId) {
+            try {
+                // جلب الطلبات المؤكدة للمسوق
+                const { data: confirmedOrders, error: ordersError } = await supabaseClient
+                    .from('orders')
+                    .select(`
+                        *,
+                        order_products(*)
+                    `)
+                    .eq('affiliate_id', affiliateId)
+                    .in('status', ['confirmed', 'delivered']);
+
+                if (ordersError) {
+                    console.error('❌ خطأ في جلب الطلبات المؤكدة:', ordersError);
+                    return 0;
+                }
+
+                // جلب المنتجات لحساب العمولة
+                const { data: products, error: productsError } = await supabaseClient
+                    .from('products')
+                    .select('*');
+
+                if (productsError) {
+                    console.error('❌ خطأ في جلب المنتجات:', productsError);
+                    return 0;
+                }
+
+                let totalConfirmedCommission = 0;
+
+                if (confirmedOrders && confirmedOrders.length > 0) {
+                    confirmedOrders.forEach(order => {
+                        const commission = getProductCommission(order.order_products, products);
+                        totalConfirmedCommission += commission;
+                    });
+                }
+
+                console.log(`💰 العمولة المؤكدة للمسوق ${affiliateId}:`, totalConfirmedCommission);
+                return totalConfirmedCommission;
+
+            } catch (error) {
+                console.error('❌ خطأ في حساب العمولة المؤكدة:', error);
+                return 0;
+            }
+        }
+
+        function getProductCommission(orderProducts, products) {
+            if (!orderProducts || !Array.isArray(orderProducts) || orderProducts.length === 0 || !products || products.length === 0) {
+                return 0;
+            }
+            
+            let totalCommission = 0;
+            
+            orderProducts.forEach(orderProduct => {
+                if (!orderProduct.product_name) return;
+                
+                const cleanText = (text) => {
+                    return text.toLowerCase()
+                        .replace(/[❤️✨]/g, '')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                };
+                
+                const cleanOrderProduct = cleanText(orderProduct.product_name);
+                
+                const product = products.find(p => {
+                    if (!p.name) return false;
+                    
+                    const cleanProductName = cleanText(p.name);
+                    const orderWords = cleanOrderProduct.split(' ');
+                    const productWords = cleanProductName.split(' ');
+                    
+                    const commonWords = orderWords.filter(word => 
+                        productWords.some(pWord => pWord.includes(word) || word.includes(pWord))
+                    );
+                    
+                    return commonWords.length >= 2;
+                });
+                
+                if (product && product.commission) {
+                    totalCommission += product.commission * (orderProduct.quantity || 1);
+                }
+            });
+            
+            return totalCommission;
+        }
+        
         function clearAffiliateIdFromStorage() {
-            // مسح قوي لجميع مفاتيح المسوق
             const affiliateKeys = ['currentAffiliateId', 'affiliateId', 'ref'];
             affiliateKeys.forEach(key => {
                 if (localStorage.getItem(key)) {
@@ -951,7 +1218,6 @@
                 }
             });
             
-            // مسح إضافي لأي مفاتيح مرتبطة بالمسوقين
             const keysToRemove = [];
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
@@ -964,7 +1230,6 @@
                 console.log('🗑️ تم حذف المفتاح:', key);
             });
             
-            // تحديث العناصر في السلة
             cartItems.forEach(item => {
                 if (item.affiliateId) {
                     delete item.affiliateId;
@@ -972,7 +1237,6 @@
             });
             localStorage.setItem('cartItems', JSON.stringify(cartItems));
             
-            // إزالة معرف المسوق من الرابط إذا كان موجوداً
             if (window.history.replaceState && window.location.search.includes('ref=')) {
                 const url = new URL(window.location);
                 url.searchParams.delete('ref');
@@ -982,7 +1246,6 @@
             
             console.log('✅ تم تنظيف جميع بيانات المسوق بنجاح');
             
-            // فحص نهائي للتأكد من المسح
             setTimeout(() => {
                 checkRemainingAffiliateData();
             }, 100);
@@ -1009,7 +1272,6 @@
         // ========== دوال التكامل مع الشريط العلوي ==========
         
         function loadSavedLocationFromTopbar() {
-            // تحميل البيانات من المفتاح الصحيح deliveryLocationData
             const savedLocationData = localStorage.getItem('deliveryLocationData');
             if (savedLocationData) {
                 try {
@@ -1020,7 +1282,6 @@
                         userAddress = locationData.address;
                         document.getElementById('address').value = userAddress;
                         
-                        // تحديث بيانات الموقع
                         if (locationData.lat && locationData.lon) {
                             userLocation = {
                                 lat: locationData.lat,
@@ -1031,12 +1292,11 @@
                             updateLocationButton(true);
                         }
                         
-                        // تحديد المدينة تلقائياً
                         autoSelectCityFromDeliveryData(locationData.city);
                     }
                     return locationData;
                 } catch (e) {
-                    console.error('❌ خطأ في تحميل بيانات deliveryLocationData:', e);
+                    console.error('❌ خطأ في تحميل deliveryLocationData:', e);
                 }
             }
             return null;
@@ -1128,8 +1388,6 @@
             calculateTotal();
         }
         
-        // ========== دوال التعرف التلقائي على المدينة من deliveryLocationData ==========
-        
         function autoSelectCityFromDeliveryData(cityName) {
             if (!cityName) {
                 console.log('❌ اسم المدينة فارغ');
@@ -1138,7 +1396,6 @@
             
             console.log('🚀 بدء التعرف التلقائي على المدينة من deliveryLocationData:', cityName);
             
-            // الانتظار حتى يتم تحميل خيارات المدن
             const citySelect = document.getElementById('deliveryCity');
             if (!citySelect || citySelect.options.length <= 1) {
                 console.log('⏳ خيارات المدن لم تحمل بعد، إعادة المحاولة...');
@@ -1146,17 +1403,14 @@
                 return false;
             }
             
-            // مطابقة المدينة مع الخيارات المتاحة
             const matchedCity = matchCityWithAvailableOptions(cityName);
             if (!matchedCity) {
                 console.log('❌ فشل مطابقة المدينة مع الخيارات المتاحة');
                 return false;
             }
             
-            // تحديد المدينة في القائمة المنسدلة
             citySelect.value = matchedCity.value;
             
-            // تحديث بيانات المدينة المحددة
             const [type, name] = matchedCity.value.split('_');
             const cities = type === 'cod' ? citiesData.cashOnDelivery : citiesData.prepaid;
             const city = cities.find(c => c.name === name);
@@ -1170,7 +1424,6 @@
                 console.log('💰 نوع الدفع:', type === 'cod' ? 'دفع عند الاستلام' : 'دفع مقدم');
                 console.log('💵 تكلفة الشحن:', city.price.toLocaleString(), 'SDG');
                 
-                // إظهار رسالة نجاح للمستخدم
                 showAutoCityDetectionMessage(name);
                 
                 return true;
@@ -1194,10 +1447,8 @@
                 return null;
             }
             
-            // تطبيع اسم المدينة للبحث (إزالة المسافات الزائدة وتحويل لحالة صغيرة)
             const normalizedCityName = cityName.trim().toLowerCase();
             
-            // البحث في جميع خيارات المدينة
             for (let i = 0; i < citySelect.options.length; i++) {
                 const option = citySelect.options[i];
                 const optionText = option.textContent;
@@ -1205,7 +1456,6 @@
                 
                 console.log(`🔍 فحص الخيار: ${optionText}`);
                 
-                // التحقق إذا كان اسم المدينة موجود في نص الخيار
                 if (normalizedOptionText.includes(normalizedCityName)) {
                     console.log('✅ تم العثور على تطابق:', option.value);
                     return {
@@ -1215,7 +1465,6 @@
                     };
                 }
                 
-                // البحث أيضًا في أسماء المدن المعرفة
                 for (const knownCity of Object.keys(sudanCities)) {
                     if (normalizedOptionText.includes(knownCity.toLowerCase()) && 
                         knownCity.toLowerCase().includes(normalizedCityName)) {
@@ -1242,7 +1491,6 @@
                 autoCityMessage.textContent = `تم التعرف تلقائيا على مدينة التوصيل: ${cityName}`;
                 autoCityElement.style.display = 'block';
                 
-                // إخفاء الرسالة بعد 5 ثواني
                 setTimeout(() => {
                     autoCityElement.style.display = 'none';
                 }, 5000);
@@ -1378,7 +1626,6 @@
         }
         
         function setupMapButton() {
-            // التحقق من وجود عناصر الخريطة قبل إضافة event listeners
             const locationMainBtn = document.getElementById('locationMainBtn');
             const cancelLocation = document.getElementById('cancelLocation');
             const confirmLocation = document.getElementById('confirmLocation');
@@ -1401,7 +1648,6 @@
         // ========== دوال إدارة البيانات المحلية ==========
         
         async function loadSavedData() {
-            // تحميل بيانات المستخدم
             if (userInfo.name) {
                 document.getElementById('name').value = userInfo.name;
                 document.getElementById('name').classList.add('auto-filled');
@@ -1417,7 +1663,6 @@
                 document.getElementById('phone2').classList.add('auto-filled');
             }
             
-            // تحديث زر الموقع بناءً على البيانات المحفوظة
             if (userLocation && userLocation.lat && userLocation.lng) {
                 updateLocationButton(true);
             } else {
@@ -1595,7 +1840,6 @@
             
             console.log('🏗️ جاري تحميل خيارات المدن...');
             
-            // تحميل مدن الدفع عند الاستلام
             citiesData.cashOnDelivery.forEach(city => {
                 const option = document.createElement('option');
                 option.value = `cod_${city.name}`;
@@ -1604,7 +1848,6 @@
                 citySelect.appendChild(option);
             });
             
-            // تحميل مدن الدفع المقدم
             citiesData.prepaid.forEach(city => {
                 const option = document.createElement('option');
                 option.value = `prepaid_${city.name}`;
@@ -1615,7 +1858,6 @@
             
             console.log(`✅ تم تحميل ${citySelect.options.length - 1} خيار مدينة`);
             
-            // إضافة مستمع الحدث للتغيير
             citySelect.addEventListener('change', function() {
                 if (this.value) {
                     const [type, name] = this.value.split('_');
@@ -1638,7 +1880,6 @@
                 }
             });
             
-            // محاولة التعرف التلقائي على المدينة بعد تحميل الخيارات
             const deliveryLocationData = localStorage.getItem('deliveryLocationData');
             if (deliveryLocationData) {
                 try {
@@ -1719,7 +1960,6 @@
                     return;
                 }
                 
-                // دالة مساعدة لتعيين textContent مع التحقق من وجود العنصر
                 const setPdfContent = (id, value) => {
                     const element = document.getElementById(id);
                     if (element) {
@@ -1792,25 +2032,20 @@
         // ========== تهيئة الصفحة ==========
         
         document.addEventListener('DOMContentLoaded', function() {
-            // إنشاء/تحميل معرف المستخدم الفريد
             userId = getOrCreateUserId();
             displayUserId();
             
-            // تتبع المسوقين
             trackAffiliateClick();
             
-            // تحميل البيانات
             loadSavedData();
             displayProductsSummary();
             loadCitiesData();
             setupMapButton();
             
-            // تحميل البيانات من deliveryLocationData تلقائياً
             setTimeout(() => {
                 loadSavedLocationFromTopbar();
             }, 1000);
             
-            // إعداد أحداث النموذج
             const form = document.getElementById('orderForm');
             const successMsg = document.getElementById('successMsg');
             const errorMsg = document.getElementById('errorMsg');
@@ -1852,23 +2087,19 @@
                     location: userLocation,
                     date: new Date().toISOString(),
                     timestamp: Date.now(),
-                    status: 'new'
+                    status: 'new',
+                    affiliateId: getAffiliateId()
                 };
                 
                 try {
-                    // فحص معرف المسوق قبل المسح
                     console.log('🔍 فحص معرف المسوق قبل المسح:', getAffiliateId());
                     
-                    // حفظ الطلب عبر Vercel API
                     await createNewOrder(formData);
                     
-                    // بعد الحفظ، تأكد من وجود البيانات في DB ثم امسح localStorage
                     console.log('✅ تم حفظ بيانات المسوق في قاعدة البيانات');
                     
-                    // حفظ بيانات المستخدم
                     saveUserInfo();
                     
-                    // الآن يمكن مسح localStorage بأمان
                     clearAffiliateIdFromStorage();
                     
                     successMsg.textContent = "تم إرسال طلبك بنجاح! يمكنك الآن تحميل نسخة PDF من إيصال الطلب.";
@@ -1882,7 +2113,6 @@
                     console.log('✅ تم إرسال الطلب بنجاح:', orderId);
                     console.log('👤 معرف المستخدم المرتبط بالطلب:', userId);
                     
-                    // فحص نهائي للتأكد من عدم وجود بيانات مسوق متبقية
                     setTimeout(() => {
                         const isClean = checkRemainingAffiliateData();
                         if (!isClean) {
