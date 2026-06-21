@@ -810,8 +810,33 @@
 </div>
 
 <script>
-// ========== إعدادات Vercel ==========
-const API_BASE_URL = 'https://orders-9vxn.vercel.app/api/orders';
+// ========== إعدادات Supabase ==========
+const SUPABASE_URL = 'https://yhujvalqfmnlyffvejbh.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlodWp2YWxxZm1ubHlmZnZlamJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNTc3OTcsImV4cCI6MjA3ODYzMzc5N30.mMG55moG7HdM-vDzT5R5HiD7kKdE_Jr9BkRio4MJGqw';
+
+// ========== دوال Supabase ==========
+async function supabaseRequest(endpoint, options = {}) {
+    const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
+    const headers = {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+
+    const response = await fetch(url, {
+        ...options,
+        headers
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Supabase error:', response.status, errorText);
+        throw new Error(`Supabase error: ${response.status} - ${errorText}`);
+    }
+
+    return await response.json();
+}
 
 // ========== دوال النظام الأساسية ==========
 
@@ -831,28 +856,46 @@ async function registerAffiliate(affiliateData) {
     try {
         console.log('بدء عملية التسجيل:', affiliateData);
 
-        const response = await fetch(API_BASE_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                action: 'register_affiliate',
-                name: affiliateData.name,
-                email: affiliateData.email,
-                phone: affiliateData.phone,
-                password: affiliateData.password
-            })
-        });
-
-        const result = await response.json();
-        console.log('استجابة التسجيل:', result);
-
-        if (!response.ok) {
-            throw new Error(result.error || result.details || 'حدث خطأ أثناء التسجيل');
+        // التحقق من عدم وجود بريد إلكتروني أو هاتف مكرر
+        const existingCheck = await supabaseRequest('affiliate_users?select=email,phone&email=eq.' + encodeURIComponent(affiliateData.email) + '&or=phone.eq.' + encodeURIComponent(affiliateData.phone));
+        
+        if (existingCheck && existingCheck.length > 0) {
+            const existing = existingCheck[0];
+            if (existing.email === affiliateData.email) {
+                throw new Error('البريد الإلكتروني مسجل بالفعل');
+            }
+            if (existing.phone === affiliateData.phone) {
+                throw new Error('رقم الهاتف مسجل بالفعل');
+            }
         }
 
-        return result;
+        // إنشاء معرف المسوق
+        const affiliateId = generateAffiliateId(affiliateData.name);
+        
+        // إدخال المسوق الجديد
+        const newAffiliate = {
+            affiliate_id: affiliateId,
+            name: affiliateData.name,
+            email: affiliateData.email,
+            phone: affiliateData.phone,
+            password: affiliateData.password, // في التطبيق الحقيقي يجب تشفير كلمة المرور
+            created_at: new Date().toISOString(),
+            total_clicks: 0,
+            total_orders: 0
+        };
+
+        const result = await supabaseRequest('affiliate_users', {
+            method: 'POST',
+            body: JSON.stringify(newAffiliate)
+        });
+
+        console.log('نتيجة التسجيل:', result);
+
+        return {
+            success: true,
+            message: 'تم التسجيل بنجاح',
+            affiliate: newAffiliate
+        };
 
     } catch (error) {
         console.error('خطأ في تسجيل المسوق:', error);
@@ -865,26 +908,27 @@ async function registerAffiliate(affiliateData) {
 
 async function loginAffiliate(affiliateId, password) {
     try {
-        const response = await fetch(API_BASE_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                action: 'login_affiliate',
-                affiliateId: affiliateId,
-                password: password
-            })
-        });
+        // البحث عن المسوق
+        const result = await supabaseRequest('affiliate_users?select=*&affiliate_id=eq.' + encodeURIComponent(affiliateId));
+        
+        console.log('نتيجة البحث عن المسوق:', result);
 
-        const result = await response.json();
-        console.log('استجابة تسجيل الدخول:', result);
-
-        if (!response.ok) {
-            throw new Error(result.error || result.details || 'حدث خطأ أثناء تسجيل الدخول');
+        if (!result || result.length === 0) {
+            throw new Error('المسوق غير موجود');
         }
 
-        return result;
+        const affiliate = result[0];
+        
+        // التحقق من كلمة المرور
+        if (affiliate.password !== password) {
+            throw new Error('كلمة المرور غير صحيحة');
+        }
+
+        return {
+            success: true,
+            message: 'تم تسجيل الدخول بنجاح',
+            affiliate: affiliate
+        };
 
     } catch (error) {
         console.error('خطأ في تسجيل الدخول:', error);
@@ -897,16 +941,49 @@ async function loginAffiliate(affiliateId, password) {
 
 async function getAffiliateData(affiliateId) {
     try {
-        const response = await fetch(`${API_BASE_URL}?action=get_affiliate_data&affiliateId=${affiliateId}`);
-        console.log('حالة جلب البيانات:', response.status);
+        // جلب بيانات المسوق
+        const affiliateResult = await supabaseRequest('affiliate_users?select=*&affiliate_id=eq.' + encodeURIComponent(affiliateId));
         
-        if (!response.ok) {
-            throw new Error('فشل في جلب البيانات');
+        if (!affiliateResult || affiliateResult.length === 0) {
+            throw new Error('المسوق غير موجود');
         }
 
-        const result = await response.json();
-        console.log('بيانات المسوق:', result);
-        return result;
+        const affiliate = affiliateResult[0];
+
+        // جلب المنتجات
+        const productsResult = await supabaseRequest('products?select=*');
+        
+        // جلب الطلبات
+        const ordersResult = await supabaseRequest('orders?select=*&affiliate_id=eq.' + encodeURIComponent(affiliateId));
+
+        // حساب الإحصائيات
+        const stats = {
+            totalClicks: affiliate.total_clicks || 0,
+            totalOrders: ordersResult ? ordersResult.length : 0,
+            pendingOrders: 0,
+            confirmedOrders: 0,
+            cancelledOrders: 0
+        };
+
+        if (ordersResult) {
+            ordersResult.forEach(order => {
+                if (order.status === 'pending' || order.status === 'new' || order.status === 'processing') {
+                    stats.pendingOrders++;
+                } else if (order.status === 'confirmed' || order.status === 'delivered') {
+                    stats.confirmedOrders++;
+                } else if (order.status === 'cancelled') {
+                    stats.cancelledOrders++;
+                }
+            });
+        }
+
+        return {
+            success: true,
+            affiliate: affiliate,
+            products: productsResult || [],
+            orders: ordersResult || [],
+            stats: stats
+        };
 
     } catch (error) {
         console.error('خطأ في جلب بيانات المسوق:', error);
@@ -916,16 +993,12 @@ async function getAffiliateData(affiliateId) {
 
 async function getAffiliateOrders(affiliateId) {
     try {
-        const response = await fetch(`${API_BASE_URL}?affiliateId=${affiliateId}`);
-        console.log('حالة جلب الطلبات:', response.status);
+        const result = await supabaseRequest('orders?select=*&affiliate_id=eq.' + encodeURIComponent(affiliateId));
         
-        if (!response.ok) {
-            throw new Error('فشل في جلب الطلبات');
-        }
-
-        const result = await response.json();
-        console.log('طلبات المسوق:', result);
-        return result;
+        return {
+            success: true,
+            orders: result || []
+        };
 
     } catch (error) {
         console.error('خطأ في جلب طلبات المسوق:', error);
@@ -935,22 +1008,36 @@ async function getAffiliateOrders(affiliateId) {
 
 async function trackAffiliateClick(affiliateId, productName, trackingUrl) {
     try {
-        const response = await fetch(API_BASE_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+        // تحديث عدد النقرات في جدول المسوقين
+        const currentData = await supabaseRequest('affiliate_users?select=total_clicks&affiliate_id=eq.' + encodeURIComponent(affiliateId));
+        
+        if (!currentData || currentData.length === 0) {
+            throw new Error('المسوق غير موجود');
+        }
+
+        const currentClicks = currentData[0].total_clicks || 0;
+        const newClicks = currentClicks + 1;
+
+        await supabaseRequest('affiliate_users?affiliate_id=eq.' + encodeURIComponent(affiliateId), {
+            method: 'PATCH',
             body: JSON.stringify({
-                action: 'track_affiliate_click',
-                affiliateId: affiliateId,
-                productName: productName,
-                trackingUrl: trackingUrl
+                total_clicks: newClicks,
+                updated_at: new Date().toISOString()
             })
         });
 
-        const result = await response.json();
-        console.log('نتيجة تسجيل النقرة:', result);
-        return result.success === true;
+        // تسجيل النقرة في جدول النقرات
+        await supabaseRequest('clicks', {
+            method: 'POST',
+            body: JSON.stringify({
+                affiliate_id: affiliateId,
+                product_name: productName,
+                tracking_url: trackingUrl,
+                created_at: new Date().toISOString()
+            })
+        });
+
+        return true;
 
     } catch (error) {
         console.error('خطأ في تسجيل النقرة:', error);
@@ -978,7 +1065,7 @@ function checkSession() {
             const now = new Date();
             const diffDays = (now - loginTime) / (1000 * 60 * 60 * 24);
             
-            // تم تعديل هذه الدالة لجعل الجلسة صالحة لمدة شهر
+            // الجلسة صالحة لمدة شهر
             if (diffDays < 30) {
                 console.log('جلسة نشطة:', sessionData.id);
                 return sessionData;
