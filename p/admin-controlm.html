@@ -483,6 +483,7 @@
                     <option value="processing">قيد المعالجة</option>
                     <option value="shipped">تم الشحن</option>
                     <option value="delivered">تم التوصيل</option>
+                    <option value="completed">مكتمل</option>
                     <option value="cancelled">ملغى</option>
                 </select>
 
@@ -547,8 +548,12 @@
                     <div class="stat-label">إجمالي النقرات</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number" id="totalCommission">0 ج.س</div>
-                    <div class="stat-label">إجمالي العمولة</div>
+                    <div class="stat-number" id="totalCommission" style="color: var(--warning-color);">0 ج.س</div>
+                    <div class="stat-label">عمولات معلقة/مؤكدة</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="paidCommission" style="color: var(--success-color);">0 ج.س</div>
+                    <div class="stat-label">إجمالي العمولات المدفوعة</div>
                 </div>
             </div>
 
@@ -667,6 +672,7 @@
             let allOrders = [];
             let allAffiliates = [];
             let allProducts = [];
+            let allAffiliateOrders = [];
             let isLoggedIn = false;
 
             // ========== تعريف الدوال في النطاق العام ==========
@@ -685,6 +691,7 @@
             window.editProduct = editProduct;
             window.deleteProduct = deleteProduct;
             window.copyOrderSummary = copyOrderSummary;
+            window.markCommissionPaid = markCommissionPaid;
 
             // ========== دوال تسجيل الدخول ==========
             async function checkLoginStatus() {
@@ -854,9 +861,19 @@
                         console.error('خطأ في جلب المنتجات:', productsError);
                     }
                     
+                    // جلب تفاصيل عمولات المسوقين
+                    const { data: affOrders, error: affOrdersError } = await supabase
+                        .from('affiliate_orders')
+                        .select('*');
+
+                    if (affOrdersError) {
+                        console.error('خطأ في جلب عمولات المسوقين:', affOrdersError);
+                    }
+
                     allOrders = orders || [];
                     allAffiliates = affiliates || [];
                     allProducts = products || [];
+                    allAffiliateOrders = affOrders || [];
 
                     if (debugMode) {
                         document.getElementById('debugContent').innerHTML = `
@@ -995,6 +1012,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     'processing': 'قيد المعالجة',
                     'shipped': 'تم الشحن',
                     'delivered': 'تم التوصيل',
+                    'completed': 'مكتمل',
                     'cancelled': 'ملغى',
                     'active': 'نشط',
                     'inactive': 'غير نشط'
@@ -1008,6 +1026,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     'processing': 'pending',
                     'shipped': 'confirmed',
                     'delivered': 'confirmed',
+                    'completed': 'confirmed',
                     'cancelled': 'cancelled',
                     'active': 'active',
                     'inactive': 'inactive'
@@ -1042,7 +1061,17 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                 
                 filteredOrders.forEach(order => {
                     const affiliate = affiliates.find(aff => aff.affiliate_id === order.affiliate_id);
-                    const commission = getProductCommission(order.order_products, products);
+                    const affiliateOrder = allAffiliateOrders.find(ao => ao.order_id === order.order_id);
+
+                    // استخدام العمولة المخزنة في قاعدة البيانات إذا وجدت، وإلا حسابها
+                    let commission = 0;
+                    if (affiliateOrder && affiliateOrder.commission !== undefined) {
+                        commission = affiliateOrder.commission;
+                    } else {
+                        commission = getProductCommission(order.order_products, products);
+                    }
+
+                    const isPaid = affiliateOrder && affiliateOrder.status === 'paid';
                     
                     const row = document.createElement('tr');
                     row.innerHTML = `
@@ -1073,18 +1102,25 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                         </td>
                         <td>${formatDateEnglish(order.created_at)}</td>
                         <td><span class="status-badge status-${getStatusClass(order.status)}">${getStatusText(order.status)}</span></td>
-                        <td class="commission-display">${commission > 0 ? commission.toLocaleString() + ' ج.س' : '--'}</td>
+                        <td class="commission-display" style="${isPaid ? 'text-decoration: line-through; opacity: 0.6;' : ''}">
+                            ${commission > 0 ? commission.toLocaleString() + ' ج.س' : '--'}
+                            ${isPaid ? '<br><span class="status-badge status-active" style="font-size:10px; text-decoration: none; display: inline-block;">تم الدفع</span>' : ''}
+                        </td>
                         <td>
                             <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-                                <button class="btn btn-success btn-sm" onclick="updateOrderStatus('${order.order_id}', 'delivered')" ${order.status === 'delivered' ? 'disabled' : ''}>
+                                <button class="btn btn-success btn-sm" onclick="updateOrderStatus('${order.order_id}', 'delivered')" ${order.status === 'delivered' ? 'disabled' : ''} title="تم التوصيل">
                                     <i class="fas fa-check"></i>
                                 </button>
-                                <button class="btn btn-danger btn-sm" onclick="updateOrderStatus('${order.order_id}', 'cancelled')" ${order.status === 'cancelled' ? 'disabled' : ''}>
+                                <button class="btn btn-danger btn-sm" onclick="updateOrderStatus('${order.order_id}', 'cancelled')" ${order.status === 'cancelled' ? 'disabled' : ''} title="إلغاء الطلب">
                                     <i class="fas fa-times"></i>
                                 </button>
                                 <button class="btn btn-primary btn-sm" onclick="copyOrderSummary(${JSON.stringify(order).replace(/"/g, '&quot;')})" title="نسخ ملخص الطلب">
                                     <i class="fas fa-copy"></i>
                                 </button>
+                                ${order.affiliate_id && order.affiliate_id !== 'direct' && !isPaid ? `
+                                <button class="btn btn-warning btn-sm" onclick="markCommissionPaid('${order.order_id}', '${order.affiliate_id}')" title="تحديد كمدفوع">
+                                    <i class="fas fa-money-bill"></i>
+                                </button>` : ''}
                             </div>
                         </td>
                     `;
@@ -1114,6 +1150,27 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                 }
             }
 
+            async function markCommissionPaid(orderId, affiliateId) {
+                if (!confirm('هل أنت متأكد من تمييز هذه العمولة كمدفوعة؟')) return;
+                try {
+                    const { data, error } = await supabase
+                        .from('affiliate_orders')
+                        .update({
+                            status: 'paid',
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('order_id', orderId);
+
+                    if (error) throw error;
+
+                    loadOrders();
+                    alert(`تم تمييز عمولة الطلب ${orderId} كمدفوعة بنجاح`);
+                } catch (error) {
+                    console.error('خطأ في تحديث حالة العمولة:', error);
+                    alert('حدث خطأ في تحديث حالة العمولة');
+                }
+            }
+
             // ========== دوال إدارة المسوقين ==========
             async function loadAffiliates() {
                 if (!isLoggedIn) return;
@@ -1132,15 +1189,6 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     
                     if (affiliatesError) throw affiliatesError;
                     
-                    // جلب النقرات
-                    const { data: clicks, error: clicksError } = await supabase
-                        .from('affiliate_clicks')
-                        .select('*');
-                    
-                    if (clicksError) {
-                        console.error('خطأ في جلب النقرات:', clicksError);
-                    }
-                    
                     // جلب الطلبات
                     const { data: orders, error: ordersError } = await supabase
                         .from('orders')
@@ -1153,7 +1201,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     allAffiliates = affiliates || [];
                     allOrders = orders || [];
                     
-                    updateAffiliatesStats(affiliates || [], clicks || []);
+                    updateAffiliatesStats(affiliates || []);
                     displayAffiliates(affiliates || []);
                     
                 } catch (error) {
@@ -1166,42 +1214,61 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                 }
             }
 
-            function updateAffiliatesStats(affiliates, clicks) {
+            function updateAffiliatesStats(affiliates) {
                 const totalAffiliates = affiliates.length;
                 const activeAffiliates = affiliates.filter(aff => aff.status === 'active').length;
                 
-                // حساب النقرات من جدول affiliate_clicks
-                const totalClicks = clicks.reduce((sum, click) => sum + (click.click_count || 0), 0);
+                // حساب إجمالي النقرات من عمود total_clicks لجميع المسوقين
+                const totalClicks = affiliates.reduce((sum, aff) => sum + (aff.total_clicks || 0), 0);
                 
-                // حساب إجمالي العمولة
-                let totalCommission = 0;
-                affiliates.forEach(affiliate => {
-                    const affiliateOrders = allOrders.filter(order => 
-                        order.affiliate_id === affiliate.affiliate_id && 
-                        ['delivered'].includes(order.status)
-                    );
-                    
-                    affiliateOrders.forEach(order => {
-                        const commission = getProductCommission(order.order_products, allProducts);
-                        totalCommission += commission;
-                    });
+                // حساب إجمالي العمولة (معلقة ومدفوعة)
+                let pendingCommission = 0;
+                let paidCommission = 0;
+
+                allOrders.forEach(order => {
+                    if (order.affiliate_id && order.affiliate_id !== 'direct' && ['delivered', 'completed'].includes(order.status)) {
+                        const affiliateOrder = allAffiliateOrders.find(ao => ao.order_id === order.order_id);
+                        let commission = 0;
+                        if (affiliateOrder && affiliateOrder.commission !== undefined) {
+                            commission = affiliateOrder.commission;
+                        } else {
+                            commission = getProductCommission(order.order_products, allProducts);
+                        }
+
+                        if (affiliateOrder && affiliateOrder.status === 'paid') {
+                            paidCommission += commission;
+                        } else {
+                            pendingCommission += commission;
+                        }
+                    }
                 });
                 
                 document.getElementById('totalAffiliates').textContent = totalAffiliates;
                 document.getElementById('activeAffiliates').textContent = activeAffiliates;
                 document.getElementById('totalClicks').textContent = totalClicks;
-                document.getElementById('totalCommission').textContent = totalCommission + ' ج.س';
+                document.getElementById('totalCommission').textContent = pendingCommission.toLocaleString() + ' ج.س';
+                document.getElementById('paidCommission').textContent = paidCommission.toLocaleString() + ' ج.س';
             }
 
-            function calculateAffiliateCommission(affiliateId) {
+            function calculateAffiliateCommission(affiliateId, includePaid = false) {
                 const affiliateOrders = allOrders.filter(order => 
-                    order.affiliate_id === affiliateId && order.status === 'delivered'
+                    order.affiliate_id === affiliateId && ['delivered', 'completed'].includes(order.status)
                 );
                 
                 let totalCommission = 0;
                 affiliateOrders.forEach(order => {
-                    const commission = getProductCommission(order.order_products, allProducts);
-                    totalCommission += commission;
+                    const affOrder = allAffiliateOrders.find(ao => ao.order_id === order.order_id);
+
+                    if (affOrder) {
+                        if (!includePaid && affOrder.status === 'paid') return;
+                        if (includePaid && affOrder.status !== 'paid') return;
+
+                        totalCommission += affOrder.commission || 0;
+                    } else {
+                        // Fallback if not in affiliate_orders table
+                        if (includePaid) return;
+                        totalCommission += getProductCommission(order.order_products, allProducts);
+                    }
                 });
                 
                 return totalCommission;
@@ -1230,8 +1297,9 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                 
                 filteredAffiliates.forEach(affiliate => {
                     const affiliateOrders = allOrders.filter(order => order.affiliate_id === affiliate.affiliate_id);
-                    const confirmedOrders = affiliateOrders.filter(order => order.status === 'delivered').length;
-                    const totalCommission = calculateAffiliateCommission(affiliate.affiliate_id);
+                    const confirmedOrders = affiliateOrders.filter(order => ['delivered', 'completed'].includes(order.status)).length;
+                    const pendingCommission = calculateAffiliateCommission(affiliate.affiliate_id, false);
+                    const paidCommission = calculateAffiliateCommission(affiliate.affiliate_id, true);
                     
                     const row = document.createElement('tr');
                     row.innerHTML = `
@@ -1251,7 +1319,10 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                             <span style="font-weight: 700; color: #38a169;">${affiliateOrders.length}</span>
                             <br><small>(${confirmedOrders} مؤكدة)</small>
                         </td>
-                        <td class="commission-display">${totalCommission > 0 ? totalCommission + ' ج.س' : '--'}</td>
+                        <td class="commission-display">
+                            <div title="مؤكدة">${pendingCommission > 0 ? pendingCommission.toLocaleString() + ' ج.س' : '--'}</div>
+                            ${paidCommission > 0 ? `<div style="font-size:10px; color:var(--success-color); text-decoration:line-through;" title="مدفوعة">${paidCommission.toLocaleString()} ج.س</div>` : ''}
+                        </td>
                         <td>
                             <span class="status-badge status-${getStatusClass(affiliate.status)}">
                                 ${getStatusText(affiliate.status)}
@@ -1294,8 +1365,9 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     if (affiliateError) throw affiliateError;
                     
                     const affiliateOrders = allOrders.filter(order => order.affiliate_id === affiliateId);
-                    const confirmedOrders = affiliateOrders.filter(order => order.status === 'delivered').length;
-                    const totalCommission = calculateAffiliateCommission(affiliateId);
+                    const confirmedOrders = affiliateOrders.filter(order => ['delivered', 'completed'].includes(order.status)).length;
+                    const pendingCommission = calculateAffiliateCommission(affiliateId, false);
+                    const paidCommission = calculateAffiliateCommission(affiliateId, true);
                     
                     const detailsContent = document.getElementById('affiliateDetailsContent');
                     const detailsSection = document.getElementById('affiliateDetails');
@@ -1330,8 +1402,12 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                             <span class="detail-value" style="color: #38a169; font-weight: 700;">${affiliateOrders.length} (${confirmedOrders} مؤكدة)</span>
                         </div>
                         <div class="detail-item">
-                            <span class="detail-label"> العمولة المستحقة:</span>
-                            <span class="detail-value commission-display">${totalCommission} ج.س</span>
+                            <span class="detail-label"> العمولة المؤكدة:</span>
+                            <span class="detail-value commission-display">${pendingCommission.toLocaleString()} ج.س</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"> العمولة المدفوعة:</span>
+                            <span class="detail-value" style="color:var(--success-color); text-decoration:line-through;">${paidCommission.toLocaleString()} ج.س</span>
                         </div>
                         ${affiliateOrders.length > 0 ? `
                         <div class="detail-item">

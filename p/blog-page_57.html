@@ -583,49 +583,6 @@
             display: none;
         }
 
-        .announcement-banner {
-            background: #fff8e1;
-            border: 1px solid #ffe082;
-            color: #5d4037;
-            padding: 15px;
-            margin: 20px 15px;
-            border-radius: var(--border-radius);
-            display: flex;
-            align-items: flex-start;
-            gap: 15px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-        .announcement-banner i {
-            font-size: 1.4rem;
-            color: var(--primary-color);
-            margin-top: 3px;
-        }
-        .announcement-banner-content {
-            flex: 1;
-        }
-        .announcement-banner-title {
-            font-weight: 700;
-            margin-bottom: 5px;
-            color: var(--dark-color);
-            font-size: 1rem;
-        }
-        .announcement-banner-text {
-            font-size: 0.95rem;
-            line-height: 1.5;
-        }
-        .facebook-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            color: #1877f2;
-            text-decoration: none;
-            font-weight: 700;
-            margin-top: 5px;
-            transition: var(--transition);
-        }
-        .facebook-link:hover {
-            text-decoration: underline;
-        }
     </style>
 </head>
 <body class="mobile-optimized">
@@ -709,19 +666,6 @@
             <div class="affiliate-id">معرف المسوق: <span id="affiliateIdDisplay">...</span></div>
         </div>
 
-        <div class="announcement-banner">
-            <i class="fas fa-info-circle"></i>
-            <div class="announcement-banner-content">
-                <div class="announcement-banner-title">تنبيه هام للمسوقين</div>
-                <div class="announcement-banner-text">
-                    لم يتم بدأ عمل المسوقين بعد وسيبدأ العمل قريبا. سيتم إعلامكم عند بدأ العمل عبر منشور في صفحة متجر زونا الرسمية على فيسبوك.
-                </div>
-                <a href="https://web.facebook.com/people/ZOONA-%D8%B2%D9%88%D9%86%D8%A7/61581917511691/" class="facebook-link" target="_blank">
-                    <i class="fab fa-facebook"></i> تابع صفحتنا على فيسبوك لتبقى على اطلاع
-                </a>
-            </div>
-        </div>
-        
         <div class="stats-grid">
             <div class="stat-card">
                 <i class="fas fa-mouse-pointer"></i>
@@ -732,13 +676,19 @@
             <div class="stat-card">
                 <i class="fas fa-shopping-cart"></i>
                 <div class="stat-number" id="totalOrders">0</div>
-                <div>إجمالي الطلبات</div>
+                <div>الطلبات</div>
             </div>
             
             <div class="stat-card">
-                <i class="fas fa-money-bill-wave"></i>
+                <i class="fas fa-hourglass-half"></i>
                 <div class="stat-number" id="totalCommission">0 ج.س</div>
                 <div>العمولة المؤكدة</div>
+            </div>
+
+            <div class="stat-card" style="background: linear-gradient(135deg, #28a745 0%, #218838 100%);">
+                <i class="fas fa-check-double"></i>
+                <div class="stat-number" id="paidCommission">0 ج.س</div>
+                <div>عمولة مدفوعة</div>
             </div>
             
             <div class="stat-card extended">
@@ -954,7 +904,7 @@ async function getAffiliateData(affiliateId) {
         const productsResult = await supabaseRequest('products?select=*');
         
         // جلب الطلبات
-        const ordersResult = await supabaseRequest('orders?select=*&affiliate_id=eq.' + encodeURIComponent(affiliateId));
+        const ordersResult = await supabaseRequest('orders?select=*,order_products(*)&affiliate_id=eq.' + encodeURIComponent(affiliateId));
 
         // حساب الإحصائيات
         const stats = {
@@ -993,7 +943,7 @@ async function getAffiliateData(affiliateId) {
 
 async function getAffiliateOrders(affiliateId) {
     try {
-        const result = await supabaseRequest('orders?select=*&affiliate_id=eq.' + encodeURIComponent(affiliateId));
+        const result = await supabaseRequest('orders?select=*,order_products(*)&affiliate_id=eq.' + encodeURIComponent(affiliateId));
         
         return {
             success: true,
@@ -1143,15 +1093,19 @@ async function loadDashboardData() {
             document.getElementById('totalClicks').textContent = affiliateData.stats.totalClicks || 0;
             document.getElementById('totalOrders').textContent = affiliateData.stats.totalOrders || 0;
             
-            // حساب العمولة المؤكدة فقط (الطلبات المؤكدة والمكتملة)
-            const confirmedCommission = await calculateConfirmedCommission(session.id, affiliateData.products || []);
-            document.getElementById('totalCommission').textContent = confirmedCommission + ' ج.س';
+            // حساب العمولة المؤكدة والمدفوعة
+            const commissionData = await calculateConfirmedCommission(session.id, affiliateData.products || []);
+            document.getElementById('totalCommission').textContent = commissionData.confirmed.toLocaleString() + ' ج.س';
+            document.getElementById('paidCommission').textContent = commissionData.paid.toLocaleString() + ' ج.س';
             
             // تحديث تفصيل الطلبات
             document.getElementById('pendingOrdersCount').textContent = affiliateData.stats.pendingOrders || 0;
             document.getElementById('confirmedOrdersCount').textContent = affiliateData.stats.confirmedOrders || 0;
             document.getElementById('cancelledOrdersCount').textContent = affiliateData.stats.cancelledOrders || 0;
             
+            document.getElementById('totalClicks').textContent = (affiliateData.stats.totalClicks || 0).toLocaleString();
+            document.getElementById('totalOrders').textContent = (affiliateData.stats.totalOrders || 0).toLocaleString();
+
             // تحميل قائمة المنتجات
             await loadProductsList(affiliateData.products || []);
             
@@ -1168,30 +1122,44 @@ async function loadDashboardData() {
     }
 }
 
-// دالة جديدة لحساب العمولة المؤكدة فقط
+// دالة جديدة لحساب العمولة المؤكدة والمدفوعة
 async function calculateConfirmedCommission(affiliateId, products) {
     try {
         const ordersData = await getAffiliateOrders(affiliateId);
+        const affOrdersResult = await supabaseRequest('affiliate_orders?select=*&affiliate_id=eq.' + encodeURIComponent(affiliateId));
         
         if (!ordersData.success || !ordersData.orders || ordersData.orders.length === 0) {
-            return 0;
+            return { confirmed: 0, paid: 0 };
         }
         
-        let totalConfirmedCommission = 0;
+        let confirmed = 0;
+        let paid = 0;
         
         for (let order of ordersData.orders) {
             // حساب العمولة فقط للطلبات المؤكدة والمكتملة
-            if (order.status === 'confirmed' || order.status === 'delivered') {
-                const commission = calculateOrderCommission(order, products);
-                totalConfirmedCommission += commission;
+            if (order.status === 'confirmed' || order.status === 'delivered' || order.status === 'completed') {
+                const affOrder = affOrdersResult.find(ao => ao.order_id === order.order_id);
+                let commission = 0;
+
+                if (affOrder && affOrder.commission !== undefined) {
+                    commission = affOrder.commission;
+                } else {
+                    commission = calculateOrderCommission(order, products);
+                }
+
+                if (affOrder && affOrder.status === 'paid') {
+                    paid += commission;
+                } else {
+                    confirmed += commission;
+                }
             }
         }
         
-        return totalConfirmedCommission;
+        return { confirmed, paid };
         
     } catch (error) {
-        console.error('خطأ في حساب العمولة المؤكدة:', error);
-        return 0;
+        console.error('خطأ في حساب العمولة:', error);
+        return { confirmed: 0, paid: 0 };
     }
 }
 
@@ -1206,8 +1174,8 @@ async function loadProductsList(products) {
         return;
     }
     
-    // إضافة المنتجات للقائمة
-    products.forEach(product => {
+    // إضافة المنتجات للقائمة (التي لها عمولة فقط)
+    products.filter(p => p.commission > 0).forEach(product => {
         const option = document.createElement('option');
         option.value = product.name;
         option.textContent = `${product.name} - ${product.commission || 0} ج.س`;
@@ -1233,9 +1201,20 @@ async function loadAllOrders(affiliateId, products) {
             // ترتيب الطلبات من الأحدث إلى الأقدم
             const sortedOrders = [...ordersData.orders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
             
+            const affOrdersResult = await supabaseRequest('affiliate_orders?select=*&affiliate_id=eq.' + encodeURIComponent(affiliateId));
+
             for (let order of sortedOrders) {
+                const affOrder = affOrdersResult.find(ao => ao.order_id === order.order_id);
+
                 // حساب العمولة
-                const commission = calculateOrderCommission(order, products);
+                let commission = 0;
+                if (affOrder && affOrder.commission !== undefined) {
+                    commission = affOrder.commission;
+                } else {
+                    commission = calculateOrderCommission(order, products);
+                }
+
+                const isPaid = affOrder && affOrder.status === 'paid';
                 
                 let statusClass, statusText;
                 
@@ -1243,8 +1222,9 @@ async function loadAllOrders(affiliateId, products) {
                 switch(order.status) {
                     case 'confirmed':
                     case 'delivered':
+                    case 'completed':
                         statusClass = 'status-confirmed';
-                        statusText = 'مؤكد';
+                        statusText = isPaid ? 'مدفوعة' : 'مؤكدة';
                         break;
                     case 'cancelled':
                         statusClass = 'status-cancelled';
@@ -1271,10 +1251,16 @@ async function loadAllOrders(affiliateId, products) {
                 
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td class="text-truncate" title="${productsText}">${shortProducts}</td>
+                    <td>
+                        <div style="text-align:right; font-size: 0.8rem;">
+                            ${order.order_products && order.order_products.length > 0 ?
+                                order.order_products.map(p => `<div>• ${p.product_name} (${p.quantity || 1})</div>`).join('')
+                                : 'لا توجد منتجات'}
+                        </div>
+                    </td>
                     <td>${formatDateEnglish(order.created_at)}</td>
                     <td><span class="${statusClass}">${statusText}</span></td>
-                    <td class="commission">${(order.status === 'confirmed' || order.status === 'delivered') ? commission + ' ج.س' : '--'}</td>
+                    <td class="commission" style="${isPaid ? 'text-decoration: line-through; opacity: 0.7;' : ''}">${(order.status === 'confirmed' || order.status === 'delivered' || order.status === 'completed') ? commission.toLocaleString() + ' ج.س' : '--'}</td>
                 `;
                 tableBody.appendChild(row);
             }
@@ -1298,11 +1284,22 @@ function calculateOrderCommission(order, products) {
         order.order_products.forEach(orderProduct => {
             if (!orderProduct.product_name) return;
             
-            // البحث عن المنتج المطابق
-            const product = products.find(p => 
-                p.name && orderProduct.product_name && 
-                orderProduct.product_name.includes(p.name)
-            );
+            // تنظيف النص للمقارنة
+            const cleanText = (text) => {
+                return text.toLowerCase()
+                    .replace(/[❤️✨]/g, '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            };
+
+            const cleanOrderProduct = cleanText(orderProduct.product_name);
+
+            // البحث عن المنتج المطابق بدقة أكبر
+            const product = products.find(p => {
+                if (!p.name) return false;
+                const cleanProductName = cleanText(p.name);
+                return cleanOrderProduct.includes(cleanProductName) || cleanProductName.includes(cleanOrderProduct);
+            });
             
             if (product && product.commission) {
                 totalCommission += product.commission * (orderProduct.quantity || 1);

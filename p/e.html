@@ -1011,42 +1011,48 @@
             try {
                 console.log('💰 معالجة بيانات المسوق:', orderData.affiliateId);
 
-                // التحقق من وجود المسوق
+                // التحقق من وجود المسوق في جدول المستخدمين
                 const { data: affiliateData, error: affiliateError } = await supabaseClient
-                    .from('affiliates')
-                    .select('*')
+                    .from('affiliate_users')
+                    .select('affiliate_id')
                     .eq('affiliate_id', orderData.affiliateId)
                     .single();
 
-                if (affiliateError && affiliateError.code !== 'PGRST116') {
+                if (affiliateError) {
+                    if (affiliateError.code === 'PGRST116') {
+                        console.warn('⚠️ المسوق غير موجود، سيتم تسجيل الطلب كطلب مباشر');
+                        orderData.affiliateId = 'direct';
+                        return;
+                    }
                     console.error('❌ خطأ في التحقق من المسوق:', affiliateError);
                     throw affiliateError;
                 }
 
-                // إنشاء المسوق إذا لم يكن موجوداً
-                if (!affiliateData) {
-                    console.log('🆕 إنشاء مسوق جديد:', orderData.affiliateId);
-                    
-                    const { error: createError } = await supabaseClient
-                        .from('affiliates')
-                        .insert([{
-                            affiliate_id: orderData.affiliateId,
-                            name: `مسوق ${orderData.affiliateId}`,
-                            total_commission: 0,
-                            status: 'active',
-                            created_at: new Date().toISOString(),
-                            updated_at: new Date().toISOString()
-                        }]);
+                // جلب المنتجات لحساب العمولة بدقة
+                const { data: products, error: productsError } = await supabaseClient
+                    .from('products')
+                    .select('id, name, commission');
 
-                    if (createError) {
-                        console.error('❌ خطأ في إنشاء المسوق:', createError);
-                        throw createError;
-                    }
+                let totalCommission = 0;
+                let commissionDetail = "";
+
+                if (products && !productsError) {
+                    orderData.products.forEach(item => {
+                        const product = products.find(p => p.id == item.id || (p.name && item.name && p.name.trim() === item.name.trim()));
+                        if (product && product.commission) {
+                            totalCommission += product.commission * item.quantity;
+                        } else {
+                            // Fallback to 5% for this specific item if no commission set
+                            totalCommission += Math.round((item.price * item.quantity) * 0.05);
+                        }
+                    });
+                    commissionDetail = "Calculated from products";
+                } else {
+                    totalCommission = Math.round((orderData.total - (orderData.shippingCost || 0)) * 0.05);
+                    commissionDetail = "5% fallback (products fetch failed)";
                 }
 
-                // حساب العمولة (5% من الإجمالي)
-                const commission = Math.round(orderData.total * 0.05);
-                console.log('💰 حساب العمولة:', commission, 'SDG');
+                console.log('💰 حساب العمولة:', totalCommission, 'SDG');
 
                 // حفظ طلب المسوق
                 const { error: orderError } = await supabaseClient
@@ -1054,8 +1060,8 @@
                     .insert([{
                         affiliate_id: orderData.affiliateId,
                         order_id: orderData.orderId,
-                        commission: commission,
-                        commission_rate: '5%',
+                        commission: totalCommission,
+                        commission_rate: commissionDetail,
                         status: 'pending',
                         created_at: new Date().toISOString(),
                         updated_at: new Date().toISOString()
