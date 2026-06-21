@@ -960,7 +960,7 @@ async function getAffiliateData(affiliateId) {
         const productsResult = await supabaseRequest('products?select=*');
         
         // جلب الطلبات
-        const ordersResult = await supabaseRequest('orders?select=*&affiliate_id=eq.' + encodeURIComponent(affiliateId));
+        const ordersResult = await supabaseRequest('orders?select=*,order_products(*)&affiliate_id=eq.' + encodeURIComponent(affiliateId));
 
         // حساب الإحصائيات
         const stats = {
@@ -999,7 +999,7 @@ async function getAffiliateData(affiliateId) {
 
 async function getAffiliateOrders(affiliateId) {
     try {
-        const result = await supabaseRequest('orders?select=*&affiliate_id=eq.' + encodeURIComponent(affiliateId));
+        const result = await supabaseRequest('orders?select=*,order_products(*)&affiliate_id=eq.' + encodeURIComponent(affiliateId));
         
         return {
             success: true,
@@ -1151,14 +1151,17 @@ async function loadDashboardData() {
             
             // حساب العمولة المؤكدة والمدفوعة
             const commissionData = await calculateConfirmedCommission(session.id, affiliateData.products || []);
-            document.getElementById('totalCommission').textContent = commissionData.confirmed + ' ج.س';
-            document.getElementById('paidCommission').textContent = commissionData.paid + ' ج.س';
+            document.getElementById('totalCommission').textContent = commissionData.confirmed.toLocaleString() + ' ج.س';
+            document.getElementById('paidCommission').textContent = commissionData.paid.toLocaleString() + ' ج.س';
             
             // تحديث تفصيل الطلبات
             document.getElementById('pendingOrdersCount').textContent = affiliateData.stats.pendingOrders || 0;
             document.getElementById('confirmedOrdersCount').textContent = affiliateData.stats.confirmedOrders || 0;
             document.getElementById('cancelledOrdersCount').textContent = affiliateData.stats.cancelledOrders || 0;
             
+            document.getElementById('totalClicks').textContent = (affiliateData.stats.totalClicks || 0).toLocaleString();
+            document.getElementById('totalOrders').textContent = (affiliateData.stats.totalOrders || 0).toLocaleString();
+
             // تحميل قائمة المنتجات
             await loadProductsList(affiliateData.products || []);
             
@@ -1190,9 +1193,15 @@ async function calculateConfirmedCommission(affiliateId, products) {
         
         for (let order of ordersData.orders) {
             // حساب العمولة فقط للطلبات المؤكدة والمكتملة
-            if (order.status === 'confirmed' || order.status === 'delivered') {
-                const commission = calculateOrderCommission(order, products);
+            if (order.status === 'confirmed' || order.status === 'delivered' || order.status === 'completed') {
                 const affOrder = affOrdersResult.find(ao => ao.order_id === order.order_id);
+                let commission = 0;
+
+                if (affOrder && affOrder.commission !== undefined) {
+                    commission = affOrder.commission;
+                } else {
+                    commission = calculateOrderCommission(order, products);
+                }
 
                 if (affOrder && affOrder.status === 'paid') {
                     paid += commission;
@@ -1221,8 +1230,8 @@ async function loadProductsList(products) {
         return;
     }
     
-    // إضافة المنتجات للقائمة
-    products.forEach(product => {
+    // إضافة المنتجات للقائمة (التي لها عمولة فقط)
+    products.filter(p => p.commission > 0).forEach(product => {
         const option = document.createElement('option');
         option.value = product.name;
         option.textContent = `${product.name} - ${product.commission || 0} ج.س`;
@@ -1251,9 +1260,16 @@ async function loadAllOrders(affiliateId, products) {
             const affOrdersResult = await supabaseRequest('affiliate_orders?select=*&affiliate_id=eq.' + encodeURIComponent(affiliateId));
 
             for (let order of sortedOrders) {
-                // حساب العمولة
-                const commission = calculateOrderCommission(order, products);
                 const affOrder = affOrdersResult.find(ao => ao.order_id === order.order_id);
+
+                // حساب العمولة
+                let commission = 0;
+                if (affOrder && affOrder.commission !== undefined) {
+                    commission = affOrder.commission;
+                } else {
+                    commission = calculateOrderCommission(order, products);
+                }
+
                 const isPaid = affOrder && affOrder.status === 'paid';
                 
                 let statusClass, statusText;
@@ -1262,6 +1278,7 @@ async function loadAllOrders(affiliateId, products) {
                 switch(order.status) {
                     case 'confirmed':
                     case 'delivered':
+                    case 'completed':
                         statusClass = 'status-confirmed';
                         statusText = isPaid ? 'مدفوعة' : 'مؤكدة';
                         break;
@@ -1290,10 +1307,16 @@ async function loadAllOrders(affiliateId, products) {
                 
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td class="text-truncate" title="${productsText}">${shortProducts}</td>
+                    <td>
+                        <div style="text-align:right; font-size: 0.8rem;">
+                            ${order.order_products && order.order_products.length > 0 ?
+                                order.order_products.map(p => `<div>• ${p.product_name} (${p.quantity || 1})</div>`).join('')
+                                : 'لا توجد منتجات'}
+                        </div>
+                    </td>
                     <td>${formatDateEnglish(order.created_at)}</td>
                     <td><span class="${statusClass}">${statusText}</span></td>
-                    <td class="commission">${(order.status === 'confirmed' || order.status === 'delivered') ? commission + ' ج.س' : '--'}</td>
+                    <td class="commission" style="${isPaid ? 'text-decoration: line-through; opacity: 0.7;' : ''}">${(order.status === 'confirmed' || order.status === 'delivered' || order.status === 'completed') ? commission.toLocaleString() + ' ج.س' : '--'}</td>
                 `;
                 tableBody.appendChild(row);
             }
@@ -1317,11 +1340,22 @@ function calculateOrderCommission(order, products) {
         order.order_products.forEach(orderProduct => {
             if (!orderProduct.product_name) return;
             
-            // البحث عن المنتج المطابق
-            const product = products.find(p => 
-                p.name && orderProduct.product_name && 
-                orderProduct.product_name.includes(p.name)
-            );
+            // تنظيف النص للمقارنة
+            const cleanText = (text) => {
+                return text.toLowerCase()
+                    .replace(/[❤️✨]/g, '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            };
+
+            const cleanOrderProduct = cleanText(orderProduct.product_name);
+
+            // البحث عن المنتج المطابق بدقة أكبر
+            const product = products.find(p => {
+                if (!p.name) return false;
+                const cleanProductName = cleanText(p.name);
+                return cleanOrderProduct.includes(cleanProductName) || cleanProductName.includes(cleanOrderProduct);
+            });
             
             if (product && product.commission) {
                 totalCommission += product.commission * (orderProduct.quantity || 1);

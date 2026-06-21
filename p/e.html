@@ -1011,37 +1011,21 @@
             try {
                 console.log('💰 معالجة بيانات المسوق:', orderData.affiliateId);
 
-                // التحقق من وجود المسوق
+                // التحقق من وجود المسوق في جدول المستخدمين
                 const { data: affiliateData, error: affiliateError } = await supabaseClient
-                    .from('affiliates')
-                    .select('*')
+                    .from('affiliate_users')
+                    .select('affiliate_id')
                     .eq('affiliate_id', orderData.affiliateId)
                     .single();
 
-                if (affiliateError && affiliateError.code !== 'PGRST116') {
+                if (affiliateError) {
+                    if (affiliateError.code === 'PGRST116') {
+                        console.warn('⚠️ المسوق غير موجود، سيتم تسجيل الطلب كطلب مباشر');
+                        orderData.affiliateId = 'direct';
+                        return;
+                    }
                     console.error('❌ خطأ في التحقق من المسوق:', affiliateError);
                     throw affiliateError;
-                }
-
-                // إنشاء المسوق إذا لم يكن موجوداً
-                if (!affiliateData) {
-                    console.log('🆕 إنشاء مسوق جديد:', orderData.affiliateId);
-                    
-                    const { error: createError } = await supabaseClient
-                        .from('affiliates')
-                        .insert([{
-                            affiliate_id: orderData.affiliateId,
-                            name: `مسوق ${orderData.affiliateId}`,
-                            total_commission: 0,
-                            status: 'active',
-                            created_at: new Date().toISOString(),
-                            updated_at: new Date().toISOString()
-                        }]);
-
-                    if (createError) {
-                        console.error('❌ خطأ في إنشاء المسوق:', createError);
-                        throw createError;
-                    }
                 }
 
                 // جلب المنتجات لحساب العمولة بدقة
