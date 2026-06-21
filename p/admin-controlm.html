@@ -651,259 +651,308 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        const API_URL = 'https://orders-9vxn.vercel.app/api/orders';
-        
-        let debugMode = false;
-        let currentAffiliateDetails = null;
-        let currentEditingProductId = null;
-        let allOrders = [];
-        let allAffiliates = [];
-        let allProducts = [];
-        let isLoggedIn = false;
-        let correctAffiliateId = null;
+        (function() {
+            // ========== تهيئة Supabase ==========
+            const SUPABASE_URL = 'https://yhujvalqfmnlyffvejbh.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlodWp2YWxxZm1ubHlmZnZlamJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNTc3OTcsImV4cCI6MjA3ODYzMzc5N30.mMG55moG7HdM-vDzT5R5HiD7kKdE_Jr9BkRio4MJGqw';
+            
+            const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            
+            // ========== المتغيرات العامة ==========
+            let debugMode = false;
+            let currentAffiliateDetails = null;
+            let currentEditingProductId = null;
+            let allOrders = [];
+            let allAffiliates = [];
+            let allProducts = [];
+            let isLoggedIn = false;
 
-        // نظام تسجيل الدخول - الحل المبسط
-        async function checkLoginStatus() {
-            const loginData = localStorage.getItem('admin_login');
-            if (loginData) {
-                const { timestamp, password } = JSON.parse(loginData);
-                const now = new Date().getTime();
-                const oneMonth = 30 * 24 * 60 * 60 * 1000;
-                
-                if (now - timestamp < oneMonth) {
-                    // التحقق من أن المعرف صحيح عن طريق جلب بيانات المسوقين
-                    const isValid = await verifyAffiliateId(password);
-                    if (isValid) {
-                        isLoggedIn = true;
-                        showAdminPanel();
-                        return;
+            // ========== تعريف الدوال في النطاق العام ==========
+            window.login = login;
+            window.logout = logout;
+            window.showTab = showTab;
+            window.toggleDebug = toggleDebug;
+            window.loadOrders = loadOrders;
+            window.loadAffiliates = loadAffiliates;
+            window.loadProducts = loadProducts;
+            window.updateOrderStatus = updateOrderStatus;
+            window.viewAffiliateDetails = viewAffiliateDetails;
+            window.toggleAffiliateStatus = toggleAffiliateStatus;
+            window.showAddProductModal = showAddProductModal;
+            window.closeProductModal = closeProductModal;
+            window.editProduct = editProduct;
+            window.deleteProduct = deleteProduct;
+            window.copyOrderSummary = copyOrderSummary;
+
+            // ========== دوال تسجيل الدخول ==========
+            async function checkLoginStatus() {
+                const loginData = localStorage.getItem('admin_login');
+                if (loginData) {
+                    const { timestamp, password } = JSON.parse(loginData);
+                    const now = new Date().getTime();
+                    const oneMonth = 30 * 24 * 60 * 60 * 1000;
+                    
+                    if (now - timestamp < oneMonth) {
+                        const isValid = await verifyAffiliateId(password);
+                        if (isValid) {
+                            isLoggedIn = true;
+                            showAdminPanel();
+                            return;
+                        }
                     }
+                    localStorage.removeItem('admin_login');
                 }
+                showLoginPanel();
+            }
+
+            async function verifyAffiliateId(affiliateId) {
+                try {
+                    const { data, error } = await supabase
+                        .from('affiliate_users')
+                        .select('affiliate_id')
+                        .eq('affiliate_id', affiliateId);
+                    
+                    if (error) {
+                        console.error('خطأ في التحقق من المعرف:', error);
+                        return false;
+                    }
+                    
+                    return data && data.length > 0;
+                } catch (error) {
+                    console.error('خطأ في التحقق من المعرف:', error);
+                    return false;
+                }
+            }
+
+            function showLoginPanel() {
+                document.getElementById('loginContainer').style.display = 'block';
+                document.getElementById('adminContainer').style.display = 'none';
+                isLoggedIn = false;
+                allOrders = [];
+                allAffiliates = [];
+                allProducts = [];
+            }
+
+            function showAdminPanel() {
+                document.getElementById('loginContainer').style.display = 'none';
+                document.getElementById('adminContainer').style.display = 'block';
+                isLoggedIn = true;
+                loadOrders();
+            }
+
+            async function login() {
+                const password = document.getElementById('passwordInput').value;
+                const errorElement = document.getElementById('loginError');
+                
+                if (!password) {
+                    errorElement.textContent = 'يرجى إدخال معرف المسوق';
+                    errorElement.style.display = 'block';
+                    return;
+                }
+                
+                const isValid = await verifyAffiliateId(password);
+                
+                if (isValid) {
+                    const loginData = {
+                        timestamp: new Date().getTime(),
+                        password: password
+                    };
+                    localStorage.setItem('admin_login', JSON.stringify(loginData));
+                    showAdminPanel();
+                } else {
+                    errorElement.textContent = 'معرف المسوق غير صحيح';
+                    errorElement.style.display = 'block';
+                }
+            }
+
+            function logout() {
                 localStorage.removeItem('admin_login');
+                showLoginPanel();
             }
-            showLoginPanel();
-        }
 
-        // التحقق من صحة معرف المسوق
-        async function verifyAffiliateId(affiliateId) {
-            try {
-                // جلب بيانات المسوقين للتحقق من وجود المعرف
-                const response = await fetch(`${API_URL}?action=get_affiliates_stats`);
-                const result = await response.json();
+            // ========== دوال إدارة الواجهة ==========
+            function showTab(tabName) {
+                if (!isLoggedIn) return;
                 
-                if (result.success && result.affiliates) {
-                    // البحث عن المعرف في قائمة المسوقين
-                    const affiliateExists = result.affiliates.some(aff => aff.affiliate_id === affiliateId);
-                    return affiliateExists;
-                }
-                return false;
-            } catch (error) {
-                console.error('خطأ في التحقق من المعرف:', error);
-                return false;
-            }
-        }
-
-        function showLoginPanel() {
-            document.getElementById('loginContainer').style.display = 'block';
-            document.getElementById('adminContainer').style.display = 'none';
-            isLoggedIn = false;
-            // إخفاء جميع البيانات
-            allOrders = [];
-            allAffiliates = [];
-            allProducts = [];
-        }
-
-        function showAdminPanel() {
-            document.getElementById('loginContainer').style.display = 'none';
-            document.getElementById('adminContainer').style.display = 'block';
-            isLoggedIn = true;
-            loadOrders();
-        }
-
-        async function login() {
-            const password = document.getElementById('passwordInput').value;
-            const errorElement = document.getElementById('loginError');
-            
-            if (!password) {
-                errorElement.textContent = 'يرجى إدخال معرف المسوق';
-                errorElement.style.display = 'block';
-                return;
-            }
-            
-            const isValid = await verifyAffiliateId(password);
-            
-            if (isValid) {
-                const loginData = {
-                    timestamp: new Date().getTime(),
-                    password: password
-                };
-                localStorage.setItem('admin_login', JSON.stringify(loginData));
-                showAdminPanel();
-            } else {
-                errorElement.textContent = 'معرف المسوق غير صحيح';
-                errorElement.style.display = 'block';
-            }
-        }
-
-        function logout() {
-            localStorage.removeItem('admin_login');
-            showLoginPanel();
-        }
-
-        // دوال إدارة الواجهة
-        function showTab(tabName) {
-            if (!isLoggedIn) return;
-            
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            document.querySelectorAll('.nav-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            document.getElementById(tabName + '-tab').classList.add('active');
-            event.target.classList.add('active');
-            
-            if (tabName === 'orders') {
-                loadOrders();
-            } else if (tabName === 'affiliates') {
-                loadAffiliates();
-            } else if (tabName === 'products') {
-                loadProducts();
-            }
-        }
-
-        function toggleDebug() {
-            debugMode = !debugMode;
-            document.getElementById('debugInfo').style.display = debugMode ? 'block' : 'none';
-            if (debugMode) {
-                loadOrders();
-            }
-        }
-
-        // دالة تحميل الطلبات
-        async function loadOrders() {
-            if (!isLoggedIn) return;
-            
-            const loadingElement = document.getElementById('ordersLoading');
-            const tableElement = document.getElementById('ordersTable');
-            
-            loadingElement.style.display = 'block';
-            tableElement.style.display = 'none';
-            
-            try {
-                const response = await fetch(`${API_URL}?action=get_all_orders`);
-                const result = await response.json();
-                
-                if (!result.success) {
-                    throw new Error(result.error || 'خطأ في تحميل الطلبات');
-                }
-                
-                allOrders = result.orders || [];
-                allAffiliates = result.affiliates || [];
-                allProducts = result.products || [];
-
-                if (debugMode) {
-                    document.getElementById('debugContent').innerHTML = `
-                        <div>عدد الطلبات: ${allOrders.length}</div>
-                        <div>عدد المنتجات: ${allProducts.length}</div>
-                        <div>أمثلة من الطلبات: ${JSON.stringify(allOrders.slice(0, 2).map(o => ({ 
-                            order_id: o.order_id,
-                            products: o.order_products,
-                            total_amount: o.total_amount,
-                            shipping_cost: o.shipping_cost
-                        })))}</div>
-                    `;
-                }
-                
-                updateAffiliateFilter(allAffiliates);
-                displayOrders(allOrders, allAffiliates, allProducts);
-                
-            } catch (error) {
-                console.error('خطأ في تحميل الطلبات:', error);
-                document.getElementById('ordersBody').innerHTML = 
-                    '<tr><td colspan="12" style="text-align: center; color: #e53e3e; padding: 20px;">حدث خطأ في تحميل الطلبات</td></tr>';
-            } finally {
-                loadingElement.style.display = 'none';
-                tableElement.style.display = 'table';
-            }
-        }
-
-        // تحديث فلتر المسوقين
-        function updateAffiliateFilter(affiliates) {
-            const filter = document.getElementById('affiliateFilter');
-            filter.innerHTML = '<option value="">جميع المسوقين</option>';
-            
-            affiliates.forEach(affiliate => {
-                const option = document.createElement('option');
-                option.value = affiliate.affiliate_id;
-                option.textContent = `${affiliate.affiliate_id} - ${affiliate.name}`;
-                filter.appendChild(option);
-            });
-        }
-
-        // دالة محسنة للحصول على قيمة العمولة من المنتج
-        function getProductCommission(orderProducts, products) {
-            if (!orderProducts || !Array.isArray(orderProducts) || orderProducts.length === 0 || !products || products.length === 0) {
-                return 0;
-            }
-            
-            let totalCommission = 0;
-            
-            orderProducts.forEach(orderProduct => {
-                if (!orderProduct.product_name) return;
-                
-                const cleanText = (text) => {
-                    return text.toLowerCase()
-                        .replace(/[❤️✨]/g, '')
-                        .replace(/\s+/g, ' ')
-                        .trim();
-                };
-                
-                const cleanOrderProduct = cleanText(orderProduct.product_name);
-                
-                const product = products.find(p => {
-                    if (!p.name) return false;
-                    
-                    const cleanProductName = cleanText(p.name);
-                    
-                    const orderWords = cleanOrderProduct.split(' ');
-                    const productWords = cleanProductName.split(' ');
-                    
-                    const commonWords = orderWords.filter(word => 
-                        productWords.some(pWord => pWord.includes(word) || word.includes(pWord))
-                    );
-                    
-                    return commonWords.length >= 2;
+                document.querySelectorAll('.tab-content').forEach(tab => {
+                    tab.classList.remove('active');
                 });
                 
-                if (product && product.commission) {
-                    totalCommission += product.commission * (orderProduct.quantity || 1);
+                document.querySelectorAll('.nav-tab').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                document.getElementById(tabName + '-tab').classList.add('active');
+                
+                // تحديث التاب النشط
+                const navTabs = document.querySelectorAll('.nav-tab');
+                const tabMap = {
+                    'orders': 0,
+                    'affiliates': 1,
+                    'products': 2
+                };
+                if (tabMap[tabName] !== undefined) {
+                    navTabs[tabMap[tabName]].classList.add('active');
                 }
-            });
-            
-            return totalCommission;
-        }
+                
+                if (tabName === 'orders') {
+                    loadOrders();
+                } else if (tabName === 'affiliates') {
+                    loadAffiliates();
+                } else if (tabName === 'products') {
+                    loadProducts();
+                }
+            }
 
-        // دالة نسخ ملخص الطلب
-        function copyOrderSummary(order) {
-            const productsText = order.order_products && order.order_products.length > 0 
-                ? order.order_products.map(p => `${p.product_name} (${p.quantity || 1})`).join('، ')
-                : 'لا توجد منتجات';
-            
-            // استخدام التاريخ الميلادي
-            const date = new Date(order.created_at);
-            const formattedDate = date.toLocaleDateString('en-GB', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-            
-            const summary = `
+            function toggleDebug() {
+                debugMode = !debugMode;
+                document.getElementById('debugInfo').style.display = debugMode ? 'block' : 'none';
+                if (debugMode) {
+                    loadOrders();
+                }
+            }
+
+            // ========== دوال تحميل الطلبات ==========
+            async function loadOrders() {
+                if (!isLoggedIn) return;
+                
+                const loadingElement = document.getElementById('ordersLoading');
+                const tableElement = document.getElementById('ordersTable');
+                
+                loadingElement.style.display = 'block';
+                tableElement.style.display = 'none';
+                
+                try {
+                    // جلب الطلبات مع المنتجات المرتبطة
+                    const { data: orders, error: ordersError } = await supabase
+                        .from('orders')
+                        .select(`
+                            *,
+                            order_products(*)
+                        `)
+                        .order('created_at', { ascending: false });
+                    
+                    if (ordersError) throw ordersError;
+                    
+                    // جلب بيانات المسوقين
+                    const { data: affiliates, error: affiliatesError } = await supabase
+                        .from('affiliate_users')
+                        .select('affiliate_id, name');
+                    
+                    if (affiliatesError) {
+                        console.error('خطأ في جلب المسوقين:', affiliatesError);
+                    }
+                    
+                    // جلب المنتجات لحساب العمولة
+                    const { data: products, error: productsError } = await supabase
+                        .from('products')
+                        .select('*');
+                    
+                    if (productsError) {
+                        console.error('خطأ في جلب المنتجات:', productsError);
+                    }
+                    
+                    allOrders = orders || [];
+                    allAffiliates = affiliates || [];
+                    allProducts = products || [];
+
+                    if (debugMode) {
+                        document.getElementById('debugContent').innerHTML = `
+                            <div>عدد الطلبات: ${allOrders.length}</div>
+                            <div>عدد المنتجات: ${allProducts.length}</div>
+                            <div>أمثلة من الطلبات: ${JSON.stringify(allOrders.slice(0, 2).map(o => ({ 
+                                order_id: o.order_id,
+                                products: o.order_products,
+                                total_amount: o.total_amount,
+                                shipping_cost: o.shipping_cost
+                            })))}</div>
+                        `;
+                    }
+                    
+                    updateAffiliateFilter(allAffiliates);
+                    displayOrders(allOrders, allAffiliates, allProducts);
+                    
+                } catch (error) {
+                    console.error('خطأ في تحميل الطلبات:', error);
+                    document.getElementById('ordersBody').innerHTML = 
+                        '<tr><td colspan="12" style="text-align: center; color: #e53e3e; padding: 20px;">حدث خطأ في تحميل الطلبات</td></tr>';
+                } finally {
+                    loadingElement.style.display = 'none';
+                    tableElement.style.display = 'table';
+                }
+            }
+
+            function updateAffiliateFilter(affiliates) {
+                const filter = document.getElementById('affiliateFilter');
+                filter.innerHTML = '<option value="">جميع المسوقين</option>';
+                
+                affiliates.forEach(affiliate => {
+                    const option = document.createElement('option');
+                    option.value = affiliate.affiliate_id;
+                    option.textContent = `${affiliate.affiliate_id} - ${affiliate.name}`;
+                    filter.appendChild(option);
+                });
+            }
+
+            function getProductCommission(orderProducts, products) {
+                if (!orderProducts || !Array.isArray(orderProducts) || orderProducts.length === 0 || !products || products.length === 0) {
+                    return 0;
+                }
+                
+                let totalCommission = 0;
+                
+                orderProducts.forEach(orderProduct => {
+                    if (!orderProduct.product_name) return;
+                    
+                    const cleanText = (text) => {
+                        return text.toLowerCase()
+                            .replace(/[❤️✨]/g, '')
+                            .replace(/\s+/g, ' ')
+                            .trim();
+                    };
+                    
+                    const cleanOrderProduct = cleanText(orderProduct.product_name);
+                    
+                    const product = products.find(p => {
+                        if (!p.name) return false;
+                        
+                        const cleanProductName = cleanText(p.name);
+                        
+                        const orderWords = cleanOrderProduct.split(' ');
+                        const productWords = cleanProductName.split(' ');
+                        
+                        const commonWords = orderWords.filter(word => 
+                            productWords.some(pWord => pWord.includes(word) || word.includes(pWord))
+                        );
+                        
+                        return commonWords.length >= 2;
+                    });
+                    
+                    if (product && product.commission) {
+                        totalCommission += product.commission * (orderProduct.quantity || 1);
+                    }
+                });
+                
+                return totalCommission;
+            }
+
+            function copyOrderSummary(order) {
+                const productsText = order.order_products && order.order_products.length > 0 
+                    ? order.order_products.map(p => `${p.product_name} (${p.quantity || 1})`).join('، ')
+                    : 'لا توجد منتجات';
+                
+                const date = new Date(order.created_at);
+                const formattedDate = date.toLocaleDateString('en-GB', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                const summary = `
  ملخص الطلب - Zoona mall
 
  رقم الطلب: ${order.order_id || 'غير متوفر'}
@@ -917,643 +966,635 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
  السعر الإجمالي: ${order.total_amount ? order.total_amount.toLocaleString() + ' ج.س' : 'غير محدد'}
  تكلفة التوصيل: ${order.shipping_cost ? order.shipping_cost.toLocaleString() + ' ج.س' : 'غير محدد'}
  التاريخ: ${formattedDate}
-            `.trim();
-            
-            navigator.clipboard.writeText(summary).then(() => {
-                alert('✅ تم نسخ ملخص الطلب إلى الحافظة\nيمكنك الآن إرساله لفريق التوصيل');
-            }).catch(err => {
-                console.error('خطأ في النسخ: ', err);
-                alert('❌ حدث خطأ في نسخ الملخص');
-            });
-        }
-
-        // تنسيق التاريخ بالعربية
-        function formatDateArabic(dateString) {
-            if (!dateString) return 'غير متوفر';
-            const date = new Date(dateString);
-            const options = { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            };
-            return date.toLocaleDateString('ar-SA', options);
-        }
-
-        // تنسيق التاريخ بالإنجليزية
-        function formatDateEnglish(dateString) {
-            if (!dateString) return 'غير متوفر';
-            const date = new Date(dateString);
-            const options = { 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            };
-            return date.toLocaleDateString('en-US', options);
-        }
-
-        // الحصول على نص الحالة
-        function getStatusText(status) {
-            const statusMap = {
-                'new': 'جديد',
-                'processing': 'قيد المعالجة',
-                'shipped': 'تم الشحن',
-                'delivered': 'تم التوصيل',
-                'cancelled': 'ملغى',
-                'active': 'نشط',
-                'inactive': 'غير نشط'
-            };
-            return statusMap[status] || 'جديد';
-        }
-
-        // الحصول على كلاس الحالة
-        function getStatusClass(status) {
-            const statusMap = {
-                'new': 'pending',
-                'processing': 'pending',
-                'shipped': 'confirmed',
-                'delivered': 'confirmed',
-                'cancelled': 'cancelled',
-                'active': 'active',
-                'inactive': 'inactive'
-            };
-            return statusMap[status] || 'pending';
-        }
-
-        // عرض الطلبات
-        function displayOrders(orders, affiliates, products) {
-            const tbody = document.getElementById('ordersBody');
-            const searchTerm = document.getElementById('searchOrders').value.toLowerCase();
-            const statusFilter = document.getElementById('statusFilter').value;
-            const affiliateFilter = document.getElementById('affiliateFilter').value;
-            
-            let filteredOrders = orders.filter(order => {
-                const matchesSearch = !searchTerm || 
-                    (order.order_id && order.order_id.toLowerCase().includes(searchTerm)) ||
-                    (order.name && order.name.toLowerCase().includes(searchTerm)) ||
-                    (order.order_products && order.order_products.some(p => p.product_name && p.product_name.toLowerCase().includes(searchTerm)));
+                `.trim();
                 
-                const matchesStatus = !statusFilter || order.status === statusFilter;
-                const matchesAffiliate = !affiliateFilter || order.affiliate_id === affiliateFilter;
-                
-                return matchesSearch && matchesStatus && matchesAffiliate;
-            });
-            
-            if (filteredOrders.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; padding: 30px; color: #718096;">لا توجد طلبات</td></tr>';
-                return;
+                navigator.clipboard.writeText(summary).then(() => {
+                    alert('✅ تم نسخ ملخص الطلب إلى الحافظة\nيمكنك الآن إرساله لفريق التوصيل');
+                }).catch(err => {
+                    console.error('خطأ في النسخ: ', err);
+                    alert('❌ حدث خطأ في نسخ الملخص');
+                });
             }
-            
-            tbody.innerHTML = '';
-            
-            filteredOrders.forEach(order => {
-                const affiliate = affiliates.find(aff => aff.affiliate_id === order.affiliate_id);
-                const commission = getProductCommission(order.order_products, products);
-                
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${order.order_id || 'غير متوفر'}</td>
-                    <td class="customer-info">
-                        <div class="customer-name">${order.name || 'غير متوفر'}</div>
-                        <div class="customer-phone">${order.phone || ''}</div>
-                        ${order.phone2 ? `<div class="customer-phone">${order.phone2}</div>` : ''}
-                    </td>
-                    <td class="product-info">
-                        ${order.order_products && order.order_products.length > 0 ? 
-                            order.order_products.map(product => 
-                                `<div class="product-name">${product.product_name || 'غير معروف'}</div>
-                                 <div class="product-quantity">الكمية: ${product.quantity || 1}</div>`
-                            ).join('') 
-                            : 'لا توجد منتجات'}
-                    </td>
-                    <td>${affiliate ? `${affiliate.affiliate_id}<br><small>${affiliate.name}</small>` : 'طلب مباشر'}</td>
-                    <td>${order.city || 'غير محدد'}</td>
-                    <td class="price-display">${order.total_amount ? order.total_amount.toLocaleString() : '0'} ج.س</td>
-                    <td class="price-display">${order.shipping_cost ? order.shipping_cost.toLocaleString() : '0'} ج.س</td>
-                    <td>
-                        ${order.location_link ? 
-                            `<a href="${order.location_link}" target="_blank" class="location-link">
-                                <i class="fas fa-map-marker-alt"></i> موقع التوصيل
-                            </a>` 
-                            : 'غير محدد'}
-                    </td>
-                    <td>${formatDateEnglish(order.created_at)}</td>
-                    <td><span class="status-badge status-${getStatusClass(order.status)}">${getStatusText(order.status)}</span></td>
-                    <td class="commission-display">${commission > 0 ? commission.toLocaleString() + ' ج.س' : '--'}</td>
-                    <td>
-                        <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-                            <button class="btn btn-success btn-sm" onclick="updateOrderStatus('${order.order_id}', 'delivered')" ${order.status === 'delivered' ? 'disabled' : ''}>
-                                <i class="fas fa-check"></i>
-                            </button>
-                            <button class="btn btn-danger btn-sm" onclick="updateOrderStatus('${order.order_id}', 'cancelled')" ${order.status === 'cancelled' ? 'disabled' : ''}>
-                                <i class="fas fa-times"></i>
-                            </button>
-                            <button class="btn btn-primary btn-sm" onclick="copyOrderSummary(${JSON.stringify(order).replace(/"/g, '&quot;')})" title="نسخ ملخص الطلب">
-                                <i class="fas fa-copy"></i>
-                            </button>
-                        </div>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
 
-        // دالة تحديث حالة الطلب
-        async function updateOrderStatus(orderId, newStatus) {
-            try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'update_order_status',
-                        orderId: orderId,
-                        status: newStatus
-                    })
+            function formatDateEnglish(dateString) {
+                if (!dateString) return 'غير متوفر';
+                const date = new Date(dateString);
+                const options = { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                };
+                return date.toLocaleDateString('en-US', options);
+            }
+
+            function getStatusText(status) {
+                const statusMap = {
+                    'new': 'جديد',
+                    'processing': 'قيد المعالجة',
+                    'shipped': 'تم الشحن',
+                    'delivered': 'تم التوصيل',
+                    'cancelled': 'ملغى',
+                    'active': 'نشط',
+                    'inactive': 'غير نشط'
+                };
+                return statusMap[status] || 'جديد';
+            }
+
+            function getStatusClass(status) {
+                const statusMap = {
+                    'new': 'pending',
+                    'processing': 'pending',
+                    'shipped': 'confirmed',
+                    'delivered': 'confirmed',
+                    'cancelled': 'cancelled',
+                    'active': 'active',
+                    'inactive': 'inactive'
+                };
+                return statusMap[status] || 'pending';
+            }
+
+            function displayOrders(orders, affiliates, products) {
+                const tbody = document.getElementById('ordersBody');
+                const searchTerm = document.getElementById('searchOrders').value.toLowerCase();
+                const statusFilter = document.getElementById('statusFilter').value;
+                const affiliateFilter = document.getElementById('affiliateFilter').value;
+                
+                let filteredOrders = orders.filter(order => {
+                    const matchesSearch = !searchTerm || 
+                        (order.order_id && order.order_id.toLowerCase().includes(searchTerm)) ||
+                        (order.name && order.name.toLowerCase().includes(searchTerm)) ||
+                        (order.order_products && order.order_products.some(p => p.product_name && p.product_name.toLowerCase().includes(searchTerm)));
+                    
+                    const matchesStatus = !statusFilter || order.status === statusFilter;
+                    const matchesAffiliate = !affiliateFilter || order.affiliate_id === affiliateFilter;
+                    
+                    return matchesSearch && matchesStatus && matchesAffiliate;
                 });
                 
-                const result = await response.json();
-                
-                if (!result.success) {
-                    throw new Error(result.error || 'خطأ في تحديث الحالة');
+                if (filteredOrders.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; padding: 30px; color: #718096;">لا توجد طلبات</td></tr>';
+                    return;
                 }
                 
-                loadOrders();
-                alert(`تم تحديث حالة الطلب ${orderId} إلى ${getStatusText(newStatus)}`);
-            } catch (error) {
-                console.error('خطأ في تحديث حالة الطلب:', error);
-                alert('حدث خطأ في تحديث حالة الطلب');
-            }
-        }
-
-        // دوال إدارة المسوقين
-        async function loadAffiliates() {
-            if (!isLoggedIn) return;
-            
-            const loadingElement = document.getElementById('affiliatesLoading');
-            const tableElement = document.getElementById('affiliatesTable');
-            
-            loadingElement.style.display = 'block';
-            tableElement.style.display = 'none';
-            
-            try {
-                const response = await fetch(`${API_URL}?action=get_affiliates_stats`);
-                const result = await response.json();
+                tbody.innerHTML = '';
                 
-                if (!result.success) {
-                    throw new Error(result.error || 'خطأ في تحميل بيانات المسوقين');
+                filteredOrders.forEach(order => {
+                    const affiliate = affiliates.find(aff => aff.affiliate_id === order.affiliate_id);
+                    const commission = getProductCommission(order.order_products, products);
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${order.order_id || 'غير متوفر'}</td>
+                        <td class="customer-info">
+                            <div class="customer-name">${order.name || 'غير متوفر'}</div>
+                            <div class="customer-phone">${order.phone || ''}</div>
+                            ${order.phone2 ? `<div class="customer-phone">${order.phone2}</div>` : ''}
+                        </td>
+                        <td class="product-info">
+                            ${order.order_products && order.order_products.length > 0 ? 
+                                order.order_products.map(product => 
+                                    `<div class="product-name">${product.product_name || 'غير معروف'}</div>
+                                     <div class="product-quantity">الكمية: ${product.quantity || 1}</div>`
+                                ).join('') 
+                                : 'لا توجد منتجات'}
+                        </td>
+                        <td>${affiliate ? `${affiliate.affiliate_id}<br><small>${affiliate.name}</small>` : 'طلب مباشر'}</td>
+                        <td>${order.city || 'غير محدد'}</td>
+                        <td class="price-display">${order.total_amount ? order.total_amount.toLocaleString() : '0'} ج.س</td>
+                        <td class="price-display">${order.shipping_cost ? order.shipping_cost.toLocaleString() : '0'} ج.س</td>
+                        <td>
+                            ${order.location_link ? 
+                                `<a href="${order.location_link}" target="_blank" class="location-link">
+                                    <i class="fas fa-map-marker-alt"></i> موقع التوصيل
+                                </a>` 
+                                : 'غير محدد'}
+                        </td>
+                        <td>${formatDateEnglish(order.created_at)}</td>
+                        <td><span class="status-badge status-${getStatusClass(order.status)}">${getStatusText(order.status)}</span></td>
+                        <td class="commission-display">${commission > 0 ? commission.toLocaleString() + ' ج.س' : '--'}</td>
+                        <td>
+                            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                                <button class="btn btn-success btn-sm" onclick="updateOrderStatus('${order.order_id}', 'delivered')" ${order.status === 'delivered' ? 'disabled' : ''}>
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="updateOrderStatus('${order.order_id}', 'cancelled')" ${order.status === 'cancelled' ? 'disabled' : ''}>
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                <button class="btn btn-primary btn-sm" onclick="copyOrderSummary(${JSON.stringify(order).replace(/"/g, '&quot;')})" title="نسخ ملخص الطلب">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+
+            // ========== دوال تحديث حالة الطلب ==========
+            async function updateOrderStatus(orderId, newStatus) {
+                try {
+                    const { data, error } = await supabase
+                        .from('orders')
+                        .update({ 
+                            status: newStatus,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('order_id', orderId)
+                        .select();
+                    
+                    if (error) throw error;
+                    
+                    loadOrders();
+                    alert(`تم تحديث حالة الطلب ${orderId} إلى ${getStatusText(newStatus)}`);
+                } catch (error) {
+                    console.error('خطأ في تحديث حالة الطلب:', error);
+                    alert('حدث خطأ في تحديث حالة الطلب');
                 }
-                
-                updateAffiliatesStats(result.affiliates || []);
-                displayAffiliates(result.affiliates || []);
-                
-            } catch (error) {
-                console.error('خطأ في تحميل بيانات المسوقين:', error);
-                document.getElementById('affiliatesBody').innerHTML = 
-                    '<tr><td colspan="10" style="text-align: center; color: #e53e3e; padding: 20px;">حدث خطأ في تحميل بيانات المسوقين</td></tr>';
-            } finally {
-                loadingElement.style.display = 'none';
-                tableElement.style.display = 'table';
             }
-        }
 
-        // تحديث إحصائيات المسوقين
-        function updateAffiliatesStats(affiliates) {
-            // إجمالي المسوقين
-            const totalAffiliates = affiliates.length;
-            
-            // المسوقين النشطين
-            const activeAffiliates = affiliates.filter(aff => aff.status === 'active').length;
-            
-            // إجمالي النقرات
-            const totalClicks = affiliates.reduce((sum, aff) => sum + (aff.total_clicks || 0), 0);
-            
-            // إجمالي العمولة
-            const totalCommission = affiliates.reduce((sum, aff) => {
-                const affiliateCommission = calculateAffiliateCommission(aff.affiliate_id);
-                return sum + affiliateCommission;
-            }, 0);
-            
-            document.getElementById('totalAffiliates').textContent = totalAffiliates;
-            document.getElementById('activeAffiliates').textContent = activeAffiliates;
-            document.getElementById('totalClicks').textContent = totalClicks;
-            document.getElementById('totalCommission').textContent = totalCommission + ' ج.س';
-        }
-
-        // حساب العمولة الإجمالية لمسوق معين
-        function calculateAffiliateCommission(affiliateId) {
-            const affiliateOrders = allOrders.filter(order => 
-                order.affiliate_id === affiliateId && order.status === 'delivered'
-            );
-            
-            let totalCommission = 0;
-            affiliateOrders.forEach(order => {
-                const commission = getProductCommission(order.order_products, allProducts);
-                totalCommission += commission;
-            });
-            
-            return totalCommission;
-        }
-
-        // عرض بيانات المسوقين
-        function displayAffiliates(affiliates) {
-            const tbody = document.getElementById('affiliatesBody');
-            const searchTerm = document.getElementById('searchAffiliates').value.toLowerCase();
-            
-            let filteredAffiliates = affiliates.filter(affiliate => {
-                const matchesSearch = !searchTerm || 
-                    (affiliate.affiliate_id && affiliate.affiliate_id.toLowerCase().includes(searchTerm)) ||
-                    (affiliate.name && affiliate.name.toLowerCase().includes(searchTerm)) ||
-                    (affiliate.email && affiliate.email.toLowerCase().includes(searchTerm)) ||
-                    (affiliate.phone && affiliate.phone.includes(searchTerm));
+            // ========== دوال إدارة المسوقين ==========
+            async function loadAffiliates() {
+                if (!isLoggedIn) return;
                 
-                return matchesSearch;
-            });
-            
-            if (filteredAffiliates.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px; color: #718096;">لا توجد مسوقين مسجلين</td></tr>';
-                return;
-            }
-            
-            tbody.innerHTML = '';
-            
-            filteredAffiliates.forEach(affiliate => {
-                const affiliateOrders = allOrders.filter(order => order.affiliate_id === affiliate.affiliate_id);
-                const confirmedOrders = affiliateOrders.filter(order => order.status === 'delivered').length;
-                const totalCommission = calculateAffiliateCommission(affiliate.affiliate_id);
+                const loadingElement = document.getElementById('affiliatesLoading');
+                const tableElement = document.getElementById('affiliatesTable');
                 
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>
-                        <strong>${affiliate.affiliate_id || 'غير معروف'}</strong>
-                        ${affiliate.registration_date ? `<br><small>مسجل منذ ${daysSince(affiliate.registration_date)} يوم</small>` : ''}
-                    </td>
-                    <td>${affiliate.name || 'غير معروف'}</td>
-                    <td>${affiliate.email || 'غير متوفر'}</td>
-                    <td>${affiliate.phone || 'غير متوفر'}</td>
-                    <td>${formatDateEnglish(affiliate.registration_date)}</td>
-                    <td>
-                        <span style="font-weight: 700; color: #3182ce;">${affiliate.total_clicks || 0}</span>
-                        <br><small>نقرة</small>
-                    </td>
-                    <td>
-                        <span style="font-weight: 700; color: #38a169;">${affiliateOrders.length}</span>
-                        <br><small>(${confirmedOrders} مؤكدة)</small>
-                    </td>
-                    <td class="commission-display">${totalCommission > 0 ? totalCommission + ' ج.س' : '--'}</td>
-                    <td>
-                        <span class="status-badge status-${getStatusClass(affiliate.status)}">
-                            ${getStatusText(affiliate.status)}
-                        </span>
-                    </td>
-                    <td>
-                        <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-                            <button class="btn btn-primary btn-sm" onclick="viewAffiliateDetails('${affiliate.affiliate_id}')" title="عرض التفاصيل">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn ${affiliate.status === 'active' ? 'btn-warning' : 'btn-success'} btn-sm" 
-                                    onclick="toggleAffiliateStatus('${affiliate.affiliate_id}', '${affiliate.status}')" 
-                                    title="${affiliate.status === 'active' ? 'تعطيل' : 'تفعيل'}">
-                                <i class="fas ${affiliate.status === 'active' ? 'fa-pause' : 'fa-play'}"></i>
-                            </button>
-                        </div>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        // دوال مساعدة للمسوقين
-        function daysSince(dateString) {
-            if (!dateString) return '?';
-            const date = new Date(dateString);
-            const now = new Date();
-            const diffTime = Math.abs(now - date);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            return diffDays;
-        }
-
-        // عرض تفاصيل المسوق
-        async function viewAffiliateDetails(affiliateId) {
-            try {
-                const response = await fetch(`${API_URL}?action=get_affiliate_data&affiliateId=${affiliateId}`);
-                const result = await response.json();
+                loadingElement.style.display = 'block';
+                tableElement.style.display = 'none';
                 
-                if (!result.success) {
-                    throw new Error(result.error || 'خطأ في تحميل بيانات المسوق');
+                try {
+                    const { data: affiliates, error: affiliatesError } = await supabase
+                        .from('affiliate_users')
+                        .select('*')
+                        .order('registration_date', { ascending: false });
+                    
+                    if (affiliatesError) throw affiliatesError;
+                    
+                    // جلب النقرات
+                    const { data: clicks, error: clicksError } = await supabase
+                        .from('affiliate_clicks')
+                        .select('*');
+                    
+                    if (clicksError) {
+                        console.error('خطأ في جلب النقرات:', clicksError);
+                    }
+                    
+                    // جلب الطلبات
+                    const { data: orders, error: ordersError } = await supabase
+                        .from('orders')
+                        .select('*');
+                    
+                    if (ordersError) {
+                        console.error('خطأ في جلب الطلبات:', ordersError);
+                    }
+                    
+                    allAffiliates = affiliates || [];
+                    allOrders = orders || [];
+                    
+                    updateAffiliatesStats(affiliates || [], clicks || []);
+                    displayAffiliates(affiliates || []);
+                    
+                } catch (error) {
+                    console.error('خطأ في تحميل بيانات المسوقين:', error);
+                    document.getElementById('affiliatesBody').innerHTML = 
+                        '<tr><td colspan="10" style="text-align: center; color: #e53e3e; padding: 20px;">حدث خطأ في تحميل بيانات المسوقين</td></tr>';
+                } finally {
+                    loadingElement.style.display = 'none';
+                    tableElement.style.display = 'table';
                 }
-
-                const affiliate = result.affiliate;
-                const affiliateOrders = allOrders.filter(order => order.affiliate_id === affiliateId);
-                const confirmedOrders = affiliateOrders.filter(order => order.status === 'delivered').length;
-                const totalCommission = calculateAffiliateCommission(affiliateId);
-                
-                const detailsContent = document.getElementById('affiliateDetailsContent');
-                const detailsSection = document.getElementById('affiliateDetails');
-                
-                detailsContent.innerHTML = `
-                    <div class="detail-item">
-                        <span class="detail-label"> المعرف:</span>
-                        <span class="detail-value">${affiliate.affiliate_id}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label"> الاسم:</span>
-                        <span class="detail-value">${affiliate.name}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label"> البريد:</span>
-                        <span class="detail-value">${affiliate.email || 'غير متوفر'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label"> الهاتف:</span>
-                        <span class="detail-value">${affiliate.phone || 'غير متوفر'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label"> تاريخ التسجيل:</span>
-                        <span class="detail-value">${formatDateEnglish(affiliate.registration_date)}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label"> إجمالي النقرات:</span>
-                        <span class="detail-value" style="color: #3182ce; font-weight: 700;">${affiliate.total_clicks || 0}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label"> إجمالي الطلبات:</span>
-                        <span class="detail-value" style="color: #38a169; font-weight: 700;">${affiliateOrders.length} (${confirmedOrders} مؤكدة)</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label"> العمولة المستحقة:</span>
-                        <span class="detail-value commission-display">${totalCommission} ج.س</span>
-                    </div>
-                    ${affiliateOrders.length > 0 ? `
-                    <div class="detail-item">
-                        <span class="detail-label"> آخر الطلبات:</span>
-                        <span class="detail-value">
-                            ${affiliateOrders.slice(0, 3).map(order => 
-                                `طلب ${order.order_id} (${getStatusText(order.status)})`
-                            ).join('<br>')}
-                        </span>
-                    </div>
-                    ` : ''}
-                `;
-                
-                detailsSection.style.display = 'block';
-                currentAffiliateDetails = affiliateId;
-                
-            } catch (error) {
-                console.error('خطأ في عرض تفاصيل المسوق:', error);
-                alert('حدث خطأ في عرض التفاصيل');
             }
-        }
 
-        // تبديل حالة المسوق
-        async function toggleAffiliateStatus(affiliateId, currentStatus) {
-            try {
-                const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+            function updateAffiliatesStats(affiliates, clicks) {
+                const totalAffiliates = affiliates.length;
+                const activeAffiliates = affiliates.filter(aff => aff.status === 'active').length;
                 
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'update_affiliate_status',
-                        affiliateId: affiliateId,
-                        status: newStatus
-                    })
+                // حساب النقرات من جدول affiliate_clicks
+                const totalClicks = clicks.reduce((sum, click) => sum + (click.click_count || 0), 0);
+                
+                // حساب إجمالي العمولة
+                let totalCommission = 0;
+                affiliates.forEach(affiliate => {
+                    const affiliateOrders = allOrders.filter(order => 
+                        order.affiliate_id === affiliate.affiliate_id && 
+                        ['delivered'].includes(order.status)
+                    );
+                    
+                    affiliateOrders.forEach(order => {
+                        const commission = getProductCommission(order.order_products, allProducts);
+                        totalCommission += commission;
+                    });
                 });
                 
-                const result = await response.json();
-                
-                if (!result.success) {
-                    throw new Error(result.error || 'خطأ في تحديث الحالة');
-                }
-                
-                loadAffiliates();
-                
-                if (currentAffiliateDetails === affiliateId) {
-                    viewAffiliateDetails(affiliateId);
-                }
-                
-                alert(`تم ${newStatus === 'active' ? 'تفعيل' : 'تعطيل'} المسوق ${affiliateId}`);
-                
-            } catch (error) {
-                console.error('خطأ في تبديل حالة المسوق:', error);
-                alert('حدث خطأ في تغيير الحالة');
+                document.getElementById('totalAffiliates').textContent = totalAffiliates;
+                document.getElementById('activeAffiliates').textContent = activeAffiliates;
+                document.getElementById('totalClicks').textContent = totalClicks;
+                document.getElementById('totalCommission').textContent = totalCommission + ' ج.س';
             }
-        }
 
-        // دوال إدارة المنتجات
-        async function loadProducts() {
-            if (!isLoggedIn) return;
-            
-            const loadingElement = document.getElementById('productsLoading');
-            const tableElement = document.getElementById('productsTable');
-            
-            loadingElement.style.display = 'block';
-            tableElement.style.display = 'none';
-            
-            try {
-                const response = await fetch(`${API_URL}?action=get_all_products`);
-                const result = await response.json();
+            function calculateAffiliateCommission(affiliateId) {
+                const affiliateOrders = allOrders.filter(order => 
+                    order.affiliate_id === affiliateId && order.status === 'delivered'
+                );
                 
-                if (!result.success) {
-                    throw new Error(result.error || 'خطأ في تحميل المنتجات');
+                let totalCommission = 0;
+                affiliateOrders.forEach(order => {
+                    const commission = getProductCommission(order.order_products, allProducts);
+                    totalCommission += commission;
+                });
+                
+                return totalCommission;
+            }
+
+            function displayAffiliates(affiliates) {
+                const tbody = document.getElementById('affiliatesBody');
+                const searchTerm = document.getElementById('searchAffiliates').value.toLowerCase();
+                
+                let filteredAffiliates = affiliates.filter(affiliate => {
+                    const matchesSearch = !searchTerm || 
+                        (affiliate.affiliate_id && affiliate.affiliate_id.toLowerCase().includes(searchTerm)) ||
+                        (affiliate.name && affiliate.name.toLowerCase().includes(searchTerm)) ||
+                        (affiliate.email && affiliate.email.toLowerCase().includes(searchTerm)) ||
+                        (affiliate.phone && affiliate.phone.includes(searchTerm));
+                    
+                    return matchesSearch;
+                });
+                
+                if (filteredAffiliates.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px; color: #718096;">لا توجد مسوقين مسجلين</td></tr>';
+                    return;
                 }
                 
-                allProducts = result.products || [];
-                displayProducts(allProducts);
+                tbody.innerHTML = '';
                 
-            } catch (error) {
-                console.error('خطأ في تحميل المنتجات:', error);
-                document.getElementById('productsBody').innerHTML = 
-                    '<tr><td colspan="6" style="text-align: center; color: #e53e3e; padding: 20px;">حدث خطأ في تحميل المنتجات</td></tr>';
-            } finally {
-                loadingElement.style.display = 'none';
-                tableElement.style.display = 'table';
+                filteredAffiliates.forEach(affiliate => {
+                    const affiliateOrders = allOrders.filter(order => order.affiliate_id === affiliate.affiliate_id);
+                    const confirmedOrders = affiliateOrders.filter(order => order.status === 'delivered').length;
+                    const totalCommission = calculateAffiliateCommission(affiliate.affiliate_id);
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>
+                            <strong>${affiliate.affiliate_id || 'غير معروف'}</strong>
+                            ${affiliate.registration_date ? `<br><small>مسجل منذ ${daysSince(affiliate.registration_date)} يوم</small>` : ''}
+                        </td>
+                        <td>${affiliate.name || 'غير معروف'}</td>
+                        <td>${affiliate.email || 'غير متوفر'}</td>
+                        <td>${affiliate.phone || 'غير متوفر'}</td>
+                        <td>${formatDateEnglish(affiliate.registration_date)}</td>
+                        <td>
+                            <span style="font-weight: 700; color: #3182ce;">${affiliate.total_clicks || 0}</span>
+                            <br><small>نقرة</small>
+                        </td>
+                        <td>
+                            <span style="font-weight: 700; color: #38a169;">${affiliateOrders.length}</span>
+                            <br><small>(${confirmedOrders} مؤكدة)</small>
+                        </td>
+                        <td class="commission-display">${totalCommission > 0 ? totalCommission + ' ج.س' : '--'}</td>
+                        <td>
+                            <span class="status-badge status-${getStatusClass(affiliate.status)}">
+                                ${getStatusText(affiliate.status)}
+                            </span>
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                                <button class="btn btn-primary btn-sm" onclick="viewAffiliateDetails('${affiliate.affiliate_id}')" title="عرض التفاصيل">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn ${affiliate.status === 'active' ? 'btn-warning' : 'btn-success'} btn-sm" 
+                                        onclick="toggleAffiliateStatus('${affiliate.affiliate_id}', '${affiliate.status}')" 
+                                        title="${affiliate.status === 'active' ? 'تعطيل' : 'تفعيل'}">
+                                    <i class="fas ${affiliate.status === 'active' ? 'fa-pause' : 'fa-play'}"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
             }
-        }
 
-        function displayProducts(products) {
-            const tbody = document.getElementById('productsBody');
-            const searchTerm = document.getElementById('searchProducts').value.toLowerCase();
-            
-            let filteredProducts = products.filter(product => 
-                !searchTerm || 
-                (product.name && product.name.toLowerCase().includes(searchTerm))
-            );
-            
-            if (filteredProducts.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 30px; color: #718096;">لا توجد منتجات</td></tr>';
-                return;
+            function daysSince(dateString) {
+                if (!dateString) return '?';
+                const date = new Date(dateString);
+                const now = new Date();
+                const diffTime = Math.abs(now - date);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                return diffDays;
             }
-            
-            tbody.innerHTML = '';
-            
-            filteredProducts.forEach((product) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${product.name || 'غير معروف'}</td>
-                    <td class="commission-display">${product.commission || 0} ج.س</td>
-                    <td><a href="${product.url || '#'}" target="_blank" style="color: #3182ce; text-decoration: none;">عرض المنتج</a></td>
-                    <td>${formatDateEnglish(product.created_at)}</td>
-                    <td><span class="status-badge status-${getStatusClass(product.status)}">${getStatusText(product.status)}</span></td>
-                    <td>
-                        <div style="display: flex; gap: 5px;">
-                            <button class="btn btn-primary btn-sm" onclick="editProduct('${product.id}')">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-danger btn-sm" onclick="deleteProduct('${product.id}')">
-                                <i class="fas fa-trash"></i>
-                            </button>
+
+            async function viewAffiliateDetails(affiliateId) {
+                try {
+                    const { data: affiliate, error: affiliateError } = await supabase
+                        .from('affiliate_users')
+                        .select('*')
+                        .eq('affiliate_id', affiliateId)
+                        .single();
+                    
+                    if (affiliateError) throw affiliateError;
+                    
+                    const affiliateOrders = allOrders.filter(order => order.affiliate_id === affiliateId);
+                    const confirmedOrders = affiliateOrders.filter(order => order.status === 'delivered').length;
+                    const totalCommission = calculateAffiliateCommission(affiliateId);
+                    
+                    const detailsContent = document.getElementById('affiliateDetailsContent');
+                    const detailsSection = document.getElementById('affiliateDetails');
+                    
+                    detailsContent.innerHTML = `
+                        <div class="detail-item">
+                            <span class="detail-label"> المعرف:</span>
+                            <span class="detail-value">${affiliate.affiliate_id}</span>
                         </div>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        // دوال Modal المنتجات
-        function showAddProductModal() {
-            document.getElementById('modalTitle').textContent = 'إضافة منتج جديد';
-            document.getElementById('productForm').reset();
-            document.getElementById('productStatus').value = 'active';
-            document.getElementById('productId').value = '';
-            currentEditingProductId = null;
-            document.getElementById('productModal').style.display = 'flex';
-        }
-
-        function closeProductModal() {
-            document.getElementById('productModal').style.display = 'none';
-        }
-
-        // تعديل منتج
-        async function editProduct(productId) {
-            try {
-                const product = allProducts.find(p => p.id == productId);
-                
-                if (!product) {
-                    throw new Error('المنتج غير موجود');
+                        <div class="detail-item">
+                            <span class="detail-label"> الاسم:</span>
+                            <span class="detail-value">${affiliate.name}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"> البريد:</span>
+                            <span class="detail-value">${affiliate.email || 'غير متوفر'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"> الهاتف:</span>
+                            <span class="detail-value">${affiliate.phone || 'غير متوفر'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"> تاريخ التسجيل:</span>
+                            <span class="detail-value">${formatDateEnglish(affiliate.registration_date)}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"> إجمالي النقرات:</span>
+                            <span class="detail-value" style="color: #3182ce; font-weight: 700;">${affiliate.total_clicks || 0}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"> إجمالي الطلبات:</span>
+                            <span class="detail-value" style="color: #38a169; font-weight: 700;">${affiliateOrders.length} (${confirmedOrders} مؤكدة)</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"> العمولة المستحقة:</span>
+                            <span class="detail-value commission-display">${totalCommission} ج.س</span>
+                        </div>
+                        ${affiliateOrders.length > 0 ? `
+                        <div class="detail-item">
+                            <span class="detail-label"> آخر الطلبات:</span>
+                            <span class="detail-value">
+                                ${affiliateOrders.slice(0, 3).map(order => 
+                                    `طلب ${order.order_id} (${getStatusText(order.status)})`
+                                ).join('<br>')}
+                            </span>
+                        </div>
+                        ` : ''}
+                    `;
+                    
+                    detailsSection.style.display = 'block';
+                    currentAffiliateDetails = affiliateId;
+                    
+                } catch (error) {
+                    console.error('خطأ في عرض تفاصيل المسوق:', error);
+                    alert('حدث خطأ في عرض التفاصيل');
                 }
+            }
 
-                document.getElementById('modalTitle').textContent = 'تعديل المنتج';
-                document.getElementById('productName').value = product.name || '';
-                document.getElementById('productUrl').value = product.url || '';
-                document.getElementById('productCommission').value = product.commission || 0;
-                document.getElementById('productStatus').value = product.status || 'active';
-                document.getElementById('productId').value = product.id;
-                currentEditingProductId = product.id;
+            async function toggleAffiliateStatus(affiliateId, currentStatus) {
+                try {
+                    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+                    
+                    const { data, error } = await supabase
+                        .from('affiliate_users')
+                        .update({ 
+                            status: newStatus,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('affiliate_id', affiliateId)
+                        .select();
+                    
+                    if (error) throw error;
+                    
+                    loadAffiliates();
+                    
+                    if (currentAffiliateDetails === affiliateId) {
+                        viewAffiliateDetails(affiliateId);
+                    }
+                    
+                    alert(`تم ${newStatus === 'active' ? 'تفعيل' : 'تعطيل'} المسوق ${affiliateId}`);
+                    
+                } catch (error) {
+                    console.error('خطأ في تبديل حالة المسوق:', error);
+                    alert('حدث خطأ في تغيير الحالة');
+                }
+            }
+
+            // ========== دوال إدارة المنتجات ==========
+            async function loadProducts() {
+                if (!isLoggedIn) return;
                 
+                const loadingElement = document.getElementById('productsLoading');
+                const tableElement = document.getElementById('productsTable');
+                
+                loadingElement.style.display = 'block';
+                tableElement.style.display = 'none';
+                
+                try {
+                    const { data: products, error } = await supabase
+                        .from('products')
+                        .select('*')
+                        .order('created_at', { ascending: false });
+                    
+                    if (error) throw error;
+                    
+                    allProducts = products || [];
+                    displayProducts(allProducts);
+                    
+                } catch (error) {
+                    console.error('خطأ في تحميل المنتجات:', error);
+                    document.getElementById('productsBody').innerHTML = 
+                        '<tr><td colspan="6" style="text-align: center; color: #e53e3e; padding: 20px;">حدث خطأ في تحميل المنتجات</td></tr>';
+                } finally {
+                    loadingElement.style.display = 'none';
+                    tableElement.style.display = 'table';
+                }
+            }
+
+            function displayProducts(products) {
+                const tbody = document.getElementById('productsBody');
+                const searchTerm = document.getElementById('searchProducts').value.toLowerCase();
+                
+                let filteredProducts = products.filter(product => 
+                    !searchTerm || 
+                    (product.name && product.name.toLowerCase().includes(searchTerm))
+                );
+                
+                if (filteredProducts.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 30px; color: #718096;">لا توجد منتجات</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = '';
+                
+                filteredProducts.forEach((product) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${product.name || 'غير معروف'}</td>
+                        <td class="commission-display">${product.commission || 0} ج.س</td>
+                        <td><a href="${product.url || '#'}" target="_blank" style="color: #3182ce; text-decoration: none;">عرض المنتج</a></td>
+                        <td>${formatDateEnglish(product.created_at)}</td>
+                        <td><span class="status-badge status-${getStatusClass(product.status)}">${getStatusText(product.status)}</span></td>
+                        <td>
+                            <div style="display: flex; gap: 5px;">
+                                <button class="btn btn-primary btn-sm" onclick="editProduct('${product.id}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteProduct('${product.id}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+
+            function showAddProductModal() {
+                document.getElementById('modalTitle').textContent = 'إضافة منتج جديد';
+                document.getElementById('productForm').reset();
+                document.getElementById('productStatus').value = 'active';
+                document.getElementById('productId').value = '';
+                currentEditingProductId = null;
                 document.getElementById('productModal').style.display = 'flex';
-                
-            } catch (error) {
-                console.error('خطأ في تحميل بيانات المنتج:', error);
-                alert('حدث خطأ في تحميل بيانات المنتج');
             }
-        }
 
-        // حذف منتج
-        async function deleteProduct(productId) {
-            if (!confirm('هل أنت متأكد من حذف هذا المنتج؟\n\n⚠️ سيؤثر هذا على حساب العمولة للطلبات المرتبطة به.')) {
-                return;
+            function closeProductModal() {
+                document.getElementById('productModal').style.display = 'none';
             }
-            
-            try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'delete_product',
-                        id: productId
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (!result.success) {
-                    throw new Error(result.error || 'خطأ في حذف المنتج');
+
+            async function editProduct(productId) {
+                try {
+                    const product = allProducts.find(p => p.id == productId);
+                    
+                    if (!product) {
+                        throw new Error('المنتج غير موجود');
+                    }
+
+                    document.getElementById('modalTitle').textContent = 'تعديل المنتج';
+                    document.getElementById('productName').value = product.name || '';
+                    document.getElementById('productUrl').value = product.url || '';
+                    document.getElementById('productCommission').value = product.commission || 0;
+                    document.getElementById('productStatus').value = product.status || 'active';
+                    document.getElementById('productId').value = product.id;
+                    currentEditingProductId = product.id;
+                    
+                    document.getElementById('productModal').style.display = 'flex';
+                    
+                } catch (error) {
+                    console.error('خطأ في تحميل بيانات المنتج:', error);
+                    alert('حدث خطأ في تحميل بيانات المنتج');
+                }
+            }
+
+            async function deleteProduct(productId) {
+                if (!confirm('هل أنت متأكد من حذف هذا المنتج؟\n\n⚠️ سيؤثر هذا على حساب العمولة للطلبات المرتبطة به.')) {
+                    return;
                 }
                 
-                loadProducts();
-                alert(`تم حذف المنتج بنجاح`);
-                
-            } catch (error) {
-                console.error('خطأ في حذف المنتج:', error);
-                alert('حدث خطأ في حذف المنتج');
+                try {
+                    const { error } = await supabase
+                        .from('products')
+                        .delete()
+                        .eq('id', productId);
+                    
+                    if (error) throw error;
+                    
+                    loadProducts();
+                    alert('تم حذف المنتج بنجاح');
+                    
+                } catch (error) {
+                    console.error('خطأ في حذف المنتج:', error);
+                    alert('حدث خطأ في حذف المنتج');
+                }
             }
-        }
 
-        // إضافة أو تحديث منتج
-        async function saveProduct(productData) {
-            try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'save_product',
-                        ...productData
-                    })
-                });
+            async function saveProduct(productData) {
+                try {
+                    let result;
+                    
+                    if (productData.id) {
+                        // تحديث منتج موجود
+                        const { data, error } = await supabase
+                            .from('products')
+                            .update({
+                                name: productData.name,
+                                url: productData.url,
+                                commission: parseInt(productData.commission),
+                                status: productData.status,
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('id', productData.id)
+                            .select();
+                        
+                        if (error) throw error;
+                        result = data;
+                    } else {
+                        // إضافة منتج جديد
+                        const { data, error } = await supabase
+                            .from('products')
+                            .insert([{
+                                name: productData.name,
+                                url: productData.url,
+                                commission: parseInt(productData.commission),
+                                status: productData.status,
+                                created_at: new Date().toISOString()
+                            }])
+                            .select();
+                        
+                        if (error) throw error;
+                        result = data;
+                    }
+                    
+                    loadProducts();
+                    closeProductModal();
+                    
+                    alert(productData.id ? 'تم تحديث المنتج بنجاح' : 'تم إضافة المنتج بنجاح');
+                    
+                } catch (error) {
+                    console.error('خطأ في حفظ المنتج:', error);
+                    alert('حدث خطأ في حفظ المنتج');
+                }
+            }
+
+            document.getElementById('productForm').addEventListener('submit', function(e) {
+                e.preventDefault();
                 
-                const result = await response.json();
+                const productData = {
+                    name: document.getElementById('productName').value,
+                    url: document.getElementById('productUrl').value,
+                    commission: parseInt(document.getElementById('productCommission').value),
+                    status: document.getElementById('productStatus').value
+                };
                 
-                if (!result.success) {
-                    throw new Error(result.error || 'خطأ في حفظ المنتج');
+                if (currentEditingProductId) {
+                    productData.id = currentEditingProductId;
                 }
                 
-                loadProducts();
-                closeProductModal();
-                
-                alert(currentEditingProductId ? 'تم تحديث المنتج بنجاح' : 'تم إضافة المنتج بنجاح');
-                
-            } catch (error) {
-                console.error('خطأ في حفظ المنتج:', error);
-                alert('حدث خطأ في حفظ المنتج');
-            }
-        }
-
-        // معالجة نموذج المنتج
-        document.getElementById('productForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const productData = {
-                name: document.getElementById('productName').value,
-                url: document.getElementById('productUrl').value,
-                commission: parseInt(document.getElementById('productCommission').value),
-                status: document.getElementById('productStatus').value
-            };
-            
-            if (currentEditingProductId) {
-                productData.id = currentEditingProductId;
-            }
-            
-            saveProduct(productData);
-        });
-
-        // تحميل البيانات عند فتح الصفحة
-        document.addEventListener('DOMContentLoaded', function() {
-            checkLoginStatus();
-            
-            document.getElementById('searchOrders').addEventListener('input', () => displayOrders(allOrders, allAffiliates, allProducts));
-            document.getElementById('statusFilter').addEventListener('change', () => displayOrders(allOrders, allAffiliates, allProducts));
-            document.getElementById('affiliateFilter').addEventListener('change', () => displayOrders(allOrders, allAffiliates, allProducts));
-            document.getElementById('searchAffiliates').addEventListener('input', () => displayAffiliates(allAffiliates));
-            document.getElementById('searchProducts').addEventListener('input', () => displayProducts(allProducts));
-            
-            // إدخال كلمة المرور عند الضغط على Enter
-            document.getElementById('passwordInput').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    login();
-                }
+                saveProduct(productData);
             });
-        });
+
+            // ========== تحميل البيانات عند فتح الصفحة ==========
+            document.addEventListener('DOMContentLoaded', function() {
+                checkLoginStatus();
+                
+                document.getElementById('searchOrders').addEventListener('input', () => displayOrders(allOrders, allAffiliates, allProducts));
+                document.getElementById('statusFilter').addEventListener('change', () => displayOrders(allOrders, allAffiliates, allProducts));
+                document.getElementById('affiliateFilter').addEventListener('change', () => displayOrders(allOrders, allAffiliates, allProducts));
+                document.getElementById('searchAffiliates').addEventListener('input', () => displayAffiliates(allAffiliates));
+                document.getElementById('searchProducts').addEventListener('input', () => displayProducts(allProducts));
+                
+                document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        login();
+                    }
+                });
+            });
+
+        })();
     </script>
 </body>
 </html>
