@@ -1175,7 +1175,8 @@ async function loadProductsList(products) {
     products.filter(p => p.commission > 0).forEach(product => {
         const option = document.createElement('option');
         option.value = product.name;
-        option.textContent = `${product.name} - ${product.commission || 0} ج.س`;
+        const stockStatus = product.is_out_of_stock ? ' (نفذت الكمية)' : '';
+        option.textContent = `${product.name}${stockStatus} - ${product.commission || 0} ج.س`;
         option.setAttribute('data-url', product.url || '');
         option.setAttribute('data-commission', product.commission || 0);
         productSelect.appendChild(option);
