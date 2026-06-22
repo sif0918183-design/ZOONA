@@ -7,9 +7,8 @@
 const ALLOWED_ORIGINS = [
   'https://zoonasd.com',
   'https://www.zoonasd.com',
-  'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app',
-  'https://zoona-git-feat-complete-affiliate-track-800b78-sifians-projects.vercel.app',
-  'https://zoona-git-feat-complete-affiliate-system-v2-30a731-sifians-projects.vercel.app'
+  'zoonasd.com',
+    'https://zoona-git-secure-supabase-keys-77307646-147e2c-sifians-projects.vercel.app'
 ];
 
 function isOriginAllowed(origin) {
@@ -23,11 +22,10 @@ export default async function handler(req, res) {
   const allowedOrigins = [
     'https://zoonasd.com',
     'https://www.zoonasd.com',
-    'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app',
-    'https://zoona-git-feat-complete-affiliate-track-800b78-sifians-projects.vercel.app',
-    'https://zoona-git-feat-complete-affiliate-system-v2-30a731-sifians-projects.vercel.app'
+    'zoonasd.com',
+    'https://zoona-git-secure-supabase-keys-77307646-147e2c-sifians-projects.vercel.app'
   ];
-  const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed));
+  const isAllowed = allowedOrigins.some(allowed => origin === allowed || origin.startsWith(allowed + "/"));
   
   if (!isAllowed && origin) {
     return res.status(403).json({ error: 'Access denied. Invalid origin.' });
@@ -53,16 +51,9 @@ export default async function handler(req, res) {
   }
 
   // 3. إعداد رؤوس CORS للنطاقات المسموحة فقط
-  const allowedOriginsList = [
-    'https://zoonasd.com',
-    'https://www.zoonasd.com',
-    'https://zoona-git-feature-out-of-stock-indicato-6a745f-sifians-projects.vercel.app',
-    'https://zoona-git-feat-complete-affiliate-track-800b78-sifians-projects.vercel.app',
-    'https://zoona-git-feat-complete-affiliate-system-v2-30a731-sifians-projects.vercel.app'
-  ];
   const currentOrigin = req.headers.origin;
   
-  if (currentOrigin && allowedOriginsList.includes(currentOrigin)) {
+  if (currentOrigin && allowedOrigins.some(allowed => currentOrigin === allowed || currentOrigin.startsWith(allowed + "/"))) {
     res.setHeader('Access-Control-Allow-Origin', currentOrigin);
   } else if (!currentOrigin) {
     // للطلبات من المتصفح مباشرة

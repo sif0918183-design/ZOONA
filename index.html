@@ -2236,52 +2236,51 @@ async function recordAffiliateClick() {
 
     if (!sessionStorage.getItem('affiliate_click_recorded')) {
       try {
-        const SUPABASE_URL = 'https://yhujvalqfmnlyffvejbh.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlodWp2YWxxZm1ubHlmZnZlamJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNTc3OTcsImV4cCI6MjA3ODYzMzc5N30.mMG55moG7HdM-vDzT5R5HiD7kKdE_Jr9BkRio4MJGqw';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const callProxy = async (endpoint, options = {}) => {
+          const res = await fetch(`/api/orders?endpoint=${encodeURIComponent(endpoint)}`, {
+            ...options,
+            headers: { 'Content-Type': 'application/json', ...options.headers }
+          });
+          if (res.status === 204) return null;
+          return res.json();
+        };
 
         const today = new Date().toISOString().split('T')[0];
 
         // 1. Record/Update click in affiliate_clicks
-        const { data: existingClick, error: checkError } = await supabase
-          .from('affiliate_clicks')
-          .select('*')
-          .eq('affiliate_id', ref)
-          .eq('click_date', today)
-          .single();
+        const clicks = await callProxy(`affiliate_clicks?select=*&affiliate_id=eq.${ref}&click_date=eq.${today}`);
+        const existingClick = clicks && clicks.length > 0 ? clicks[0] : null;
 
         if (existingClick) {
-          await supabase
-            .from('affiliate_clicks')
-            .update({
+          await callProxy(`affiliate_clicks?id=eq.${existingClick.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({
               click_count: (existingClick.click_count || 0) + 1,
               updated_at: new Date().toISOString()
             })
-            .eq('id', existingClick.id);
+          });
         } else {
-          await supabase
-            .from('affiliate_clicks')
-            .insert([{
+          await callProxy('affiliate_clicks', {
+            method: 'POST',
+            body: JSON.stringify([{
               affiliate_id: ref,
               click_date: today,
               click_count: 1,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
-            }]);
+            }])
+          });
         }
 
         // 2. Increment total_clicks in affiliate_users
-        const { data: user, error: userError } = await supabase
-          .from('affiliate_users')
-          .select('total_clicks')
-          .eq('affiliate_id', ref)
-          .single();
+        const users = await callProxy(`affiliate_users?select=total_clicks&affiliate_id=eq.${ref}`);
+        const user = users && users.length > 0 ? users[0] : null;
 
         if (user) {
-          await supabase
-            .from('affiliate_users')
-            .update({ total_clicks: (user.total_clicks || 0) + 1 })
-            .eq('affiliate_id', ref);
+          await callProxy(`affiliate_users?affiliate_id=eq.${ref}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ total_clicks: (user.total_clicks || 0) + 1 })
+          });
         }
 
         sessionStorage.setItem('affiliate_click_recorded', 'true');

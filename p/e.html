@@ -786,15 +786,26 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // ========== تكوين Supabase ==========
-        const SUPABASE_URL = 'https://yhujvalqfmnlyffvejbh.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlodWp2YWxxZm1ubHlmZnZlamJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNTc3OTcsImV4cCI6MjA3ODYzMzc5N30.mMG55moG7HdM-vDzT5R5HiD7kKdE_Jr9BkRio4MJGqw';
-        
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // ========== تكوين API (Proxy) ==========
+        async function callSupabase(endpoint, options = {}) {
+            const url = `/api/orders?endpoint=${encodeURIComponent(endpoint)}`;
+            const response = await fetch(url, {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                }
+            });
+            if (response.status === 204) return null;
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || 'Request failed');
+            }
+            return response.json();
+        }
 
-        // ========== دوال API للعمل مع Supabase مباشرة ==========
+        // ========== دوال API للعمل مع Supabase عبر البروكسي ==========
         
         // متغيرات النظام
         let cartItems = JSON.parse(localStorage.getItem('cartItems')) || [];
@@ -885,42 +896,30 @@
             
             if (currentAffiliateId !== 'direct') {
                 try {
-                    // استخدام Supabase مباشرة لتسجيل النقرة
                     const today = new Date().toISOString().split('T')[0];
                     
-                    const { data: existingClick, error: checkError } = await supabaseClient
-                        .from('affiliate_clicks')
-                        .select('*')
-                        .eq('affiliate_id', currentAffiliateId)
-                        .eq('click_date', today)
-                        .single();
-
-                    if (checkError && checkError.code !== 'PGRST116') {
-                        throw new Error('خطأ في التحقق من النقرات: ' + checkError.message);
-                    }
+                    const clicks = await callSupabase(`affiliate_clicks?select=*&affiliate_id=eq.${currentAffiliateId}&click_date=eq.${today}`);
+                    const existingClick = clicks && clicks.length > 0 ? clicks[0] : null;
 
                     if (existingClick) {
-                        const { error: updateError } = await supabaseClient
-                            .from('affiliate_clicks')
-                            .update({ 
+                        await callSupabase(`affiliate_clicks?id=eq.${existingClick.id}`, {
+                            method: 'PATCH',
+                            body: JSON.stringify({
                                 click_count: existingClick.click_count + 1,
                                 updated_at: new Date().toISOString()
                             })
-                            .eq('id', existingClick.id);
-
-                        if (updateError) throw new Error('خطأ في تحديث النقرة: ' + updateError.message);
+                        });
                     } else {
-                        const { error: insertError } = await supabaseClient
-                            .from('affiliate_clicks')
-                            .insert([{
+                        await callSupabase('affiliate_clicks', {
+                            method: 'POST',
+                            body: JSON.stringify([{
                                 affiliate_id: currentAffiliateId,
                                 click_date: today,
                                 click_count: 1,
                                 created_at: new Date().toISOString(),
                                 updated_at: new Date().toISOString()
-                            }]);
-
-                        if (insertError) throw new Error('خطأ في إدخال النقرة: ' + insertError.message);
+                            }])
+                        });
                     }
 
                     console.log('✅ تم تتبع نقرة المسوق بنجاح');
@@ -935,9 +934,9 @@
                 console.log('📝 بدء إنشاء طلب جديد:', orderData.orderId);
 
                 // 1. إدخال الطلب الرئيسي
-                const { data: order, error: orderError } = await supabaseClient
-                    .from('orders')
-                    .insert([{
+                await callSupabase('orders', {
+                    method: 'POST',
+                    body: JSON.stringify([{
                         order_id: orderData.orderId,
                         user_id: orderData.userId,
                         name: orderData.name,
@@ -957,12 +956,7 @@
                         created_at: new Date().toISOString(),
                         updated_at: new Date().toISOString()
                     }])
-                    .select();
-
-                if (orderError) {
-                    console.error('❌ خطأ في إدخال الطلب:', orderError);
-                    throw new Error('خطأ في إدخال الطلب: ' + orderError.message);
-                }
+                });
 
                 console.log('✅ تم إدخال الطلب الرئيسي بنجاح');
 
@@ -978,14 +972,10 @@
                         created_at: new Date().toISOString()
                     }));
 
-                    const { error: productsError } = await supabaseClient
-                        .from('order_products')
-                        .insert(orderProducts);
-
-                    if (productsError) {
-                        console.error('❌ خطأ في إدخال المنتجات:', productsError);
-                        throw new Error('خطأ في إدخال المنتجات: ' + productsError.message);
-                    }
+                    await callSupabase('order_products', {
+                        method: 'POST',
+                        body: JSON.stringify(orderProducts)
+                    });
 
                     console.log('✅ تم إدخال', orderProducts.length, 'منتج بنجاح');
                 }
@@ -1012,31 +1002,26 @@
                 console.log('💰 معالجة بيانات المسوق:', orderData.affiliateId);
 
                 // التحقق من وجود المسوق في جدول المستخدمين
-                const { data: affiliateData, error: affiliateError } = await supabaseClient
-                    .from('affiliate_users')
-                    .select('affiliate_id')
-                    .eq('affiliate_id', orderData.affiliateId)
-                    .single();
+                const affiliates = await callSupabase(`affiliate_users?select=affiliate_id&affiliate_id=eq.${orderData.affiliateId}`);
 
-                if (affiliateError) {
-                    if (affiliateError.code === 'PGRST116') {
-                        console.warn('⚠️ المسوق غير موجود، سيتم تسجيل الطلب كطلب مباشر');
-                        orderData.affiliateId = 'direct';
-                        return;
-                    }
-                    console.error('❌ خطأ في التحقق من المسوق:', affiliateError);
-                    throw affiliateError;
+                if (!affiliates || affiliates.length === 0) {
+                    console.warn('⚠️ المسوق غير موجود، سيتم تسجيل الطلب كطلب مباشر');
+                    orderData.affiliateId = 'direct';
+                    return;
                 }
 
                 // جلب المنتجات لحساب العمولة بدقة
-                const { data: products, error: productsError } = await supabaseClient
-                    .from('products')
-                    .select('id, name, commission');
+                let products = [];
+                try {
+                    products = await callSupabase('products?select=id,name,commission');
+                } catch (e) {
+                    console.error('❌ خطأ في جلب المنتجات:', e);
+                }
 
                 let totalCommission = 0;
                 let commissionDetail = "";
 
-                if (products && !productsError) {
+                if (products && products.length > 0) {
                     orderData.products.forEach(item => {
                         const product = products.find(p => p.id == item.id || (p.name && item.name && p.name.trim() === item.name.trim()));
                         if (product && product.commission) {
@@ -1055,9 +1040,9 @@
                 console.log('💰 حساب العمولة:', totalCommission, 'SDG');
 
                 // حفظ طلب المسوق
-                const { error: orderError } = await supabaseClient
-                    .from('affiliate_orders')
-                    .insert([{
+                await callSupabase('affiliate_orders', {
+                    method: 'POST',
+                    body: JSON.stringify([{
                         affiliate_id: orderData.affiliateId,
                         order_id: orderData.orderId,
                         commission: totalCommission,
@@ -1065,12 +1050,8 @@
                         status: 'pending',
                         created_at: new Date().toISOString(),
                         updated_at: new Date().toISOString()
-                    }]);
-
-                if (orderError) {
-                    console.error('❌ خطأ في حفظ طلب المسوق:', orderError);
-                    throw orderError;
-                }
+                    }])
+                });
 
                 console.log('✅ تم حفظ بيانات المسوق بنجاح');
 
@@ -1085,42 +1066,34 @@
                 console.log('📊 تحديث إحصائيات المسوق:', affiliateId);
 
                 // حساب عدد النقرات
-                const { data: clicks, error: clicksError } = await supabaseClient
-                    .from('affiliate_clicks')
-                    .select('id')
-                    .eq('affiliate_id', affiliateId);
-
-                if (clicksError) {
-                    console.error('❌ خطأ في حساب النقرات:', clicksError);
+                let clicks = [];
+                try {
+                    clicks = await callSupabase(`affiliate_clicks?select=id&affiliate_id=eq.${affiliateId}`);
+                } catch (e) {
+                    console.error('❌ خطأ في حساب النقرات:', e);
                 }
 
                 // حساب عدد الطلبات
-                const { data: orders, error: ordersError } = await supabaseClient
-                    .from('orders')
-                    .select('id')
-                    .eq('affiliate_id', affiliateId);
-
-                if (ordersError) {
-                    console.error('❌ خطأ في حساب الطلبات:', ordersError);
+                let orders = [];
+                try {
+                    orders = await callSupabase(`orders?select=id&affiliate_id=eq.${affiliateId}`);
+                } catch (e) {
+                    console.error('❌ خطأ في حساب الطلبات:', e);
                 }
 
                 // حساب العمولة المؤكدة
                 const confirmedCommission = await calculateConfirmedCommission(affiliateId);
 
                 // تحديث بيانات المسوق
-                const { error: updateError } = await supabaseClient
-                    .from('affiliate_users')
-                    .update({
+                await callSupabase(`affiliate_users?affiliate_id=eq.${affiliateId}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({
                         total_clicks: clicks ? clicks.length : 0,
                         total_orders: orders ? orders.length : 0,
                         total_commission: confirmedCommission,
                         last_updated: new Date().toISOString()
                     })
-                    .eq('affiliate_id', affiliateId);
-
-                if (updateError) {
-                    console.error('❌ خطأ في تحديث إحصائيات المسوق:', updateError);
-                }
+                });
 
                 console.log('✅ تم تحديث إحصائيات المسوق بنجاح');
 
@@ -1132,28 +1105,19 @@
         async function calculateConfirmedCommission(affiliateId) {
             try {
                 // جلب الطلبات المؤكدة للمسوق
-                const { data: confirmedOrders, error: ordersError } = await supabaseClient
-                    .from('orders')
-                    .select(`
-                        *,
-                        order_products(*)
-                    `)
-                    .eq('affiliate_id', affiliateId)
-                    .in('status', ['confirmed', 'delivered']);
-
-                if (ordersError) {
-                    console.error('❌ خطأ في جلب الطلبات المؤكدة:', ordersError);
-                    return 0;
+                let confirmedOrders = [];
+                try {
+                    confirmedOrders = await callSupabase(`orders?select=*,order_products(*)&affiliate_id=eq.${affiliateId}&status=in.("confirmed","delivered")`);
+                } catch (e) {
+                    console.error('❌ خطأ في جلب الطلبات المؤكدة:', e);
                 }
 
                 // جلب المنتجات لحساب العمولة
-                const { data: products, error: productsError } = await supabaseClient
-                    .from('products')
-                    .select('*');
-
-                if (productsError) {
-                    console.error('❌ خطأ في جلب المنتجات:', productsError);
-                    return 0;
+                let products = [];
+                try {
+                    products = await callSupabase('products?select=*');
+                } catch (e) {
+                    console.error('❌ خطأ في جلب المنتجات:', e);
                 }
 
                 let totalConfirmedCommission = 0;
