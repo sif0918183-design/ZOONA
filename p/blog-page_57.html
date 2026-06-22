@@ -760,16 +760,13 @@
 </div>
 
 <script>
-// ========== إعدادات Supabase ==========
-const SUPABASE_URL = 'https://yhujvalqfmnlyffvejbh.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlodWp2YWxxZm1ubHlmZnZlamJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNTc3OTcsImV4cCI6MjA3ODYzMzc5N30.mMG55moG7HdM-vDzT5R5HiD7kKdE_Jr9BkRio4MJGqw';
+// ========== إعدادات API (Proxy) ==========
+const API_URL = '/api/orders';
 
-// ========== دوال Supabase ==========
+// ========== دوال API المحدثة ==========
 async function supabaseRequest(endpoint, options = {}) {
-    const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
+    const url = `${API_URL}?endpoint=${encodeURIComponent(endpoint)}`;
     const headers = {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
         'Content-Type': 'application/json',
         ...options.headers
     };

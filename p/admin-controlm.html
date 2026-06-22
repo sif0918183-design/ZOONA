@@ -656,14 +656,27 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         (function() {
-            // ========== تهيئة Supabase ==========
-            const SUPABASE_URL = 'https://yhujvalqfmnlyffvejbh.supabase.co';
-            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlodWp2YWxxZm1ubHlmZnZlamJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNTc3OTcsImV4cCI6MjA3ODYzMzc5N30.mMG55moG7HdM-vDzT5R5HiD7kKdE_Jr9BkRio4MJGqw';
-            
-            const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            // ========== تهيئة API (Proxy) ==========
+            const API_URL = '/api/orders';
+
+            async function callSupabase(endpoint, options = {}) {
+                const url = `${API_URL}?endpoint=${encodeURIComponent(endpoint)}`;
+                const response = await fetch(url, {
+                    ...options,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    }
+                });
+                if (response.status === 204) return null;
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || 'Request failed');
+                }
+                return response.json();
+            }
             
             // ========== المتغيرات العامة ==========
             let debugMode = false;
@@ -716,16 +729,7 @@
 
             async function verifyAffiliateId(affiliateId) {
                 try {
-                    const { data, error } = await supabase
-                        .from('affiliate_users')
-                        .select('affiliate_id')
-                        .eq('affiliate_id', affiliateId);
-                    
-                    if (error) {
-                        console.error('خطأ في التحقق من المعرف:', error);
-                        return false;
-                    }
-                    
+                    const data = await callSupabase(`affiliate_users?select=affiliate_id&affiliate_id=eq.${affiliateId}`);
                     return data && data.length > 0;
                 } catch (error) {
                     console.error('خطأ في التحقق من المعرف:', error);
@@ -833,41 +837,30 @@
                 
                 try {
                     // جلب الطلبات مع المنتجات المرتبطة
-                    const { data: orders, error: ordersError } = await supabase
-                        .from('orders')
-                        .select(`
-                            *,
-                            order_products(*)
-                        `)
-                        .order('created_at', { ascending: false });
-                    
-                    if (ordersError) throw ordersError;
+                    const orders = await callSupabase('orders?select=*,order_products(*)&order=created_at.desc');
                     
                     // جلب بيانات المسوقين
-                    const { data: affiliates, error: affiliatesError } = await supabase
-                        .from('affiliate_users')
-                        .select('affiliate_id, name');
-                    
-                    if (affiliatesError) {
-                        console.error('خطأ في جلب المسوقين:', affiliatesError);
+                    let affiliates = [];
+                    try {
+                        affiliates = await callSupabase('affiliate_users?select=affiliate_id,name');
+                    } catch (e) {
+                        console.error('خطأ في جلب المسوقين:', e);
                     }
                     
                     // جلب المنتجات لحساب العمولة
-                    const { data: products, error: productsError } = await supabase
-                        .from('products')
-                        .select('*');
-                    
-                    if (productsError) {
-                        console.error('خطأ في جلب المنتجات:', productsError);
+                    let products = [];
+                    try {
+                        products = await callSupabase('products?select=*');
+                    } catch (e) {
+                        console.error('خطأ في جلب المنتجات:', e);
                     }
                     
                     // جلب تفاصيل عمولات المسوقين
-                    const { data: affOrders, error: affOrdersError } = await supabase
-                        .from('affiliate_orders')
-                        .select('*');
-
-                    if (affOrdersError) {
-                        console.error('خطأ في جلب عمولات المسوقين:', affOrdersError);
+                    let affOrders = [];
+                    try {
+                        affOrders = await callSupabase('affiliate_orders?select=*');
+                    } catch (e) {
+                        console.error('خطأ في جلب عمولات المسوقين:', e);
                     }
 
                     allOrders = orders || [];
@@ -1131,16 +1124,13 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             // ========== دوال تحديث حالة الطلب ==========
             async function updateOrderStatus(orderId, newStatus) {
                 try {
-                    const { data, error } = await supabase
-                        .from('orders')
-                        .update({ 
+                    await callSupabase(`orders?order_id=eq.${orderId}`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({
                             status: newStatus,
                             updated_at: new Date().toISOString()
                         })
-                        .eq('order_id', orderId)
-                        .select();
-                    
-                    if (error) throw error;
+                    });
                     
                     loadOrders();
                     alert(`تم تحديث حالة الطلب ${orderId} إلى ${getStatusText(newStatus)}`);
@@ -1153,15 +1143,13 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             async function markCommissionPaid(orderId, affiliateId) {
                 if (!confirm('هل أنت متأكد من تمييز هذه العمولة كمدفوعة؟')) return;
                 try {
-                    const { data, error } = await supabase
-                        .from('affiliate_orders')
-                        .update({
+                    await callSupabase(`affiliate_orders?order_id=eq.${orderId}`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({
                             status: 'paid',
                             updated_at: new Date().toISOString()
                         })
-                        .eq('order_id', orderId);
-
-                    if (error) throw error;
+                    });
 
                     loadOrders();
                     alert(`تم تمييز عمولة الطلب ${orderId} كمدفوعة بنجاح`);
@@ -1182,20 +1170,14 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                 tableElement.style.display = 'none';
                 
                 try {
-                    const { data: affiliates, error: affiliatesError } = await supabase
-                        .from('affiliate_users')
-                        .select('*')
-                        .order('registration_date', { ascending: false });
-                    
-                    if (affiliatesError) throw affiliatesError;
+                    const affiliates = await callSupabase('affiliate_users?select=*&order=registration_date.desc');
                     
                     // جلب الطلبات
-                    const { data: orders, error: ordersError } = await supabase
-                        .from('orders')
-                        .select('*');
-                    
-                    if (ordersError) {
-                        console.error('خطأ في جلب الطلبات:', ordersError);
+                    let orders = [];
+                    try {
+                        orders = await callSupabase('orders?select=*');
+                    } catch (e) {
+                        console.error('خطأ في جلب الطلبات:', e);
                     }
                     
                     allAffiliates = affiliates || [];
@@ -1356,13 +1338,9 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
 
             async function viewAffiliateDetails(affiliateId) {
                 try {
-                    const { data: affiliate, error: affiliateError } = await supabase
-                        .from('affiliate_users')
-                        .select('*')
-                        .eq('affiliate_id', affiliateId)
-                        .single();
-                    
-                    if (affiliateError) throw affiliateError;
+                    const results = await callSupabase(`affiliate_users?select=*&affiliate_id=eq.${affiliateId}`);
+                    if (!results || results.length === 0) throw new Error('Affiliate not found');
+                    const affiliate = results[0];
                     
                     const affiliateOrders = allOrders.filter(order => order.affiliate_id === affiliateId);
                     const confirmedOrders = affiliateOrders.filter(order => ['delivered', 'completed'].includes(order.status)).length;
@@ -1434,16 +1412,13 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                 try {
                     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
                     
-                    const { data, error } = await supabase
-                        .from('affiliate_users')
-                        .update({ 
+                    await callSupabase(`affiliate_users?affiliate_id=eq.${affiliateId}`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({
                             status: newStatus,
                             updated_at: new Date().toISOString()
                         })
-                        .eq('affiliate_id', affiliateId)
-                        .select();
-                    
-                    if (error) throw error;
+                    });
                     
                     loadAffiliates();
                     
@@ -1470,12 +1445,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                 tableElement.style.display = 'none';
                 
                 try {
-                    const { data: products, error } = await supabase
-                        .from('products')
-                        .select('*')
-                        .order('created_at', { ascending: false });
-                    
-                    if (error) throw error;
+                    const products = await callSupabase('products?select=*&order=created_at.desc');
                     
                     allProducts = products || [];
                     displayProducts(allProducts);
@@ -1572,12 +1542,9 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                 }
                 
                 try {
-                    const { error } = await supabase
-                        .from('products')
-                        .delete()
-                        .eq('id', productId);
-                    
-                    if (error) throw error;
+                    await callSupabase(`products?id=eq.${productId}`, {
+                        method: 'DELETE'
+                    });
                     
                     loadProducts();
                     alert('تم حذف المنتج بنجاح');
@@ -1594,35 +1561,28 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     
                     if (productData.id) {
                         // تحديث منتج موجود
-                        const { data, error } = await supabase
-                            .from('products')
-                            .update({
+                        result = await callSupabase(`products?id=eq.${productData.id}`, {
+                            method: 'PATCH',
+                            body: JSON.stringify({
                                 name: productData.name,
                                 url: productData.url,
                                 commission: parseInt(productData.commission),
                                 status: productData.status,
                                 updated_at: new Date().toISOString()
                             })
-                            .eq('id', productData.id)
-                            .select();
-                        
-                        if (error) throw error;
-                        result = data;
+                        });
                     } else {
                         // إضافة منتج جديد
-                        const { data, error } = await supabase
-                            .from('products')
-                            .insert([{
+                        result = await callSupabase('products', {
+                            method: 'POST',
+                            body: JSON.stringify([{
                                 name: productData.name,
                                 url: productData.url,
                                 commission: parseInt(productData.commission),
                                 status: productData.status,
                                 created_at: new Date().toISOString()
                             }])
-                            .select();
-                        
-                        if (error) throw error;
-                        result = data;
+                        });
                     }
                     
                     loadProducts();
