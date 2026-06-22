@@ -7,7 +7,8 @@
 const ALLOWED_ORIGINS = [
   'https://zoonasd.com',
   'https://www.zoonasd.com',
-  'zoonasd.com'
+  'zoonasd.com',
+    'https://zoona-git-secure-supabase-keys-77307646-147e2c-sifians-projects.vercel.app'
 ];
 
 function isOriginAllowed(origin) {
@@ -21,7 +22,8 @@ export default async function handler(req, res) {
   const allowedOrigins = [
     'https://zoonasd.com',
     'https://www.zoonasd.com',
-    'zoonasd.com'
+    'zoonasd.com',
+    'https://zoona-git-secure-supabase-keys-77307646-147e2c-sifians-projects.vercel.app'
   ];
   const isAllowed = allowedOrigins.some(allowed => origin === allowed || origin.startsWith(allowed + "/"));
   

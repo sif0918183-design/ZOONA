@@ -9,7 +9,8 @@ export default async function handler(req, res) {
   const allowedOrigins = [
     'https://zoonasd.com',
     'https://www.zoonasd.com',
-    'zoonasd.com'
+    'zoonasd.com',
+    'https://zoona-git-secure-supabase-keys-77307646-147e2c-sifians-projects.vercel.app'
   ];
 
   // Check if origin starts with any allowed origin
