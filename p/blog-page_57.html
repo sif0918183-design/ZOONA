@@ -793,10 +793,11 @@ function isEnglishText(text) {
 }
 
 // توليد معرف فريد
-function generateAffiliateId(firstName) {
-    const namePart = firstName.trim().toLowerCase().replace(/\s+/g, '');
+function generateAffiliateId(fullName) {
+    const firstName = fullName.trim().split(' ')[0];
+    const sanitizedName = firstName.toLowerCase().replace(/[^a-z0-9]/g, '');
     const randomNum = Math.floor(1000 + Math.random() * 9000);
-    return namePart + randomNum;
+    return sanitizedName + randomNum;
 }
 
 async function registerAffiliate(affiliateData) {
@@ -816,8 +817,25 @@ async function registerAffiliate(affiliateData) {
             }
         }
 
-        // إنشاء معرف المسوق
-        const affiliateId = generateAffiliateId(affiliateData.name);
+        // إنشاء معرف المسوق مع التأكد من عدم تكراره
+        let affiliateId = '';
+        let isUnique = false;
+        let attempts = 0;
+        const maxAttempts = 10;
+
+        while (!isUnique && attempts < maxAttempts) {
+            affiliateId = generateAffiliateId(affiliateData.name);
+            const idCheck = await supabaseRequest('affiliate_users?select=affiliate_id&affiliate_id=eq.' + encodeURIComponent(affiliateId));
+
+            if (!idCheck || idCheck.length === 0) {
+                isUnique = true;
+            }
+            attempts++;
+        }
+
+        if (!isUnique) {
+            throw new Error('فشل في إنشاء معرف فريد، يرجى المحاولة مرة أخرى');
+        }
         
         // إدخال المسوق الجديد
         const newAffiliate = {
