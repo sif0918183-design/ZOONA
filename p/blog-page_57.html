@@ -804,7 +804,7 @@ async function registerAffiliate(affiliateData) {
         console.log('بدء عملية التسجيل:', affiliateData);
 
         // التحقق من عدم وجود بريد إلكتروني أو هاتف مكرر
-        const existingCheck = await supabaseRequest('affiliate_users?select=email,phone&email=eq.' + encodeURIComponent(affiliateData.email) + '&or=phone.eq.' + encodeURIComponent(affiliateData.phone));
+        const existingCheck = await supabaseRequest('affiliate_users?select=email,phone&or=(email.eq.' + encodeURIComponent(affiliateData.email) + ',phone.eq.' + encodeURIComponent(affiliateData.phone) + ')');
         
         if (existingCheck && existingCheck.length > 0) {
             const existing = existingCheck[0];

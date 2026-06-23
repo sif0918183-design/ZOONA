@@ -11,7 +11,8 @@ export default async function handler(req, res) {
     'https://www.zoonasd.com',
     'zoonasd.com',
     'https://zoona-git-secure-supabase-keys-77307646-147e2c-sifians-projects.vercel.app',
-    'https://zoona-git-indicate-out-of-stock-markete-081854-sifians-projects.vercel.app'
+    'https://zoona-git-indicate-out-of-stock-markete-081854-sifians-projects.vercel.app',
+    'https://zoona-git-fix-affiliate-registration-er-d6e282-sifians-projects.vercel.app'
   ];
 
   // Check if origin starts with any allowed origin
