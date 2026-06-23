@@ -14,6 +14,7 @@ export default async function handler(req, res) {
     'https://zoona-git-indicate-out-of-stock-markete-081854-sifians-projects.vercel.app',
     'https://zoona-git-fix-affiliate-registration-er-d6e282-sifians-projects.vercel.app',
     'https://zoona-git-unique-affiliate-id-generatio-561ea2-sifians-projects.vercel.app',
+    'https://zoona-git-tier-commission-and-ui-improv-d14974-sifians-projects.vercel.app'
   ];
   const isAllowed = allowedOrigins.some(allowed => origin === allowed || origin.startsWith(allowed + "/"));
   
@@ -54,6 +55,7 @@ export default async function handler(req, res) {
     'https://zoona-git-indicate-out-of-stock-markete-081854-sifians-projects.vercel.app',
     'https://zoona-git-fix-affiliate-registration-er-d6e282-sifians-projects.vercel.app',
     'https://zoona-git-unique-affiliate-id-generatio-561ea2-sifians-projects.vercel.app',
+    'https://zoona-git-tier-commission-and-ui-improv-d14974-sifians-projects.vercel.app'
   ];
   const currentOrigin = req.headers.origin;
   
