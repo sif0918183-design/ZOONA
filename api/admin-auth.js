@@ -86,6 +86,10 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Password is required' });
     }
 
+    // Hash the provided password
+    const crypto = await import('crypto');
+    const hashedProvided = crypto.createHash('sha256').update(password).digest('hex');
+
     // 4. التحقق من كلمة المرور من Supabase
     const fetchUrl = `${SUPABASE_URL}/rest/v1/admin_settings?key=eq.admin_password&select=value`;
     
@@ -104,7 +108,7 @@ export default async function handler(req, res) {
     }
 
     const data = await response.json();
-    const valid = data.length > 0 && data[0].value === password;
+    const valid = data.length > 0 && data[0].value === hashedProvided;
 
     return res.status(200).json({ valid });
 

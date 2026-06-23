@@ -52,7 +52,28 @@ export default async function handler(req, res) {
   // 4. Extract target endpoint and auth info
   const fullUrl = new URL(req.url, `http://${req.headers.host}`);
   const endpoint = fullUrl.searchParams.get('endpoint');
+  const action = fullUrl.searchParams.get('action');
   const adminPassword = fullUrl.searchParams.get('adminPassword');
+
+  // Handle specialized actions
+  if (action === 'login_affiliate') {
+    const { affiliateId, password } = req.body;
+    if (!affiliateId || !password) return res.status(400).json({ error: 'Missing credentials' });
+
+    const fetchUrl = `${SUPABASE_URL}/rest/v1/affiliate_users?affiliate_id=eq.${encodeURIComponent(affiliateId)}&select=*`;
+    const response = await fetch(fetchUrl, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    });
+    const data = await response.json();
+
+    if (!data || data.length === 0 || data[0].password !== password) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const user = data[0];
+    delete user.password; // Remove password before returning
+    return res.status(200).json({ success: true, affiliate: user });
+  }
 
   if (!endpoint) {
     return res.status(400).json({ error: 'Endpoint query parameter is required' });
@@ -76,14 +97,18 @@ export default async function handler(req, res) {
         return res.status(401).json({ error: 'Admin password required for this operation' });
       }
 
-      // Verify password against DB
+      // Hash the provided password
+      const crypto = await import('crypto');
+      const hashedProvided = crypto.createHash('sha256').update(adminPassword).digest('hex');
+
+      // Verify hashed password against DB
       const authUrl = `${SUPABASE_URL}/rest/v1/admin_settings?key=eq.admin_password&select=value`;
       const authResponse = await fetch(authUrl, {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
       });
       const authData = await authResponse.json();
 
-      if (!authData || authData.length === 0 || authData[0].value !== adminPassword) {
+      if (!authData || authData.length === 0 || authData[0].value !== hashedProvided) {
         return res.status(403).json({ error: 'Unauthorized: Invalid admin password' });
       }
     }

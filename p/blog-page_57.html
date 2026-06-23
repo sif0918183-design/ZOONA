@@ -892,26 +892,23 @@ async function registerAffiliate(affiliateData) {
 
 async function loginAffiliate(affiliateId, password) {
     try {
-        // البحث عن المسوق
-        const result = await supabaseRequest('affiliate_users?select=*&affiliate_id=eq.' + encodeURIComponent(affiliateId));
+        // التحقق من خلال الـ API Proxy لضمان الخصوصية
+        const response = await fetch(`${API_URL}?action=login_affiliate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ affiliateId, password })
+        });
         
-        console.log('نتيجة البحث عن المسوق:', result);
+        const result = await response.json();
 
-        if (!result || result.length === 0) {
-            throw new Error('المسوق غير موجود');
-        }
-
-        const affiliate = result[0];
-        
-        // التحقق من كلمة المرور
-        if (affiliate.password !== password) {
-            throw new Error('كلمة المرور غير صحيحة');
+        if (!response.ok) {
+            throw new Error(result.error || 'فشل تسجيل الدخول');
         }
 
         return {
             success: true,
             message: 'تم تسجيل الدخول بنجاح',
-            affiliate: affiliate
+            affiliate: result.affiliate
         };
 
     } catch (error) {
