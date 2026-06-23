@@ -713,8 +713,22 @@
             </div>
         </div>
         
+        <div id="commissionNote" style="background: #fff8e1; border: 1px solid #ffe082; padding: 15px; margin: 15px; border-radius: 8px; font-size: 0.9rem; color: #856404; display: none;">
+            <i class="fas fa-info-circle"></i> <span id="commissionNoteText">...</span>
+        </div>
+
         <div class="link-section">
-            <h3><i class="fas fa-link"></i> إنشاء رابط تتبع جديد</h3>
+            <h3><i class="fas fa-globe"></i> رابط تتبعك العام للمتجر</h3>
+            <div class="link-controls">
+                <input type="text" id="generalTrackingLink" readonly style="background: #f8f9fa;">
+                <button type="button" class="btn btn-primary" onclick="copyGeneralLink()">
+                    <i class="fas fa-copy"></i> نسخ الرابط العام
+                </button>
+            </div>
+        </div>
+
+        <div class="link-section">
+            <h3><i class="fas fa-link"></i> إنشاء رابط تتبع للمنتجات</h3>
             
             <div class="link-controls">
                 <select id="productSelect" required>
@@ -762,6 +776,11 @@
 <script>
 // ========== إعدادات API (Proxy) ==========
 const API_URL = '/api/orders';
+let commissionSettings = {
+    threshold: 100000,
+    lowRate: 8,
+    highRate: 6
+};
 
 // ========== دوال API المحدثة ==========
 async function supabaseRequest(endpoint, options = {}) {
@@ -1099,7 +1118,34 @@ async function loadDashboardData() {
     document.getElementById('userName').textContent = session.name;
     document.getElementById('affiliateIdDisplay').textContent = session.id;
     
+    // إعداد الرابط العام
+    const generalLink = `https://zoonasd.com/?ref=${session.id}`;
+    document.getElementById('generalTrackingLink').value = generalLink;
+
     try {
+        // جلب إعدادات العمولة
+        try {
+            const settings = await supabaseRequest('admin_settings?select=*');
+            if (settings && settings.length > 0) {
+                const threshold = settings.find(s => s.key === 'commission_threshold');
+                const lowRate = settings.find(s => s.key === 'commission_low_rate');
+                const highRate = settings.find(s => s.key === 'commission_high_rate');
+
+                if (threshold) commissionSettings.threshold = parseInt(threshold.value);
+                if (lowRate) commissionSettings.lowRate = parseInt(lowRate.value);
+                if (highRate) commissionSettings.highRate = parseInt(highRate.value);
+            }
+
+            // عرض ملاحظة العمولة
+            const noteElement = document.getElementById('commissionNote');
+            const noteText = document.getElementById('commissionNoteText');
+            noteText.textContent = `ملاحظة: عمولة المنتجات بسعر أقل من ${commissionSettings.threshold.toLocaleString()} ج.س هي ${commissionSettings.lowRate}%، والمنتجات بسعر ${commissionSettings.threshold.toLocaleString()} ج.س أو أكثر عمولتها ${commissionSettings.highRate}%.`;
+            noteElement.style.display = 'block';
+
+        } catch (e) {
+            console.error('Error loading settings:', e);
+        }
+
         // جلب بيانات المسوق
         const affiliateData = await getAffiliateData(session.id);
         
@@ -1189,14 +1235,17 @@ async function loadProductsList(products) {
         return;
     }
     
-    // إضافة المنتجات للقائمة (التي لها عمولة فقط)
-    products.filter(p => p.commission > 0).forEach(product => {
+    // إضافة المنتجات للقائمة (جميع المنتجات)
+    products.forEach(product => {
         const option = document.createElement('option');
         option.value = product.name;
         const stockStatus = product.is_out_of_stock ? ' (نفذت الكمية)' : '';
-        option.textContent = `${product.name}${stockStatus} - ${product.commission || 0} ج.س`;
+        // عرض سعر المنتج بدلاً من العمولة
+        option.textContent = `${product.name}${stockStatus} - ${product.price || 0} ج.س`;
         option.setAttribute('data-url', product.url || '');
         option.setAttribute('data-commission', product.commission || 0);
+        option.setAttribute('data-price', product.price || 0);
+        option.style.fontFamily = "'Tajawal', sans-serif";
         productSelect.appendChild(option);
     });
 }
@@ -1317,15 +1366,23 @@ function calculateOrderCommission(order, products) {
                 return cleanOrderProduct.includes(cleanProductName) || cleanProductName.includes(cleanOrderProduct);
             });
             
-            if (product && product.commission) {
-                totalCommission += product.commission * (orderProduct.quantity || 1);
+            if (product) {
+                if (product.commission && product.commission > 0) {
+                    // استخدام العمولة الثابتة إذا كانت محددة
+                    totalCommission += product.commission * (orderProduct.quantity || 1);
+                } else if (product.price) {
+                    // استخدام نظام النسبة المتدرج
+                    const rate = product.price < commissionSettings.threshold ? commissionSettings.lowRate : commissionSettings.highRate;
+                    totalCommission += Math.round(product.price * (rate / 100)) * (orderProduct.quantity || 1);
+                }
             }
         });
     }
     
-    // إذا لم نجد تطابق، نستخدم النظام القديم (5%)
+    // إذا لم نجد تطابق، نستخدم نظام النسبة المتدرج على إجمالي الطلب كبديل
     if (totalCommission === 0 && order.total_amount) {
-        totalCommission = Math.round(order.total_amount * 0.05);
+        const rate = order.total_amount < commissionSettings.threshold ? commissionSettings.lowRate : commissionSettings.highRate;
+        totalCommission = Math.round(order.total_amount * (rate / 100));
     }
     
     return totalCommission;
@@ -1421,6 +1478,16 @@ function copyAffiliateId(affiliateId) {
         showMessage('success', 'تم نسخ معرف المسوق إلى الحافظة!');
     }).catch(() => {
         showMessage('error', 'فشل في نسخ المعرف');
+    });
+}
+
+// نسخ الرابط العام
+function copyGeneralLink() {
+    const generalLink = document.getElementById('generalTrackingLink').value;
+    navigator.clipboard.writeText(generalLink).then(() => {
+        showMessage('success', 'تم نسخ الرابط العام بنجاح!');
+    }).catch(() => {
+        showMessage('error', 'فشل في نسخ الرابط');
     });
 }
 

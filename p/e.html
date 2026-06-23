@@ -1010,10 +1010,27 @@
                     return;
                 }
 
+                // جلب إعدادات العمولة
+                let commissionSettings = { threshold: 100000, lowRate: 8, highRate: 6 };
+                try {
+                    const settings = await callSupabase('admin_settings?select=*');
+                    if (settings && settings.length > 0) {
+                        const threshold = settings.find(s => s.key === 'commission_threshold');
+                        const lowRate = settings.find(s => s.key === 'commission_low_rate');
+                        const highRate = settings.find(s => s.key === 'commission_high_rate');
+
+                        if (threshold) commissionSettings.threshold = parseInt(threshold.value);
+                        if (lowRate) commissionSettings.lowRate = parseInt(lowRate.value);
+                        if (highRate) commissionSettings.highRate = parseInt(highRate.value);
+                    }
+                } catch (e) {
+                    console.error('❌ خطأ في جلب الإعدادات:', e);
+                }
+
                 // جلب المنتجات لحساب العمولة بدقة
                 let products = [];
                 try {
-                    products = await callSupabase('products?select=id,name,commission');
+                    products = await callSupabase('products?select=id,name,commission,price');
                 } catch (e) {
                     console.error('❌ خطأ في جلب المنتجات:', e);
                 }
@@ -1024,17 +1041,22 @@
                 if (products && products.length > 0) {
                     orderData.products.forEach(item => {
                         const product = products.find(p => p.id == item.id || (p.name && item.name && p.name.trim() === item.name.trim()));
-                        if (product && product.commission) {
+                        if (product && product.commission && product.commission > 0) {
                             totalCommission += product.commission * item.quantity;
                         } else {
-                            // Fallback to 5% for this specific item if no commission set
-                            totalCommission += Math.round((item.price * item.quantity) * 0.05);
+                            // استخدام نظام النسبة المتدرج للمنتج
+                            const price = product ? product.price : item.price;
+                            const rate = price < commissionSettings.threshold ? commissionSettings.lowRate : commissionSettings.highRate;
+                            totalCommission += Math.round(price * (rate / 100)) * item.quantity;
                         }
                     });
-                    commissionDetail = "Calculated from products";
+                    commissionDetail = `Calculated (Threshold: ${commissionSettings.threshold}, Rates: ${commissionSettings.lowRate}%/${commissionSettings.highRate}%)`;
                 } else {
-                    totalCommission = Math.round((orderData.total - (orderData.shippingCost || 0)) * 0.05);
-                    commissionDetail = "5% fallback (products fetch failed)";
+                    // Fallback باستخدام النسبة المتدرجة على إجمالي الطلب
+                    const netTotal = (orderData.total - (orderData.shippingCost || 0));
+                    const rate = netTotal < commissionSettings.threshold ? commissionSettings.lowRate : commissionSettings.highRate;
+                    totalCommission = Math.round(netTotal * (rate / 100));
+                    commissionDetail = "Tiered fallback (products fetch failed)";
                 }
 
                 console.log('💰 حساب العمولة:', totalCommission, 'SDG');

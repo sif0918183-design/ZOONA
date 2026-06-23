@@ -462,6 +462,9 @@
                 <div class="nav-tab" onclick="showTab('products')">
                     <i class="fas fa-box"></i> إدارة المنتجات
                 </div>
+                <div class="nav-tab" onclick="showTab('settings')">
+                    <i class="fas fa-cogs"></i> إعدادات العمولة
+                </div>
             </div>
         </div>
 
@@ -590,6 +593,42 @@
             </div>
         </div>
 
+        <!-- تبويب إعدادات العمولة -->
+        <div class="tab-content" id="settings-tab">
+            <div class="affiliate-details">
+                <h4 style="color: var(--primary-color); margin-bottom: 20px;">
+                    <i class="fas fa-percent"></i> ضبط إعدادات عمولة المسوقين
+                </h4>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 8px;">الحد الفاصل للعمولة (جنيه سوداني)</label>
+                    <input type="number" id="setting_commission_threshold" placeholder="مثلاً: 100000" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-family: 'Tajawal';">
+                    <p style="font-size: 0.8rem; color: #718096; margin-top: 5px;">السعر الذي يبدأ عنده تغيير نسبة العمولة.</p>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
+                    <div class="form-group">
+                        <label style="display: block; font-weight: 600; margin-bottom: 8px;">نسبة العمولة (أقل من الحد)</label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="number" id="setting_commission_low_rate" placeholder="8" style="flex: 1; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-family: 'Tajawal';">
+                            <span style="font-weight: 700;">%</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label style="display: block; font-weight: 600; margin-bottom: 8px;">نسبة العمولة (الحد فأعلى)</label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="number" id="setting_commission_high_rate" placeholder="6" style="flex: 1; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-family: 'Tajawal';">
+                            <span style="font-weight: 700;">%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="saveCommissionSettings()" style="width: 100%; padding: 15px; font-size: 1rem;">
+                    <i class="fas fa-save"></i> حفظ الإعدادات
+                </button>
+            </div>
+        </div>
+
         <!-- تبويب إدارة المنتجات -->
         <div class="tab-content" id="products-tab">
             <div class="search-box">
@@ -705,6 +744,14 @@
             window.deleteProduct = deleteProduct;
             window.copyOrderSummary = copyOrderSummary;
             window.markCommissionPaid = markCommissionPaid;
+            window.saveCommissionSettings = saveCommissionSettings;
+
+            // ========== متغيرات الإعدادات ==========
+            let commissionSettings = {
+                threshold: 100000,
+                lowRate: 8,
+                highRate: 6
+            };
 
             // ========== دوال تسجيل الدخول ==========
             async function checkLoginStatus() {
@@ -814,6 +861,8 @@
                     loadAffiliates();
                 } else if (tabName === 'products') {
                     loadProducts();
+                } else if (tabName === 'settings') {
+                    loadCommissionSettings();
                 }
             }
 
@@ -822,6 +871,78 @@
                 document.getElementById('debugInfo').style.display = debugMode ? 'block' : 'none';
                 if (debugMode) {
                     loadOrders();
+                }
+            }
+
+            // ========== دوال الإعدادات ==========
+            async function loadCommissionSettings() {
+                if (!isLoggedIn) return;
+
+                try {
+                    const settings = await callSupabase('admin_settings?select=*');
+
+                    if (settings && settings.length > 0) {
+                        const threshold = settings.find(s => s.key === 'commission_threshold');
+                        const lowRate = settings.find(s => s.key === 'commission_low_rate');
+                        const highRate = settings.find(s => s.key === 'commission_high_rate');
+
+                        if (threshold) commissionSettings.threshold = parseInt(threshold.value);
+                        if (lowRate) commissionSettings.lowRate = parseInt(lowRate.value);
+                        if (highRate) commissionSettings.highRate = parseInt(highRate.value);
+                    }
+
+                    document.getElementById('setting_commission_threshold').value = commissionSettings.threshold;
+                    document.getElementById('setting_commission_low_rate').value = commissionSettings.lowRate;
+                    document.getElementById('setting_commission_high_rate').value = commissionSettings.highRate;
+
+                } catch (error) {
+                    console.error('خطأ في تحميل الإعدادات:', error);
+                }
+            }
+
+            async function saveCommissionSettings() {
+                const threshold = document.getElementById('setting_commission_threshold').value;
+                const lowRate = document.getElementById('setting_commission_low_rate').value;
+                const highRate = document.getElementById('setting_commission_high_rate').value;
+
+                if (!threshold || !lowRate || !highRate) {
+                    alert('يرجى ملء جميع الحقول');
+                    return;
+                }
+
+                try {
+                    const settingsToSave = [
+                        { key: 'commission_threshold', value: threshold.toString() },
+                        { key: 'commission_low_rate', value: lowRate.toString() },
+                        { key: 'commission_high_rate', value: highRate.toString() }
+                    ];
+
+                    for (const setting of settingsToSave) {
+                        // محاولة تحديث إذا وجد أو إدخال جديد
+                        const existing = await callSupabase(`admin_settings?select=id&key=eq.${setting.key}`);
+
+                        if (existing && existing.length > 0) {
+                            await callSupabase(`admin_settings?id=eq.${existing[0].id}`, {
+                                method: 'PATCH',
+                                body: JSON.stringify({ value: setting.value, updated_at: new Date().toISOString() })
+                            });
+                        } else {
+                            await callSupabase('admin_settings', {
+                                method: 'POST',
+                                body: JSON.stringify([setting])
+                            });
+                        }
+                    }
+
+                    commissionSettings.threshold = parseInt(threshold);
+                    commissionSettings.lowRate = parseInt(lowRate);
+                    commissionSettings.highRate = parseInt(highRate);
+
+                    alert('✅ تم حفظ الإعدادات بنجاح');
+
+                } catch (error) {
+                    console.error('خطأ في حفظ الإعدادات:', error);
+                    alert('❌ حدث خطأ أثناء حفظ الإعدادات. قد تحتاج لإضافة الصلاحيات اللازمة لقاعدة البيانات.');
                 }
             }
 
@@ -940,8 +1061,15 @@
                         return commonWords.length >= 2;
                     });
                     
-                    if (product && product.commission) {
-                        totalCommission += product.commission * (orderProduct.quantity || 1);
+                    if (product) {
+                        // إذا كانت هناك عمولة ثابتة محددة للمنتج (غير صفر) نستخدمها
+                        if (product.commission && product.commission > 0) {
+                            totalCommission += product.commission * (orderProduct.quantity || 1);
+                        } else if (product.price) {
+                            // وإلا نستخدم نظام النسبة المئوية المتدرج
+                            const rate = product.price < commissionSettings.threshold ? commissionSettings.lowRate : commissionSettings.highRate;
+                            totalCommission += Math.round((product.price * (rate / 100))) * (orderProduct.quantity || 1);
+                        }
                     }
                 });
                 
