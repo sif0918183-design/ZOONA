@@ -14,7 +14,8 @@ export default async function handler(req, res) {
     'https://zoona-git-indicate-out-of-stock-markete-081854-sifians-projects.vercel.app',
     'https://zoona-git-fix-affiliate-registration-er-d6e282-sifians-projects.vercel.app',
     'https://zoona-git-unique-affiliate-id-generatio-561ea2-sifians-projects.vercel.app',
-    'https://zoona-git-tier-commission-and-ui-improv-d14974-sifians-projects.vercel.app'
+    'https://zoona-git-tier-commission-and-ui-improv-d14974-sifians-projects.vercel.app',
+    'https://zoona-git-login-synchronization-and-secu-5e5d31-sifians-projects.vercel.app'
   ];
 
   // Check if origin starts with any allowed origin
@@ -48,13 +49,44 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Server configuration error' });
   }
 
-  // 4. Extract target endpoint
-  // Usage: /api/orders?endpoint=table_name?select=*
+  // 4. Extract target endpoint and auth info
   const fullUrl = new URL(req.url, `http://${req.headers.host}`);
   const endpoint = fullUrl.searchParams.get('endpoint');
+  const adminPassword = fullUrl.searchParams.get('adminPassword');
 
   if (!endpoint) {
     return res.status(400).json({ error: 'Endpoint query parameter is required' });
+  }
+
+  // 5. Server-side Authorization for Admin Actions
+  // Any action that modifies data (POST, PATCH, DELETE) or accesses admin_settings (except specific public keys)
+  // requires adminPassword validation
+  const isWriteOp = ['POST', 'PATCH', 'DELETE'].includes(req.method);
+  const isAdminTable = endpoint.includes('admin_settings');
+  const isSensitiveAffiliateOp = endpoint.includes('affiliate_users') && req.method === 'PATCH'; // For toggling status
+
+  if (isWriteOp || isAdminTable || isSensitiveAffiliateOp) {
+    // If it's a public select on admin_settings for non-sensitive keys, let it pass (handled by RLS anyway)
+    const isPublicSelect = req.method === 'GET' &&
+                          endpoint.includes('admin_settings') &&
+                          !endpoint.includes('admin_password');
+
+    if (!isPublicSelect) {
+      if (!adminPassword) {
+        return res.status(401).json({ error: 'Admin password required for this operation' });
+      }
+
+      // Verify password against DB
+      const authUrl = `${SUPABASE_URL}/rest/v1/admin_settings?key=eq.admin_password&select=value`;
+      const authResponse = await fetch(authUrl, {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+      });
+      const authData = await authResponse.json();
+
+      if (!authData || authData.length === 0 || authData[0].value !== adminPassword) {
+        return res.status(403).json({ error: 'Unauthorized: Invalid admin password' });
+      }
+    }
   }
 
   const fetchUrl = `${SUPABASE_URL}/rest/v1/${endpoint}`;

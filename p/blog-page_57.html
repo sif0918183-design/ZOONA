@@ -1241,7 +1241,8 @@ async function loadProductsList(products) {
         option.value = product.name;
         const stockStatus = product.is_out_of_stock ? ' (نفذت الكمية)' : '';
         // عرض سعر المنتج بدلاً من العمولة
-        option.textContent = `${product.name}${stockStatus} - ${product.price || 0} ج.س`;
+        const priceDisplay = product.price ? product.price.toLocaleString() : '0';
+        option.textContent = `${product.name}${stockStatus} - ${priceDisplay} ج.س`;
         option.setAttribute('data-url', product.url || '');
         option.setAttribute('data-commission', product.commission || 0);
         option.setAttribute('data-price', product.price || 0);

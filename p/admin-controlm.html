@@ -25,54 +25,38 @@
 
         body {
             font-family: 'Tajawal', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 20px;
+            background: #F5F6FA;
+            color: var(--dark-color);
             min-height: 100vh;
             direction: rtl;
         }
 
-        .login-container {
-            max-width: 400px;
-            margin: 50px auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            padding: 30px;
-            text-align: center;
+        /* ── LOGIN ── */
+        #loginContainer {
+            position: fixed; inset: 0;
+            background: linear-gradient(135deg, #1a365d 0%, #2a4365 60%, #4a5568 100%);
+            display: flex; align-items: center; justify-content: center; z-index: 9999;
         }
-
-        .login-container h2 {
-            color: var(--primary-color);
-            margin-bottom: 20px;
+        .login-box {
+            background: #fff; border-radius: 24px; padding: 40px 32px; width: 90%; max-width: 380px;
+            box-shadow: 0 20px 60px rgba(0,0,0,.3); text-align: center;
         }
-
-        .login-container input {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-family: 'Tajawal';
+        .login-logo { width: 90px; height: 90px; border-radius: 20px; margin: 0 auto 16px; display: block; }
+        .login-box h2 { font-size: 22px; font-weight: 900; color: var(--primary-color); margin-bottom: 4px; }
+        .login-box p { font-size: 13px; color: #888; margin-bottom: 24px; }
+        .login-box input {
+            width: 100%; padding: 14px 16px; border: 2px solid #e0e0e0; border-radius: 12px;
+            font-family: 'Tajawal'; font-size: 15px; outline: none; margin-bottom: 12px;
+            text-align: center; letter-spacing: 4px;
         }
-
-        .login-container button {
-            width: 100%;
-            padding: 12px;
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-family: 'Tajawal';
-            font-weight: 500;
-            margin-top: 10px;
+        .login-box input:focus { border-color: var(--primary-color); }
+        .login-btn {
+            width: 100%; background: linear-gradient(135deg, var(--primary-color), var(--dark-color)); color: #fff;
+            border: none; padding: 15px; border-radius: 12px; font-family: 'Tajawal'; font-size: 16px;
+            font-weight: 800; cursor: pointer; transition: .2s;
         }
-
-        .login-error {
-            color: var(--danger-color);
-            margin-top: 10px;
-            display: none;
-        }
+        .login-btn:hover { filter: brightness(1.08); }
+        .login-error { color: var(--danger-color); font-size: 13px; margin-top: 10px; display: none; }
 
         .admin-container {
             max-width: 1400px;
@@ -433,12 +417,18 @@
 </head>
 <body>
     <!-- شاشة تسجيل الدخول -->
-    <div class="login-container" id="loginContainer">
-        <h2><i class="fas fa-lock"></i> تسجيل الدخول</h2>
-        <p>أدخل معرف المسوق للوصول إلى لوحة التحكم</p>
-        <input type="password" id="passwordInput" placeholder="معرف المسوق" />
-        <button onclick="login()">دخول</button>
-        <div class="login-error" id="loginError">معرف المسوق غير صحيح</div>
+    <div id="loginContainer">
+        <div class="login-box">
+            <img src="../assets/splash-logo.png" class="login-logo" alt="ZOONA">
+            <h2>إدارة الطلبات والعمولة</h2>
+            <p>أدخل كلمة المرور للوصول إلى الإدارة</p>
+            <form onsubmit="login(); return false;" autocomplete="off">
+                <input type="text" name="username" value="admin" style="display:none" autocomplete="username">
+                <input type="password" id="passwordInput" placeholder="••••••••" autocomplete="current-password">
+                <button type="submit" class="login-btn"><i class="fas fa-lock-open"></i> دخول</button>
+            </form>
+            <div class="login-error" id="loginError"><i class="fas fa-exclamation-circle"></i> كلمة المرور غير صحيحة</div>
+        </div>
     </div>
 
     <!-- لوحة التحكم -->
@@ -701,7 +691,14 @@
             const API_URL = '/api/orders';
 
             async function callSupabase(endpoint, options = {}) {
-                const url = `${API_URL}?endpoint=${encodeURIComponent(endpoint)}`;
+                let url = `${API_URL}?endpoint=${encodeURIComponent(endpoint)}`;
+
+                // إضافة كلمة المرور للعمليات التي تتطلب صلاحيات
+                const password = getAdminPassword();
+                if (password) {
+                    url += `&adminPassword=${encodeURIComponent(password)}`;
+                }
+
                 const response = await fetch(url, {
                     ...options,
                     headers: {
@@ -754,38 +751,62 @@
             };
 
             // ========== دوال تسجيل الدخول ==========
-            async function checkLoginStatus() {
-                const loginData = localStorage.getItem('admin_login');
-                if (loginData) {
-                    const { timestamp, password } = JSON.parse(loginData);
-                    const now = new Date().getTime();
-                    const oneMonth = 30 * 24 * 60 * 60 * 1000;
-                    
-                    if (now - timestamp < oneMonth) {
-                        const isValid = await verifyAffiliateId(password);
-                        if (isValid) {
-                            isLoggedIn = true;
-                            showAdminPanel();
-                            return;
-                        }
-                    }
-                    localStorage.removeItem('admin_login');
-                }
-                showLoginPanel();
+            const SESSION_KEY = 'admin_auth';
+            const SESSION_EXPIRY_DAYS = 30;
+
+            function setSession(password) {
+                const expiry = new Date();
+                expiry.setDate(expiry.getDate() + SESSION_EXPIRY_DAYS);
+                localStorage.setItem(SESSION_KEY, JSON.stringify({
+                    auth: '1',
+                    password: password,
+                    expiry: expiry.getTime()
+                }));
             }
 
-            async function verifyAffiliateId(affiliateId) {
+            function getAdminPassword() {
                 try {
-                    const data = await callSupabase(`affiliate_users?select=affiliate_id&affiliate_id=eq.${affiliateId}`);
-                    return data && data.length > 0;
+                    const session = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
+                    return session.password || '';
+                } catch (e) {
+                    return '';
+                }
+            }
+
+            function checkSession() {
+                const session = localStorage.getItem(SESSION_KEY);
+                if (!session) return false;
+                try {
+                    const data = JSON.parse(session);
+                    if (data.auth === '1' && data.expiry > Date.now()) {
+                        return true;
+                    }
+                    localStorage.removeItem(SESSION_KEY);
+                } catch {}
+                return false;
+            }
+
+            async function checkLoginStatus() {
+                if (checkSession()) {
+                    showAdminPanel();
+                } else {
+                    showLoginPanel();
+                }
+            }
+
+            async function verifyAdminPassword(password) {
+                try {
+                    const response = await fetch(`/api/admin-auth?password=${encodeURIComponent(password)}`);
+                    const data = await response.json();
+                    return data.valid === true;
                 } catch (error) {
-                    console.error('خطأ في التحقق من المعرف:', error);
+                    console.error('خطأ في التحقق من كلمة المرور:', error);
                     return false;
                 }
             }
 
             function showLoginPanel() {
-                document.getElementById('loginContainer').style.display = 'block';
+                document.getElementById('loginContainer').style.display = 'flex';
                 document.getElementById('adminContainer').style.display = 'none';
                 isLoggedIn = false;
                 allOrders = [];
@@ -805,29 +826,27 @@
                 const errorElement = document.getElementById('loginError');
                 
                 if (!password) {
-                    errorElement.textContent = 'يرجى إدخال معرف المسوق';
+                    errorElement.textContent = 'يرجى إدخال كلمة المرور';
                     errorElement.style.display = 'block';
                     return;
                 }
                 
-                const isValid = await verifyAffiliateId(password);
+                const isValid = await verifyAdminPassword(password);
                 
                 if (isValid) {
-                    const loginData = {
-                        timestamp: new Date().getTime(),
-                        password: password
-                    };
-                    localStorage.setItem('admin_login', JSON.stringify(loginData));
+                    setSession(password);
                     showAdminPanel();
                 } else {
-                    errorElement.textContent = 'معرف المسوق غير صحيح';
                     errorElement.style.display = 'block';
+                    document.getElementById('passwordInput').value = '';
+                    document.getElementById('passwordInput').focus();
+                    setTimeout(() => errorElement.style.display = 'none', 3000);
                 }
             }
 
             function logout() {
-                localStorage.removeItem('admin_login');
-                showLoginPanel();
+                localStorage.removeItem(SESSION_KEY);
+                location.reload();
             }
 
             // ========== دوال إدارة الواجهة ==========
