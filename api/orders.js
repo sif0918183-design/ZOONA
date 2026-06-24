@@ -15,7 +15,8 @@ export default async function handler(req, res) {
     'https://zoona-git-fix-affiliate-registration-er-d6e282-sifians-projects.vercel.app',
     'https://zoona-git-unique-affiliate-id-generatio-561ea2-sifians-projects.vercel.app',
     'https://zoona-git-tier-commission-and-ui-improv-d14974-sifians-projects.vercel.app',
-    'https://zoona-git-login-synchronization-and-secu-5e5d31-sifians-projects.vercel.app'
+    'https://zoona-git-login-synchronization-and-secu-5e5d31-sifians-projects.vercel.app',
+    'https://zoona-git-secure-tiered-commission-v2-d1be82-sifians-projects.vercel.app'
   ];
 
   // Check if origin starts with any allowed origin
@@ -55,7 +56,7 @@ export default async function handler(req, res) {
   const action = fullUrl.searchParams.get('action');
   const adminPassword = fullUrl.searchParams.get('adminPassword');
 
-  // Handle specialized actions
+  // Specialized Action: Affiliate Login
   if (action === 'login_affiliate') {
     const { affiliateId, password } = req.body;
     if (!affiliateId || !password) return res.status(400).json({ error: 'Missing credentials' });
@@ -64,6 +65,9 @@ export default async function handler(req, res) {
     const response = await fetch(fetchUrl, {
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
     });
+
+    if (!response.ok) return res.status(response.status).json({ error: 'Auth fetch failed' });
+
     const data = await response.json();
 
     if (!data || data.length === 0 || data[0].password !== password) {
@@ -71,7 +75,7 @@ export default async function handler(req, res) {
     }
 
     const user = data[0];
-    delete user.password; // Remove password before returning
+    delete user.password; // Privacy: Remove password before returning
     return res.status(200).json({ success: true, affiliate: user });
   }
 
@@ -80,14 +84,12 @@ export default async function handler(req, res) {
   }
 
   // 5. Server-side Authorization for Admin Actions
-  // Any action that modifies data (POST, PATCH, DELETE) or accesses admin_settings (except specific public keys)
-  // requires adminPassword validation
   const isWriteOp = ['POST', 'PATCH', 'DELETE'].includes(req.method);
   const isAdminTable = endpoint.includes('admin_settings');
-  const isSensitiveAffiliateOp = endpoint.includes('affiliate_users') && req.method === 'PATCH'; // For toggling status
+  const isSensitiveAffiliateOp = endpoint.includes('affiliate_users') && req.method === 'PATCH';
 
   if (isWriteOp || isAdminTable || isSensitiveAffiliateOp) {
-    // If it's a public select on admin_settings for non-sensitive keys, let it pass (handled by RLS anyway)
+    // Public non-sensitive settings (Rates & Threshold) can be fetched via GET without password
     const isPublicSelect = req.method === 'GET' &&
                           endpoint.includes('admin_settings') &&
                           !endpoint.includes('admin_password');
@@ -97,7 +99,7 @@ export default async function handler(req, res) {
         return res.status(401).json({ error: 'Admin password required for this operation' });
       }
 
-      // Hash the provided password
+      // Hash provided password to compare with DB
       const crypto = await import('crypto');
       const hashedProvided = crypto.createHash('sha256').update(adminPassword).digest('hex');
 
@@ -106,10 +108,17 @@ export default async function handler(req, res) {
       const authResponse = await fetch(authUrl, {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
       });
+
+      if (!authResponse.ok) {
+          console.error('[Orders-Proxy] Auth Fetch Failed:', authResponse.status);
+          return res.status(500).json({ error: 'Internal Auth Error' });
+      }
+
       const authData = await authResponse.json();
 
       if (!authData || authData.length === 0 || authData[0].value !== hashedProvided) {
-        return res.status(403).json({ error: 'Unauthorized: Invalid admin password' });
+        console.error('[Orders-Proxy] Unauthorized access attempt or RLS blockage.');
+        return res.status(403).json({ error: 'Unauthorized: Invalid admin password or DB error' });
       }
     }
   }
@@ -133,7 +142,6 @@ export default async function handler(req, res) {
 
     const response = await fetch(fetchUrl, fetchOptions);
 
-    // Handle 204 No Content
     if (response.status === 204) {
       return res.status(204).end();
     }

@@ -14,69 +14,42 @@ export default async function handler(req, res) {
     'https://zoona-git-indicate-out-of-stock-markete-081854-sifians-projects.vercel.app',
     'https://zoona-git-fix-affiliate-registration-er-d6e282-sifians-projects.vercel.app',
     'https://zoona-git-unique-affiliate-id-generatio-561ea2-sifians-projects.vercel.app',
-    'https://zoona-git-tier-commission-and-ui-improv-d14974-sifians-projects.vercel.app'
+    'https://zoona-git-tier-commission-and-ui-improv-d14974-sifians-projects.vercel.app',
+    'https://zoona-git-secure-tiered-commission-v2-d1be82-sifians-projects.vercel.app'
   ];
+
   const isAllowed = allowedOrigins.some(allowed => origin === allowed || origin.startsWith(allowed + "/"));
   
   if (!isAllowed && origin) {
     return res.status(403).json({ error: 'Access denied. Invalid origin.' });
   }
 
-  // 2. جلب متغيرات البيئة
+  // 2. CORS Headers
+  const currentOrigin = req.headers.origin;
+  if (currentOrigin && allowedOrigins.some(allowed => currentOrigin === allowed || currentOrigin.startsWith(allowed + "/"))) {
+    res.setHeader('Access-Control-Allow-Origin', currentOrigin);
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', 'https://zoonasd.com');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'GET') {
-    res.setHeader('Allow', ['GET']);
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
 
-  // 2. جلب متغيرات البيئة
+  // 3. جلب متغيرات البيئة
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
   if (!SUPABASE_URL || !SUPABASE_KEY) {
-    console.error('Supabase credentials missing. SUPABASE_URL:', !!SUPABASE_URL, 'SUPABASE_KEY:', !!SUPABASE_KEY);
-    return res.status(500).json({ 
-      error: 'Server configuration error',
-      details: 'Please set SUPABASE_URL and SUPABASE_KEY environment variables in Vercel project settings.'
-    });
-  }
-
-  // 3. التحقق من طريقة الطلب (GET فقط)
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', ['GET']);
-    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
-  }
-
-  // 4. إعداد رؤوس CORS للنطاقات المسموحة فقط
-  const allowedOriginsList = [
-    'https://zoonasd.com',
-    'https://www.zoonasd.com',
-    'zoonasd.com',
-    'https://zoona-git-secure-supabase-keys-77307646-147e2c-sifians-projects.vercel.app',
-    'https://zoona-git-indicate-out-of-stock-markete-081854-sifians-projects.vercel.app',
-    'https://zoona-git-fix-affiliate-registration-er-d6e282-sifians-projects.vercel.app',
-    'https://zoona-git-unique-affiliate-id-generatio-561ea2-sifians-projects.vercel.app',
-    'https://zoona-git-tier-commission-and-ui-improv-d14974-sifians-projects.vercel.app'
-  ];
-  const currentOrigin = req.headers.origin;
-  
-  if (currentOrigin && allowedOriginsList.includes(currentOrigin)) {
-    res.setHeader('Access-Control-Allow-Origin', currentOrigin);
-  } else if (!currentOrigin) {
-    res.setHeader('Access-Control-Allow-Origin', 'https://zoonasd.com');
-  } else {
-    return res.status(403).json({ error: 'Origin not allowed' });
-  }
-  
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
-
-  // التعامل مع طلب OPTIONS (Preflight)
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    console.error('Supabase credentials missing');
+    return res.status(500).json({ error: 'Server configuration error' });
   }
 
   try {
@@ -86,7 +59,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Password is required' });
     }
 
-    // Hash the provided password
+    // Hash the provided password using SHA-256
     const crypto = await import('crypto');
     const hashedProvided = crypto.createHash('sha256').update(password).digest('hex');
 
@@ -103,17 +76,25 @@ export default async function handler(req, res) {
     });
 
     if (!response.ok) {
-      // في حالة الخطأ، نرجع فشل للتحقق
-      return res.status(200).json({ valid: false, error: 'Database error' });
+      const errorText = await response.text();
+      console.error('[Admin-Auth] Supabase Fetch Error:', response.status, errorText);
+      return res.status(200).json({ valid: false, error: 'Database fetch failed' });
     }
 
     const data = await response.json();
-    const valid = data.length > 0 && data[0].value === hashedProvided;
+
+    // Check if data is empty (likely RLS blockage)
+    if (!data || data.length === 0) {
+      console.error('[Admin-Auth] No data returned for admin_password. Check RLS policies.');
+      return res.status(200).json({ valid: false, error: 'Settings not found' });
+    }
+
+    const valid = data[0].value === hashedProvided;
 
     return res.status(200).json({ valid });
 
   } catch (error) {
     console.error('[Admin-Auth] Error:', error.message);
-    return res.status(200).json({ valid: false, error: error.message });
+    return res.status(500).json({ valid: false, error: error.message });
   }
 }

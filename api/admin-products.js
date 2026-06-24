@@ -12,9 +12,11 @@ export default async function handler(req, res) {
     'zoonasd.com',
     'https://zoona-git-secure-supabase-keys-77307646-147e2c-sifians-projects.vercel.app',
     'https://zoona-git-indicate-out-of-stock-markete-081854-sifians-projects.vercel.app',
+    'https://zoona-git-fix-affiliate-registration-er-d6e282-sifians-projects.vercel.app',
     'https://zoona-git-unique-affiliate-id-generatio-561ea2-sifians-projects.vercel.app',
     'https://zoona-git-tier-commission-and-ui-improv-d14974-sifians-projects.vercel.app',
-    'https://zoona-git-login-synchronization-and-secu-5e5d31-sifians-projects.vercel.app'
+    'https://zoona-git-login-synchronization-and-secu-5e5d31-sifians-projects.vercel.app',
+    'https://zoona-git-secure-tiered-commission-v2-d1be82-sifians-projects.vercel.app'
   ];
   const isAllowed = allowedOrigins.some(allowed => origin === allowed || origin.startsWith(allowed + "/"));
   
@@ -52,15 +54,17 @@ export default async function handler(req, res) {
 
     // Try to get password from body if not in query
     if (!adminPassword && req.body) {
-      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-      adminPassword = body.adminPassword;
+      try {
+        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+        adminPassword = body.adminPassword;
+      } catch (e) {}
     }
 
     if (!adminPassword) {
       return res.status(401).json({ error: 'Admin password required for this operation' });
     }
 
-    // Hash the provided password
+    // Hash provided password to compare with DB
     const crypto = await import('crypto');
     const hashedProvided = crypto.createHash('sha256').update(adminPassword).digest('hex');
 
@@ -69,10 +73,17 @@ export default async function handler(req, res) {
     const authResponse = await fetch(authUrl, {
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
     });
+
+    if (!authResponse.ok) {
+        console.error('[Admin-Products] Auth Fetch Failed:', authResponse.status);
+        return res.status(500).json({ error: 'Internal Auth Error' });
+    }
+
     const authData = await authResponse.json();
 
     if (!authData || authData.length === 0 || authData[0].value !== hashedProvided) {
-      return res.status(403).json({ error: 'Unauthorized: Invalid admin password' });
+      console.error('[Admin-Products] Unauthorized access attempt or RLS blockage.');
+      return res.status(403).json({ error: 'Unauthorized: Invalid admin password or DB error' });
     }
   }
 
