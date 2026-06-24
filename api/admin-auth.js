@@ -1,6 +1,6 @@
 /**
  * Vercel API: /api/admin-auth
- * للتحقق من كلمة مرور المسؤول عبر Supabase مع إخفاء المفاتيح.
+ * للتحقق من كلمة مرور المسؤول عبر Supabase باستخدام Service Role Key.
  */
 
 export default async function handler(req, res) {
@@ -15,7 +15,8 @@ export default async function handler(req, res) {
     'https://zoona-git-fix-affiliate-registration-er-d6e282-sifians-projects.vercel.app',
     'https://zoona-git-unique-affiliate-id-generatio-561ea2-sifians-projects.vercel.app',
     'https://zoona-git-tier-commission-and-ui-improv-d14974-sifians-projects.vercel.app',
-    'https://zoona-git-secure-tiered-commission-v2-d1be82-sifians-projects.vercel.app'
+    'https://zoona-git-secure-tiered-commission-v2-d1be82-sifians-projects.vercel.app',
+    'https://zoona-git-fix-admin-login-and-rls-v3-203597-sifians-projects.vercel.app'
   ];
 
   const isAllowed = allowedOrigins.some(allowed => origin === allowed || origin.startsWith(allowed + "/"));
@@ -43,12 +44,12 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
 
-  // 3. جلب متغيرات البيئة
+  // 3. جلب متغيرات البيئة - استخدام Service Role Key لتجاوز RLS
   const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SUPABASE_KEY = process.env.SUPABASE_KEY;
+  const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!SUPABASE_URL || !SUPABASE_KEY) {
-    console.error('Supabase credentials missing');
+  if (!SUPABASE_URL || !SERVICE_KEY) {
+    console.error('Supabase Service Role Key missing');
     return res.status(500).json({ error: 'Server configuration error' });
   }
 
@@ -63,14 +64,14 @@ export default async function handler(req, res) {
     const crypto = await import('crypto');
     const hashedProvided = crypto.createHash('sha256').update(password).digest('hex');
 
-    // 4. التحقق من كلمة المرور من Supabase
+    // 4. التحقق من كلمة المرور من Supabase باستخدام Service Key
     const fetchUrl = `${SUPABASE_URL}/rest/v1/admin_settings?key=eq.admin_password&select=value`;
     
     const response = await fetch(fetchUrl, {
       method: 'GET',
       headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'apikey': SERVICE_KEY,
+        'Authorization': `Bearer ${SERVICE_KEY}`,
         'Content-Type': 'application/json'
       }
     });
@@ -83,10 +84,9 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    // Check if data is empty (likely RLS blockage)
     if (!data || data.length === 0) {
-      console.error('[Admin-Auth] No data returned for admin_password. Check RLS policies.');
-      return res.status(200).json({ valid: false, error: 'Settings not found' });
+      console.error('[Admin-Auth] No data returned for admin_password even with Service Role Key. Check key configuration.');
+      return res.status(200).json({ valid: false, error: 'Settings row missing' });
     }
 
     const valid = data[0].value === hashedProvided;

@@ -16,7 +16,8 @@ export default async function handler(req, res) {
     'https://zoona-git-unique-affiliate-id-generatio-561ea2-sifians-projects.vercel.app',
     'https://zoona-git-tier-commission-and-ui-improv-d14974-sifians-projects.vercel.app',
     'https://zoona-git-login-synchronization-and-secu-5e5d31-sifians-projects.vercel.app',
-    'https://zoona-git-secure-tiered-commission-v2-d1be82-sifians-projects.vercel.app'
+    'https://zoona-git-secure-tiered-commission-v2-d1be82-sifians-projects.vercel.app',
+    'https://zoona-git-fix-admin-login-and-rls-v3-203597-sifians-projects.vercel.app'
   ];
   const isAllowed = allowedOrigins.some(allowed => origin === allowed || origin.startsWith(allowed + "/"));
   
@@ -42,6 +43,7 @@ export default async function handler(req, res) {
   // 3. جلب متغيرات البيئة
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_KEY = process.env.SUPABASE_KEY;
+  const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!SUPABASE_URL || !SUPABASE_KEY) {
     return res.status(500).json({ error: 'Server configuration error' });
@@ -68,10 +70,11 @@ export default async function handler(req, res) {
     const crypto = await import('crypto');
     const hashedProvided = crypto.createHash('sha256').update(adminPassword).digest('hex');
 
-    // Verify hashed password against DB
+    // Verify hashed password against DB using Service Role Key
+    const key = SERVICE_KEY || SUPABASE_KEY;
     const authUrl = `${SUPABASE_URL}/rest/v1/admin_settings?key=eq.admin_password&select=value`;
     const authResponse = await fetch(authUrl, {
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+      headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
     });
 
     if (!authResponse.ok) {
@@ -82,8 +85,8 @@ export default async function handler(req, res) {
     const authData = await authResponse.json();
 
     if (!authData || authData.length === 0 || authData[0].value !== hashedProvided) {
-      console.error('[Admin-Products] Unauthorized access attempt or RLS blockage.');
-      return res.status(403).json({ error: 'Unauthorized: Invalid admin password or DB error' });
+      console.error('[Admin-Products] Unauthorized access attempt.');
+      return res.status(403).json({ error: 'Unauthorized: Invalid admin password' });
     }
   }
 

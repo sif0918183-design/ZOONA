@@ -16,7 +16,8 @@ export default async function handler(req, res) {
     'https://zoona-git-unique-affiliate-id-generatio-561ea2-sifians-projects.vercel.app',
     'https://zoona-git-tier-commission-and-ui-improv-d14974-sifians-projects.vercel.app',
     'https://zoona-git-login-synchronization-and-secu-5e5d31-sifians-projects.vercel.app',
-    'https://zoona-git-secure-tiered-commission-v2-d1be82-sifians-projects.vercel.app'
+    'https://zoona-git-secure-tiered-commission-v2-d1be82-sifians-projects.vercel.app',
+    'https://zoona-git-fix-admin-login-and-rls-v3-203597-sifians-projects.vercel.app'
   ];
 
   // Check if origin starts with any allowed origin
@@ -44,6 +45,7 @@ export default async function handler(req, res) {
   // 3. Supabase Credentials from Environment Variables
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_KEY = process.env.SUPABASE_KEY;
+  const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!SUPABASE_URL || !SUPABASE_KEY) {
     console.error('Supabase credentials missing');
@@ -56,14 +58,15 @@ export default async function handler(req, res) {
   const action = fullUrl.searchParams.get('action');
   const adminPassword = fullUrl.searchParams.get('adminPassword');
 
-  // Specialized Action: Affiliate Login
+  // Specialized Action: Affiliate Login (uses SERVICE_KEY for privacy)
   if (action === 'login_affiliate') {
     const { affiliateId, password } = req.body;
     if (!affiliateId || !password) return res.status(400).json({ error: 'Missing credentials' });
 
+    const key = SERVICE_KEY || SUPABASE_KEY;
     const fetchUrl = `${SUPABASE_URL}/rest/v1/affiliate_users?affiliate_id=eq.${encodeURIComponent(affiliateId)}&select=*`;
     const response = await fetch(fetchUrl, {
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+      headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
     });
 
     if (!response.ok) return res.status(response.status).json({ error: 'Auth fetch failed' });
@@ -103,10 +106,11 @@ export default async function handler(req, res) {
       const crypto = await import('crypto');
       const hashedProvided = crypto.createHash('sha256').update(adminPassword).digest('hex');
 
-      // Verify hashed password against DB
+      // Verify hashed password against DB using SERVICE_KEY to bypass RLS
+      const key = SERVICE_KEY || SUPABASE_KEY;
       const authUrl = `${SUPABASE_URL}/rest/v1/admin_settings?key=eq.admin_password&select=value`;
       const authResponse = await fetch(authUrl, {
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
       });
 
       if (!authResponse.ok) {
@@ -117,12 +121,13 @@ export default async function handler(req, res) {
       const authData = await authResponse.json();
 
       if (!authData || authData.length === 0 || authData[0].value !== hashedProvided) {
-        console.error('[Orders-Proxy] Unauthorized access attempt or RLS blockage.');
-        return res.status(403).json({ error: 'Unauthorized: Invalid admin password or DB error' });
+        console.error('[Orders-Proxy] Unauthorized access attempt or row missing.');
+        return res.status(403).json({ error: 'Unauthorized: Invalid admin password' });
       }
     }
   }
 
+  // Proceed with the actual request
   const fetchUrl = `${SUPABASE_URL}/rest/v1/${endpoint}`;
 
   try {
