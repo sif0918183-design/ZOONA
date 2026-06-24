@@ -806,6 +806,42 @@ async function supabaseRequest(endpoint, options = {}) {
 
 // ========== دوال النظام الأساسية ==========
 
+const categorySlugs = {
+    'الكل': 'all',
+    'موبايلات': 'mobiles',
+    'أجهزة إلكترونية': 'electronics',
+    'أجهزة كهربائية': 'electrical-appliances',
+    'ألعاب أطفال': 'toys',
+    'إكسسوارات موبايلات': 'accessories',
+    'مستحضرات تجميل': 'cosmetics',
+    'أزياء نسائية': 'women-fashion',
+    'المنزل والمطبخ': 'home-kitchen'
+};
+
+function transliterateArabic(text) {
+    const mapping = {
+        'أ': 'a', 'إ': 'i', 'آ': 'a', 'ا': 'a', 'ب': 'b', 'ت': 't', 'ث': 'th', 'ج': 'j', 'ح': 'h', 'خ': 'kh',
+        'د': 'd', 'ذ': 'dh', 'ر': 'r', 'ز': 'z', 'س': 's', 'ش': 'sh', 'ص': 's', 'ض': 'd', 'ط': 't', 'ظ': 'z',
+        'ع': 'a', 'غ': 'gh', 'ف': 'f', 'ق': 'q', 'ك': 'k', 'ل': 'l', 'م': 'm', 'ن': 'n', 'ه': 'h', 'و': 'w',
+        'ي': 'y', 'ى': 'a', 'ة': 't', 'ؤ': 'u', 'ئ': 'i', 'ء': 'a'
+    };
+    return text.split('').map(char => mapping[char] || char).join('');
+}
+
+function slugify(text) {
+    if (!text) return "";
+    const trimmed = text.toString().trim();
+    if (categorySlugs[trimmed]) return categorySlugs[trimmed];
+
+    const words = trimmed.split(/\s+/).slice(0, 3).join(' ');
+    return transliterateArabic(words.toLowerCase())
+        .replace(/\s+/g, '-')           // Replace spaces with -
+        .replace(/[^a-z0-9-]+/g, '')    // Remove non-Latin alphanumeric except -
+        .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+        .replace(/^-+/, '')             // Trim - from start
+        .replace(/-+$/, '');            // Trim - from end
+}
+
 function isEnglishText(text) {
     const englishPattern = /^[A-Za-z\s]+$/;
     return englishPattern.test(text);
@@ -1400,19 +1436,17 @@ async function generateTrackingLink() {
     }
     
     let productName = productSelect.value;
-    let productUrl = productSelect.options[productSelect.selectedIndex].getAttribute('data-url');
-    
     let trackingUrl = '';
     let linkType = '';
     
-    // تحديد نوع الرابط
-    if (productUrl && productUrl.startsWith('http')) {
-        // رابط المنتج مع إضافة المرجع
-        trackingUrl = `${productUrl}${productUrl.includes('?') ? '&' : '?'}ref=${session.id}`;
+    // توليد رابط احترافي بناءً على slug المنتج (مثل index.html)
+    const productSlug = slugify(productName);
+    if (productSlug) {
+        trackingUrl = `https://zoonasd.com/${productSlug}?ref=${session.id}`;
         linkType = 'product';
     } else {
-        // إذا لم يكن هناك رابط منتج، استخدام الرابط الافتراضي
-        trackingUrl = `https://www.zoonasd.com/?ref=${session.id}`;
+        // Fallback للرابط العام إذا فشل الـ slugify
+        trackingUrl = `https://zoonasd.com/?ref=${session.id}`;
         linkType = 'default';
     }
     
