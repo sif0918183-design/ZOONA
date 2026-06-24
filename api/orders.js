@@ -42,21 +42,16 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  // 3. Supabase Credentials from Environment Variables
-  const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SUPABASE_KEY = process.env.SUPABASE_KEY;
-  const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!SUPABASE_URL || !SUPABASE_KEY) {
-    console.error('Supabase credentials missing');
-    return res.status(500).json({ error: 'Server configuration error' });
-  }
-
   // 4. Extract target endpoint and auth info
   const fullUrl = new URL(req.url, `http://${req.headers.host}`);
   const endpoint = fullUrl.searchParams.get('endpoint');
   const action = fullUrl.searchParams.get('action');
   const adminPassword = fullUrl.searchParams.get('adminPassword');
+
+  // 3. Supabase Credentials from Environment Variables
+  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SUPABASE_KEY = process.env.SUPABASE_KEY;
+  const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   // Specialized Action: Affiliate Login (uses SERVICE_KEY for privacy)
   if (action === 'login_affiliate') {
@@ -88,18 +83,40 @@ export default async function handler(req, res) {
 
   // 5. Server-side Authorization for Admin Actions
   const isWriteOp = ['POST', 'PATCH', 'DELETE'].includes(req.method);
-  const isAdminTable = endpoint.includes('admin_settings');
-  const isSensitiveAffiliateOp = endpoint.includes('affiliate_users') && req.method === 'PATCH';
+
+  // Extract base table name for matching (removes query params)
+  const baseTable = endpoint.split('?')[0].split('/')[0];
+
+  const isAdminTable = baseTable === 'admin_settings';
+  const isSensitiveAffiliateOp = baseTable === 'affiliate_users' && req.method === 'PATCH';
+
+  // Define public tables that allow POST/PATCH for customer/marketer actions
+  const publicPostTables = ['orders', 'order_products', 'affiliate_orders', 'affiliate_users', 'affiliate_clicks', 'clicks'];
+  const publicPatchTables = ['affiliate_users', 'affiliate_clicks'];
 
   if (isWriteOp || isAdminTable || isSensitiveAffiliateOp) {
-    // Public non-sensitive settings (Rates & Threshold) can be fetched via GET without password
+    // 1. Allow public GET for settings (Threshold, Rates) but NOT password
     const isPublicSelect = req.method === 'GET' &&
-                          endpoint.includes('admin_settings') &&
+                          isAdminTable &&
                           !endpoint.includes('admin_password');
 
-    if (!isPublicSelect) {
+    // 2. Allow public POST for order/marketer tables
+    const isPublicPost = req.method === 'POST' && publicPostTables.includes(baseTable);
+
+    // 3. Allow public PATCH for marketer stats
+    const isPublicPatch = req.method === 'PATCH' && publicPatchTables.includes(baseTable);
+
+    if (!isPublicSelect && !isPublicPost && !isPublicPatch) {
       if (!adminPassword) {
-        return res.status(401).json({ error: 'Admin password required for this operation' });
+        return res.status(401).json({
+          error: 'Admin password required for this operation',
+          details: { method: req.method, table: baseTable, endpoint: endpoint }
+        });
+      }
+
+      if (!SUPABASE_URL || !SUPABASE_KEY) {
+        console.error('Supabase credentials missing for admin action');
+        return res.status(500).json({ error: 'Server configuration error' });
       }
 
       // Hash provided password to compare with DB
@@ -125,6 +142,11 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: 'Unauthorized: Invalid admin password' });
       }
     }
+  }
+
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    console.error('Supabase credentials missing');
+    return res.status(500).json({ error: 'Server configuration error' });
   }
 
   // Proceed with the actual request
