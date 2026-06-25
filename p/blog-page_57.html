@@ -583,6 +583,191 @@
             display: none;
         }
 
+        /* Comprehensive Guide Styles */
+        .guide-open-btn {
+            background: white;
+            color: var(--primary-color);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-family: 'Tajawal', sans-serif;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            margin-top: 15px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .guide-open-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+            background: #fffafa;
+        }
+
+        .guide-modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .guide-modal-content {
+            background-color: #fefefe;
+            margin: 20px auto;
+            padding: 0;
+            border-radius: var(--border-radius);
+            width: 90%;
+            max-width: 800px;
+            max-height: calc(100% - 40px);
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            animation: slideUp 0.4s ease;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary-color) #f1f1f1;
+        }
+
+        @media (max-width: 480px) {
+            .guide-modal-content {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                border-radius: 0;
+                max-height: none;
+            }
+        }
+
+        .guide-modal-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .guide-modal-header h2 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .guide-close-btn {
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: var(--transition);
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+        }
+
+        .guide-close-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .guide-body {
+            padding: 25px;
+            color: var(--dark-color);
+            line-height: 1.8;
+        }
+
+        .guide-body h3 {
+            color: var(--primary-color);
+            margin: 25px 0 15px 0;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+            font-size: 1.2rem;
+        }
+
+        .guide-body h3:first-child {
+            margin-top: 0;
+        }
+
+        .guide-body hr {
+            border: 0;
+            height: 1px;
+            background: #eee;
+            margin: 25px 0;
+        }
+
+        .guide-body ul, .guide-body ol {
+            margin-right: 20px;
+            margin-bottom: 20px;
+        }
+
+        .guide-body li {
+            margin-bottom: 10px;
+        }
+
+        .guide-body .highlight-box {
+            background: #fff8e1;
+            border-right: 4px solid var(--warning-color);
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+
+        .guide-body .example-box {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .guide-body .example-bad {
+            border-right: 4px solid var(--danger-color);
+        }
+
+        .guide-body .example-good {
+            border-right: 4px solid var(--success-color);
+        }
+
+        .guide-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .guide-table th, .guide-table td {
+            border: 1px solid #eee;
+            padding: 12px;
+            text-align: right;
+        }
+
+        .guide-table th {
+            background: #f8f9fa;
+            font-weight: 700;
+        }
+
+        .guide-success-badge {
+            background: #d4edda;
+            color: #155724;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
     </style>
 </head>
 <body class="mobile-optimized">
@@ -664,6 +849,10 @@
           <h1><i class="fas fa-chart-line"></i>حسابي</h1>
             <p>مرحباً <span id="userName">...</span></p>
             <div class="affiliate-id">معرف المسوق: <span id="affiliateIdDisplay">...</span></div>
+            <br>
+            <button class="guide-open-btn" onclick="openGuide()">
+                <i class="fas fa-book-open"></i> الدليل الشامل للمسوقين
+            </button>
         </div>
 
         <div class="stats-grid">
@@ -773,7 +962,237 @@
     </div>
 </div>
 
+<!-- نافذة الدليل الشامل -->
+<div id="guideModal" class="guide-modal">
+    <div class="guide-modal-content">
+        <div class="guide-modal-header">
+            <h2><i class="fas fa-book-open"></i> الدليل الشامل لبرنامج التسويق – متجر زونا</h2>
+            <span class="guide-close-btn" onclick="closeGuide()">&times;</span>
+        </div>
+        <div class="guide-body">
+            <h3>🌟 مرحباً بك في برنامج التسويق بمتجر زونا</h3>
+            <p>نحن سعداء بانضمامك إلى فريق المسوقين لدينا. هذا البرنامج يمنحك فرصة ذهبية لبناء مصدر دخل إضافي عبر الإنترنت، بدون أي استثمار مسبق، وبدون حاجة لشراء منتجات أو إدارة مخزون. كل ما تحتاجه هو حماسك ورغبتك في النجاح!</p>
+
+            <hr>
+
+            <h3>📋 خطوات البدء – انطلق الآن!</h3>
+            <p>اتبع هذه الخطوات البسيطة لبدء رحلتك التسويقية:</p>
+            <ol>
+                <li>الدخول إلى حسابك التسويقي في متجر زونا.</li>
+                <li>اختر منتجاً من نافذة روابط المنتجات.</li>
+                <li>أنشئ رابطاً تسويقياً بالنقر على زر "إنشاء رابط تتبع".</li>
+                <li>استلم رابطك الفريد للمنتج الذي يحمل معرفك التسويقي الخاص.</li>
+                <li>انسخ الرابط وابدأ النشر عبر قنوات التواصل الاجتماعي، أو أرسله مباشرة إلى عملائك المحتملين.</li>
+            </ol>
+
+            <hr>
+
+            <h3>💰 آلية احتساب العمولة – شفافية تامة</h3>
+            <p>نظام التتبع في متجر زونا يعمل تلقائياً وبكفاءة عالية:</p>
+            <ul>
+                <li>عند ضغط أي شخص على رابطك، يُسجل النظام زيارته ويُعرف أنها قادمة منك.</li>
+                <li>عند إتمام العميل لعملية شراء ناجحة من الموقع واستلام العميل للطلب، تُضاف العمولة فوراً إلى رصيدك في لوحة التحكم.</li>
+                <li>لا يحتاج العميل إلى ذكر اسمك أو إدخال أي كود ترويجي – النظام يتولى كل شيء تلقائياً ويحفظ حقك بالكامل.</li>
+            </ul>
+            <div class="highlight-box">
+                <i class="fas fa-info-circle"></i> يمكنك متابعة جميع طلباتك وعمولاتك في لوحة التحكم الخاصة بك لحظة بلحظة.
+            </div>
+
+            <hr>
+
+            <h3>📝 فن إنشاء منشور تسويقي لا يُقاوم</h3>
+            <p>معظم المسوقين يكتفون فقط بنشر صورة وسعر المنتج ومدن التوصيل المتاحة للتوصيل – وهذا أكبر خطأ يرتكبونه. المسوق المحترف يبيع الحل والفائدة قبل أن يبيع المنتج.</p>
+
+            <div class="example-box example-bad">
+                <strong>❌ مثال ضعيف:</strong><br>
+                سماعة بلوتوث بسعر 25,000 جنيه. للطلب: الرابط.
+            </div>
+
+            <div class="example-box example-good">
+                <strong>✅ مثال احترافي:</strong><br>
+                🎧 هل سئمت من ضعف صوت المكالمات وتشابك الأسلاك؟<br>
+                احصل على سماعة البلوتوث المثالية التي تمنحك:<br>
+                • 🔊 نقاء صوت استثنائي في المكالمات والموسيقى.<br>
+                • 🔋 بطارية تدوم لساعات طويلة دون انقطاع.<br>
+                • 🎮 تصميم مريح يناسب العمل، الدراسة، والرياضة.<br>
+                • 📱 تواصل سلس وسريع مع جميع الأجهزة.<br><br>
+                📦 الكمية محدودة – لا تفوّت الفرصة!<br>
+                👇 اطلب الآن عبر الرابط التالي:<br>
+                (ضع رابطك التسويقي هنا)
+            </div>
+
+            <hr>
+
+            <h3>🎯 استراتيجيات ذهبية لزيادة مبيعاتك</h3>
+            <div style="overflow-x: auto;">
+                <table class="guide-table">
+                    <thead>
+                        <tr>
+                            <th>الاستراتيجية</th>
+                            <th>التفاصيل</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>🏆 اختيار المنتجات الرائجة</td>
+                            <td>ركّز على المنتجات المطلوبة بكثرة في السوق، ادخل لصفحتها في المتجر وراجع تفاصيلها.</td>
+                        </tr>
+                        <tr>
+                            <td>📸 صور احترافية</td>
+                            <td>استخدم صوراً واضحة وجذابة تبرز جودة المنتج.</td>
+                        </tr>
+                        <tr>
+                            <td>💡 بيع الفوائد، لا المواصفات</td>
+                            <td>اشرح كيف سيُحسّن المنتج حياة العميل.</td>
+                        </tr>
+                        <tr>
+                            <td>👥 استهداف المجموعات المهتمة</td>
+                            <td>انشر في مجموعات واتساب وفيسبوك المتخصصة.</td>
+                        </tr>
+                        <tr>
+                            <td>🔄 إعادة النشر الدوري</td>
+                            <td>يومياً وجدّد منشوراتك باستمرار لتصل إلى أكبر عدد.</td>
+                        </tr>
+                        <tr>
+                            <td>🚀 عبارات تحفيزية للشراء</td>
+                            <td>استخدم: "الكمية محدودة"، "عرض لفترة محدودة"، "توصيل متاح"، "اطلب الآن".</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <hr>
+
+            <h3>📢 أين يمكنك التسويق؟ – نوّع مصادرك!</h3>
+            <p>لا تقتصر على قناة واحدة؛ انشر رابطك في أكبر عدد ممكن من المنصات:</p>
+            <ul>
+                <li>واتساب – المجموعات والحالات.</li>
+                <li>فيسبوك – المجموعات والصفحات.</li>
+                <li>تيك توك – فيديوهات قصيرة جذابة.</li>
+                <li>إنستغرام – البوستات والستوريز.</li>
+                <li>تيليجرام – القنوات والمجموعات.</li>
+                <li>المواقع والمدونات – مقالات مراجعة.</li>
+                <li>المنتديات والمجتمعات المهتمة بالمنتج.</li>
+            </ul>
+
+            <hr>
+
+            <h3>⚠️ قواعد أساسية – الالتزام طريق النجاح</h3>
+            <ul>
+                <li>❌ يمنع نشر معلومات غير صحيحة أو مضللة عن المنتجات.</li>
+                <li>✅ العمولة تُحتسب للطلبات المكتملة والمسلمة فعلياً للعميل.</li>
+                <li>✅ يُرجى الالتزام بجميع سياسات متجر زونا أثناء التسويق.</li>
+            </ul>
+
+            <hr>
+
+            <div style="text-align: center; background: #f0f7ff; padding: 20px; border-radius: 12px; margin: 30px 0;">
+                <h3 style="margin-top: 0; border: none; color: var(--dark-color);">💎 تذكر دائماً</h3>
+                <p>كل رابط تسويقي تنشره = فرصة جديدة لتحقيق عمولة.<br>
+                وكلما زاد عدد من يشاهدون منشوراتك ويزورون المتجر عبرك، زادت فرصك في تحقيق مبيعات وأرباح أعلى.</p>
+                <p>نتمنى لك التوفيق والنجاح في رحلتك مع برنامج التسويق بمتجر زونا! 🌟</p>
+            </div>
+
+            <hr>
+
+            <h3 style="text-align: center; color: var(--danger-color);">🔥 السر الذهبي لزيادة مبيعاتك وأرباحك</h3>
+
+            <h3>🤝 لماذا التواصل المباشر مع العملاء هو مفتاح النجاح؟</h3>
+            <p>صحيح أن العملاء يستطيعون الشراء مباشرة عبر رابطك، لكن المسوقين الأكثر نجاحاً يحققون نتائج استثنائية عندما يتواصلون شخصياً مع العملاء المهتمين.</p>
+            <div class="highlight-box">
+                <i class="fas fa-lightbulb"></i> ننصحك بشدة بوضع رقم هاتفك أو وسيلة تواصل معك داخل كل منشور تسويقي، لتسهيل عملية الاستفسار ومساعدة العملاء في إتمام طلباتهم.
+            </div>
+
+            <h3>📝 خطوات التعامل مع العميل المهتم</h3>
+            <p>عندما يتواصل معك عميل ويؤكد رغبته في الشراء، اتبع هذه الخطوات المهنية:</p>
+
+            <strong>🔹 اجمع بيانات الطلب بدقة:</strong>
+            <ul>
+                <li>✅ الاسم الكامل للعميل.</li>
+                <li>✅ رقما اتصال (للتواصل السهل).</li>
+                <li>✅ المدينة والحي أو المنطقة السكنية.</li>
+                <li>✅ اسم المنتج المطلوب بوضوح.</li>
+            </ul>
+
+            <strong>🔹 أرسل البيانات إلى إدارة متجر زونا:</strong>
+            <p>قم بإرسال هذه المعلومات عبر رقم الواتساب الموجود في واجهة الموقع أو التطبيق.</p>
+
+            <strong>🔹 سيتولى فريق زونا:</strong>
+            <ul>
+                <li>التواصل مع العميل.</li>
+                <li>ترتيب إجراءات التوصيل.</li>
+                <li>إكمال الطلب حتى وصوله للعميل.</li>
+            </ul>
+
+            <strong>🔹 عند إتمام البيع والتسليم بنجاح:</strong>
+            <p>تُسجل العمولة باسمك وتُضاف إلى حسابك التسويقي فوراً.</p>
+
+            <hr>
+
+            <h3>💡 لماذا هذه الطريقة أكثر فعالية؟</h3>
+            <div style="overflow-x: auto;">
+                <table class="guide-table">
+                    <thead>
+                        <tr>
+                            <th>الميزة</th>
+                            <th>التأثير</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>🛡️ بناء الثقة</td>
+                            <td>العميل يتعامل مع شخص حقيقي، ما يزيد شعوره بالأمان.</td>
+                        </tr>
+                        <tr>
+                            <td>📈 رفع نسبة الإتمام</td>
+                            <td>المتابعة الشخصية تقلل من تراجع العملاء.</td>
+                        </tr>
+                        <tr>
+                            <td>👥 شمولية أكبر</td>
+                            <td>تساعد العملاء غير المعتادين على الطلب الإلكتروني.</td>
+                        </tr>
+                        <tr>
+                            <td>💬 إقناع أقوى</td>
+                            <td>تتيح لك الرد على الاستفسارات وتشجيع العميل على الشراء الفوري.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <hr>
+
+            <div style="text-align: center; padding: 20px;">
+                <h3 style="border: none;">🏆 خلاصة النجاح – كن مسوقاً استثنائياً</h3>
+                <p>المسوق الناجح لا يكتفي بنشر الرابط فقط، بل يتابع العملاء المهتمين، يساعدهم، ويوجههم حتى إتمام عملية الشراء.</p>
+                <p>كل عملية بيع ناجحة تعني عمولة جديدة وأرباحاً أكبر لك.</p>
+                <h4 style="color: var(--primary-color); font-size: 1.3rem;">ابدأ الآن، وكن جزءاً من قصص نجاح متجر زونا! 🚀</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+// ========== وظائف الدليل الشامل ==========
+function openGuide() {
+    const modal = document.getElementById('guideModal');
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden'; // منع التمرير في الخلفية
+}
+
+function closeGuide() {
+    const modal = document.getElementById('guideModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto'; // إعادة التمرير
+}
+
+// إغلاق النافذة عند الضغط خارجها
+window.onclick = function(event) {
+    const modal = document.getElementById('guideModal');
+    if (event.target == modal) {
+        closeGuide();
+    }
+}
+
 // ========== إعدادات API (Proxy) ==========
 const API_URL = '/api/orders';
 let commissionSettings = {
