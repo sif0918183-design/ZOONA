@@ -3,22 +3,6 @@
  * يقوم بالعمليات على المنتجات (CRUD) في Supabase مع إخفاء المفاتيح عن المتصفح.
  */
 
-// التحقق من النطاق المسموح
-const ALLOWED_ORIGINS = [
-  'https://zoonasd.com',
-  'https://www.zoonasd.com',
-  'zoonasd.com',
-    'https://zoona-git-secure-supabase-keys-77307646-147e2c-sifians-projects.vercel.app',
-    'https://zoona-git-indicate-out-of-stock-markete-081854-sifians-projects.vercel.app',
-    'https://zoona-git-fix-affiliate-registration-er-d6e282-sifians-projects.vercel.app',
-    'https://zoona-git-unique-affiliate-id-generatio-561ea2-sifians-projects.vercel.app'
-];
-
-function isOriginAllowed(origin) {
-  if (!origin) return false;
-  return ALLOWED_ORIGINS.includes(origin);
-}
-
 export default async function handler(req, res) {
   // 1. التحقق من النطاق
   const origin = req.headers.origin || req.headers.referer || '';
@@ -28,7 +12,12 @@ export default async function handler(req, res) {
     'zoonasd.com',
     'https://zoona-git-secure-supabase-keys-77307646-147e2c-sifians-projects.vercel.app',
     'https://zoona-git-indicate-out-of-stock-markete-081854-sifians-projects.vercel.app',
-    'https://zoona-git-unique-affiliate-id-generatio-561ea2-sifians-projects.vercel.app'
+    'https://zoona-git-fix-affiliate-registration-er-d6e282-sifians-projects.vercel.app',
+    'https://zoona-git-unique-affiliate-id-generatio-561ea2-sifians-projects.vercel.app',
+    'https://zoona-git-tier-commission-and-ui-improv-d14974-sifians-projects.vercel.app',
+    'https://zoona-git-login-synchronization-and-secu-5e5d31-sifians-projects.vercel.app',
+    'https://zoona-git-secure-tiered-commission-v2-d1be82-sifians-projects.vercel.app',
+    'https://zoona-git-fix-admin-login-and-rls-v3-203597-sifians-projects.vercel.app'
   ];
   const isAllowed = allowedOrigins.some(allowed => origin === allowed || origin.startsWith(allowed + "/"));
   
@@ -36,47 +25,69 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Access denied. Invalid origin.' });
   }
 
-  // 2. التحقق من طريقة الطلب
-  const allowedMethods = ['GET', 'POST', 'PATCH', 'DELETE'];
-  if (!allowedMethods.includes(req.method)) {
-    res.setHeader('Allow', allowedMethods);
-    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
-  }
-
-  // 2. جلب متغيرات البيئة
-  const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SUPABASE_KEY = process.env.SUPABASE_KEY;
-
-  if (!SUPABASE_URL || !SUPABASE_KEY) {
-    console.error('Supabase credentials missing. SUPABASE_URL:', !!SUPABASE_URL, 'SUPABASE_KEY:', !!SUPABASE_KEY);
-    return res.status(500).json({ 
-      error: 'Server configuration error',
-      details: 'Please set SUPABASE_URL and SUPABASE_KEY environment variables in Vercel project settings.'
-    });
-  }
-
-  // 3. إعداد رؤوس CORS للنطاقات المسموحة فقط
+  // 2. CORS Headers
   const currentOrigin = req.headers.origin;
-  
   if (currentOrigin && allowedOrigins.some(allowed => currentOrigin === allowed || currentOrigin.startsWith(allowed + "/"))) {
     res.setHeader('Access-Control-Allow-Origin', currentOrigin);
-  } else if (!currentOrigin) {
-    // للطلبات من المتصفح مباشرة
-    res.setHeader('Access-Control-Allow-Origin', 'https://zoonasd.com');
   } else {
-    return res.status(403).json({ error: 'Origin not allowed' });
+    res.setHeader('Access-Control-Allow-Origin', 'https://zoonasd.com');
   }
-  
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
 
-  // التعامل مع طلب OPTIONS (Preflight)
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
+  }
+
+  // 3. جلب متغيرات البيئة
+  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SUPABASE_KEY = process.env.SUPABASE_KEY;
+  const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    return res.status(500).json({ error: 'Server configuration error' });
+  }
+
+  // 4. Server-side Authorization for Admin Actions
+  const isWriteOp = ['POST', 'PATCH', 'DELETE'].includes(req.method);
+  if (isWriteOp) {
+    let adminPassword = req.query.adminPassword;
+
+    // Try to get password from body if not in query
+    if (!adminPassword && req.body) {
+      try {
+        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+        adminPassword = body.adminPassword;
+      } catch (e) {}
+    }
+
+    if (!adminPassword) {
+      return res.status(401).json({ error: 'Admin password required for this operation' });
+    }
+
+    // Hash provided password to compare with DB
+    const crypto = await import('crypto');
+    const hashedProvided = crypto.createHash('sha256').update(adminPassword).digest('hex');
+
+    // Verify hashed password against DB using Service Role Key
+    const key = SERVICE_KEY || SUPABASE_KEY;
+    const authUrl = `${SUPABASE_URL}/rest/v1/admin_settings?key=eq.admin_password&select=value`;
+    const authResponse = await fetch(authUrl, {
+      headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
+    });
+
+    if (!authResponse.ok) {
+        console.error('[Admin-Products] Auth Fetch Failed:', authResponse.status);
+        return res.status(500).json({ error: 'Internal Auth Error' });
+    }
+
+    const authData = await authResponse.json();
+
+    if (!authData || authData.length === 0 || authData[0].value !== hashedProvided) {
+      console.error('[Admin-Products] Unauthorized access attempt.');
+      return res.status(403).json({ error: 'Unauthorized: Invalid admin password' });
+    }
   }
 
   try {
@@ -93,32 +104,12 @@ export default async function handler(req, res) {
       }
     };
 
-    // Debug: log incoming request
-    console.log(`[Admin-Products] ${req.method} - id: ${id}, body:`, req.body);
-
-    // 4. بناء الطلب حسب الطريقة
     if (req.method === 'GET') {
-      if (id) {
-        // جلب منتج واحد محدد
-        fetchUrl = `${baseUrl}?id=eq.${id}&select=*`;
-      } else {
-        // جلب جميع المنتجات
-        fetchUrl = `${baseUrl}?select=*&order=id.desc`;
-      }
+      fetchUrl = id ? `${baseUrl}?id=eq.${id}&select=*` : `${baseUrl}?select=*&order=id.desc`;
     } 
     else if (req.method === 'POST') {
-      // إضافة منتج جديد
       fetchUrl = baseUrl;
-      // Handle both string and object body
-      let bodyData = req.body;
-      if (typeof req.body === 'string') {
-        try {
-          bodyData = JSON.parse(req.body);
-        } catch (e) {
-          bodyData = req.body;
-        }
-      }
-      // Sanitize input: remove administrative fields before sending to Supabase
+      let bodyData = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
       if (bodyData && typeof bodyData === 'object') {
         delete bodyData.adminPassword;
         delete bodyData.action;
@@ -126,68 +117,37 @@ export default async function handler(req, res) {
       fetchOptions.body = JSON.stringify(bodyData);
     } 
     else if (req.method === 'PATCH') {
-      // تحديث منتج موجود
-      if (!id) {
-        return res.status(400).json({ error: 'Product ID is required for update' });
-      }
+      if (!id) return res.status(400).json({ error: 'Product ID is required' });
       fetchUrl = `${baseUrl}?id=eq.${id}`;
-      // Handle both string and object body
-      let bodyData = req.body;
-      if (typeof req.body === 'string') {
-        try {
-          bodyData = JSON.parse(req.body);
-        } catch (e) {
-          bodyData = req.body;
-        }
-      }
-      // Sanitize input: remove administrative fields before sending to Supabase
+      let bodyData = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
       if (bodyData && typeof bodyData === 'object') {
         delete bodyData.adminPassword;
         delete bodyData.action;
       }
-      fetchOptions.body = JSON.stringify({
-        ...bodyData,
-        updated_at: new Date().toISOString()
-      });
+      fetchOptions.body = JSON.stringify({ ...bodyData, updated_at: new Date().toISOString() });
     } 
     else if (req.method === 'DELETE') {
-      // حذف منتج
-      if (!id) {
-        return res.status(400).json({ error: 'Product ID is required for delete' });
-      }
+      if (!id) return res.status(400).json({ error: 'Product ID is required' });
       fetchUrl = `${baseUrl}?id=eq.${id}`;
     }
 
-    console.log(`[Admin-Products] ${req.method} request to: ${fetchUrl}`);
-
-    // 5. تنفيذ الطلب على Supabase
     const response = await fetch(fetchUrl, fetchOptions);
-
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`[Admin-Products] Supabase error: ${response.status} - ${errorText}`);
-      throw new Error(`Supabase API error: ${response.status}`);
+      throw new Error(`Supabase error: ${response.status} - ${errorText}`);
     }
 
-    // 6. إرجاع النتيجة
-    let result;
+    if (response.status === 204) return res.status(204).end();
+
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
-      result = await response.json();
+      const result = await response.json();
+      return res.status(200).json(req.method === 'DELETE' ? { success: true } : result);
+    } else {
+      const text = await response.text();
+      return res.status(200).send(text);
     }
-
-    if (req.method === 'DELETE') {
-      return res.status(200).json({ success: true, message: 'Product deleted successfully' });
-    }
-
-    if (req.method === 'POST' || req.method === 'PATCH') {
-      return res.status(200).json({ success: true, data: result });
-    }
-
-    return res.status(200).json(result);
-
   } catch (error) {
-    console.error('[Admin-Products] Error:', error.message);
     return res.status(500).json({ error: 'Failed to process request', details: error.message });
   }
 }

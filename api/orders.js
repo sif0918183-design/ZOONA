@@ -13,7 +13,11 @@ export default async function handler(req, res) {
     'https://zoona-git-secure-supabase-keys-77307646-147e2c-sifians-projects.vercel.app',
     'https://zoona-git-indicate-out-of-stock-markete-081854-sifians-projects.vercel.app',
     'https://zoona-git-fix-affiliate-registration-er-d6e282-sifians-projects.vercel.app',
-    'https://zoona-git-unique-affiliate-id-generatio-561ea2-sifians-projects.vercel.app'
+    'https://zoona-git-unique-affiliate-id-generatio-561ea2-sifians-projects.vercel.app',
+    'https://zoona-git-tier-commission-and-ui-improv-d14974-sifians-projects.vercel.app',
+    'https://zoona-git-login-synchronization-and-secu-5e5d31-sifians-projects.vercel.app',
+    'https://zoona-git-secure-tiered-commission-v2-d1be82-sifians-projects.vercel.app',
+    'https://zoona-git-fix-admin-login-and-rls-v3-203597-sifians-projects.vercel.app'
   ];
 
   // Check if origin starts with any allowed origin
@@ -38,24 +42,114 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
+  // 4. Extract target endpoint and auth info
+  const fullUrl = new URL(req.url, `http://${req.headers.host}`);
+  const endpoint = fullUrl.searchParams.get('endpoint');
+  const action = fullUrl.searchParams.get('action');
+  const adminPassword = fullUrl.searchParams.get('adminPassword');
+
   // 3. Supabase Credentials from Environment Variables
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_KEY = process.env.SUPABASE_KEY;
+  const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  // Specialized Action: Affiliate Login (uses SERVICE_KEY for privacy)
+  if (action === 'login_affiliate') {
+    const { affiliateId, password } = req.body;
+    if (!affiliateId || !password) return res.status(400).json({ error: 'Missing credentials' });
+
+    const key = SERVICE_KEY || SUPABASE_KEY;
+    const fetchUrl = `${SUPABASE_URL}/rest/v1/affiliate_users?affiliate_id=eq.${encodeURIComponent(affiliateId)}&select=*`;
+    const response = await fetch(fetchUrl, {
+      headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
+    });
+
+    if (!response.ok) return res.status(response.status).json({ error: 'Auth fetch failed' });
+
+    const data = await response.json();
+
+    if (!data || data.length === 0 || data[0].password !== password) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const user = data[0];
+    delete user.password; // Privacy: Remove password before returning
+    return res.status(200).json({ success: true, affiliate: user });
+  }
+
+  if (!endpoint) {
+    return res.status(400).json({ error: 'Endpoint query parameter is required' });
+  }
+
+  // 5. Server-side Authorization for Admin Actions
+  const isWriteOp = ['POST', 'PATCH', 'DELETE'].includes(req.method);
+
+  // Extract base table name for matching (removes query params)
+  const baseTable = endpoint.split('?')[0].split('/')[0];
+
+  const isAdminTable = baseTable === 'admin_settings';
+  const isSensitiveAffiliateOp = baseTable === 'affiliate_users' && req.method === 'PATCH';
+
+  // Define public tables that allow POST/PATCH for customer/marketer actions
+  const publicPostTables = ['orders', 'order_products', 'affiliate_orders', 'affiliate_users', 'affiliate_clicks', 'clicks'];
+  const publicPatchTables = ['affiliate_users', 'affiliate_clicks'];
+
+  if (isWriteOp || isAdminTable || isSensitiveAffiliateOp) {
+    // 1. Allow public GET for settings (Threshold, Rates) but NOT password
+    const isPublicSelect = req.method === 'GET' &&
+                          isAdminTable &&
+                          !endpoint.includes('admin_password');
+
+    // 2. Allow public POST for order/marketer tables
+    const isPublicPost = req.method === 'POST' && publicPostTables.includes(baseTable);
+
+    // 3. Allow public PATCH for marketer stats
+    const isPublicPatch = req.method === 'PATCH' && publicPatchTables.includes(baseTable);
+
+    if (!isPublicSelect && !isPublicPost && !isPublicPatch) {
+      if (!adminPassword) {
+        return res.status(401).json({
+          error: 'Admin password required for this operation',
+          details: { method: req.method, table: baseTable, endpoint: endpoint }
+        });
+      }
+
+      if (!SUPABASE_URL || !SUPABASE_KEY) {
+        console.error('Supabase credentials missing for admin action');
+        return res.status(500).json({ error: 'Server configuration error' });
+      }
+
+      // Hash provided password to compare with DB
+      const crypto = await import('crypto');
+      const hashedProvided = crypto.createHash('sha256').update(adminPassword).digest('hex');
+
+      // Verify hashed password against DB using SERVICE_KEY to bypass RLS
+      const key = SERVICE_KEY || SUPABASE_KEY;
+      const authUrl = `${SUPABASE_URL}/rest/v1/admin_settings?key=eq.admin_password&select=value`;
+      const authResponse = await fetch(authUrl, {
+        headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
+      });
+
+      if (!authResponse.ok) {
+          console.error('[Orders-Proxy] Auth Fetch Failed:', authResponse.status);
+          return res.status(500).json({ error: 'Internal Auth Error' });
+      }
+
+      const authData = await authResponse.json();
+
+      if (!authData || authData.length === 0 || authData[0].value !== hashedProvided) {
+        console.error('[Orders-Proxy] Unauthorized access attempt or row missing.');
+        return res.status(403).json({ error: 'Unauthorized: Invalid admin password' });
+      }
+    }
+  }
 
   if (!SUPABASE_URL || !SUPABASE_KEY) {
     console.error('Supabase credentials missing');
     return res.status(500).json({ error: 'Server configuration error' });
   }
 
-  // 4. Extract target endpoint
-  // Usage: /api/orders?endpoint=table_name?select=*
-  const fullUrl = new URL(req.url, `http://${req.headers.host}`);
-  const endpoint = fullUrl.searchParams.get('endpoint');
-
-  if (!endpoint) {
-    return res.status(400).json({ error: 'Endpoint query parameter is required' });
-  }
-
+  // Proceed with the actual request
   const fetchUrl = `${SUPABASE_URL}/rest/v1/${endpoint}`;
 
   try {
@@ -75,7 +169,6 @@ export default async function handler(req, res) {
 
     const response = await fetch(fetchUrl, fetchOptions);
 
-    // Handle 204 No Content
     if (response.status === 204) {
       return res.status(204).end();
     }

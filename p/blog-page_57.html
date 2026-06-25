@@ -713,8 +713,22 @@
             </div>
         </div>
         
+        <div id="commissionNote" style="background: #fff8e1; border: 1px solid #ffe082; padding: 15px; margin: 15px; border-radius: 8px; font-size: 0.9rem; color: #856404; display: none;">
+            <i class="fas fa-info-circle"></i> <span id="commissionNoteText">...</span>
+        </div>
+
         <div class="link-section">
-            <h3><i class="fas fa-link"></i> إنشاء رابط تتبع جديد</h3>
+            <h3><i class="fas fa-globe"></i> رابط تتبعك العام للمتجر</h3>
+            <div class="link-controls">
+                <input type="text" id="generalTrackingLink" readonly style="background: #f8f9fa;">
+                <button type="button" class="btn btn-primary" onclick="copyGeneralLink()">
+                    <i class="fas fa-copy"></i> نسخ الرابط العام
+                </button>
+            </div>
+        </div>
+
+        <div class="link-section">
+            <h3><i class="fas fa-link"></i> إنشاء رابط تتبع للمنتجات</h3>
             
             <div class="link-controls">
                 <select id="productSelect" required>
@@ -762,6 +776,11 @@
 <script>
 // ========== إعدادات API (Proxy) ==========
 const API_URL = '/api/orders';
+let commissionSettings = {
+    threshold: 100000,
+    lowRate: 8,
+    highRate: 6
+};
 
 // ========== دوال API المحدثة ==========
 async function supabaseRequest(endpoint, options = {}) {
@@ -786,6 +805,42 @@ async function supabaseRequest(endpoint, options = {}) {
 }
 
 // ========== دوال النظام الأساسية ==========
+
+const categorySlugs = {
+    'الكل': 'all',
+    'موبايلات': 'mobiles',
+    'أجهزة إلكترونية': 'electronics',
+    'أجهزة كهربائية': 'electrical-appliances',
+    'ألعاب أطفال': 'toys',
+    'إكسسوارات موبايلات': 'accessories',
+    'مستحضرات تجميل': 'cosmetics',
+    'أزياء نسائية': 'women-fashion',
+    'المنزل والمطبخ': 'home-kitchen'
+};
+
+function transliterateArabic(text) {
+    const mapping = {
+        'أ': 'a', 'إ': 'i', 'آ': 'a', 'ا': 'a', 'ب': 'b', 'ت': 't', 'ث': 'th', 'ج': 'j', 'ح': 'h', 'خ': 'kh',
+        'د': 'd', 'ذ': 'dh', 'ر': 'r', 'ز': 'z', 'س': 's', 'ش': 'sh', 'ص': 's', 'ض': 'd', 'ط': 't', 'ظ': 'z',
+        'ع': 'a', 'غ': 'gh', 'ف': 'f', 'ق': 'q', 'ك': 'k', 'ل': 'l', 'م': 'm', 'ن': 'n', 'ه': 'h', 'و': 'w',
+        'ي': 'y', 'ى': 'a', 'ة': 't', 'ؤ': 'u', 'ئ': 'i', 'ء': 'a'
+    };
+    return text.split('').map(char => mapping[char] || char).join('');
+}
+
+function slugify(text) {
+    if (!text) return "";
+    const trimmed = text.toString().trim();
+    if (categorySlugs[trimmed]) return categorySlugs[trimmed];
+
+    const words = trimmed.split(/\s+/).slice(0, 3).join(' ');
+    return transliterateArabic(words.toLowerCase())
+        .replace(/\s+/g, '-')           // Replace spaces with -
+        .replace(/[^a-z0-9-]+/g, '')    // Remove non-Latin alphanumeric except -
+        .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+        .replace(/^-+/, '')             // Trim - from start
+        .replace(/-+$/, '');            // Trim - from end
+}
 
 function isEnglishText(text) {
     const englishPattern = /^[A-Za-z\s]+$/;
@@ -873,26 +928,23 @@ async function registerAffiliate(affiliateData) {
 
 async function loginAffiliate(affiliateId, password) {
     try {
-        // البحث عن المسوق
-        const result = await supabaseRequest('affiliate_users?select=*&affiliate_id=eq.' + encodeURIComponent(affiliateId));
+        // التحقق من خلال الـ API Proxy لضمان الخصوصية
+        const response = await fetch(`${API_URL}?action=login_affiliate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ affiliateId, password })
+        });
         
-        console.log('نتيجة البحث عن المسوق:', result);
+        const result = await response.json();
 
-        if (!result || result.length === 0) {
-            throw new Error('المسوق غير موجود');
-        }
-
-        const affiliate = result[0];
-        
-        // التحقق من كلمة المرور
-        if (affiliate.password !== password) {
-            throw new Error('كلمة المرور غير صحيحة');
+        if (!response.ok) {
+            throw new Error(result.error || 'فشل تسجيل الدخول');
         }
 
         return {
             success: true,
             message: 'تم تسجيل الدخول بنجاح',
-            affiliate: affiliate
+            affiliate: result.affiliate
         };
 
     } catch (error) {
@@ -1099,7 +1151,34 @@ async function loadDashboardData() {
     document.getElementById('userName').textContent = session.name;
     document.getElementById('affiliateIdDisplay').textContent = session.id;
     
+    // إعداد الرابط العام
+    const generalLink = `https://zoonasd.com/?ref=${session.id}`;
+    document.getElementById('generalTrackingLink').value = generalLink;
+
     try {
+        // جلب إعدادات العمولة
+        try {
+            const settings = await supabaseRequest('admin_settings?select=*');
+            if (settings && settings.length > 0) {
+                const threshold = settings.find(s => s.key === 'commission_threshold');
+                const lowRate = settings.find(s => s.key === 'commission_low_rate');
+                const highRate = settings.find(s => s.key === 'commission_high_rate');
+
+                if (threshold) commissionSettings.threshold = parseInt(threshold.value);
+                if (lowRate) commissionSettings.lowRate = parseInt(lowRate.value);
+                if (highRate) commissionSettings.highRate = parseInt(highRate.value);
+            }
+
+            // عرض ملاحظة العمولة
+            const noteElement = document.getElementById('commissionNote');
+            const noteText = document.getElementById('commissionNoteText');
+            noteText.textContent = `ملاحظة: عمولة المنتجات بسعر أقل من ${commissionSettings.threshold.toLocaleString()} ج.س هي ${commissionSettings.lowRate}%، والمنتجات بسعر ${commissionSettings.threshold.toLocaleString()} ج.س أو أكثر عمولتها ${commissionSettings.highRate}%.`;
+            noteElement.style.display = 'block';
+
+        } catch (e) {
+            console.error('Error loading settings:', e);
+        }
+
         // جلب بيانات المسوق
         const affiliateData = await getAffiliateData(session.id);
         
@@ -1189,14 +1268,18 @@ async function loadProductsList(products) {
         return;
     }
     
-    // إضافة المنتجات للقائمة (التي لها عمولة فقط)
-    products.filter(p => p.commission > 0).forEach(product => {
+    // إضافة المنتجات للقائمة (جميع المنتجات)
+    products.forEach(product => {
         const option = document.createElement('option');
         option.value = product.name;
         const stockStatus = product.is_out_of_stock ? ' (نفذت الكمية)' : '';
-        option.textContent = `${product.name}${stockStatus} - ${product.commission || 0} ج.س`;
+        // عرض سعر المنتج بدلاً من العمولة
+        const priceDisplay = product.price ? product.price.toLocaleString() : '0';
+        option.textContent = `${product.name}${stockStatus} - ${priceDisplay} ج.س`;
         option.setAttribute('data-url', product.url || '');
         option.setAttribute('data-commission', product.commission || 0);
+        option.setAttribute('data-price', product.price || 0);
+        option.style.fontFamily = "'Tajawal', sans-serif";
         productSelect.appendChild(option);
     });
 }
@@ -1317,15 +1400,23 @@ function calculateOrderCommission(order, products) {
                 return cleanOrderProduct.includes(cleanProductName) || cleanProductName.includes(cleanOrderProduct);
             });
             
-            if (product && product.commission) {
-                totalCommission += product.commission * (orderProduct.quantity || 1);
+            if (product) {
+                if (product.commission && product.commission > 0) {
+                    // استخدام العمولة الثابتة إذا كانت محددة
+                    totalCommission += product.commission * (orderProduct.quantity || 1);
+                } else if (product.price) {
+                    // استخدام نظام النسبة المتدرج
+                    const rate = product.price < commissionSettings.threshold ? commissionSettings.lowRate : commissionSettings.highRate;
+                    totalCommission += Math.round(product.price * (rate / 100)) * (orderProduct.quantity || 1);
+                }
             }
         });
     }
     
-    // إذا لم نجد تطابق، نستخدم النظام القديم (5%)
+    // إذا لم نجد تطابق، نستخدم نظام النسبة المتدرج على إجمالي الطلب كبديل
     if (totalCommission === 0 && order.total_amount) {
-        totalCommission = Math.round(order.total_amount * 0.05);
+        const rate = order.total_amount < commissionSettings.threshold ? commissionSettings.lowRate : commissionSettings.highRate;
+        totalCommission = Math.round(order.total_amount * (rate / 100));
     }
     
     return totalCommission;
@@ -1345,19 +1436,17 @@ async function generateTrackingLink() {
     }
     
     let productName = productSelect.value;
-    let productUrl = productSelect.options[productSelect.selectedIndex].getAttribute('data-url');
-    
     let trackingUrl = '';
     let linkType = '';
     
-    // تحديد نوع الرابط
-    if (productUrl && productUrl.startsWith('http')) {
-        // رابط المنتج مع إضافة المرجع
-        trackingUrl = `${productUrl}${productUrl.includes('?') ? '&' : '?'}ref=${session.id}`;
+    // توليد رابط احترافي بناءً على slug المنتج (مثل index.html)
+    const productSlug = slugify(productName);
+    if (productSlug) {
+        trackingUrl = `https://zoonasd.com/${productSlug}?ref=${session.id}`;
         linkType = 'product';
     } else {
-        // إذا لم يكن هناك رابط منتج، استخدام الرابط الافتراضي
-        trackingUrl = `https://www.zoonasd.com/?ref=${session.id}`;
+        // Fallback للرابط العام إذا فشل الـ slugify
+        trackingUrl = `https://zoonasd.com/?ref=${session.id}`;
         linkType = 'default';
     }
     
@@ -1421,6 +1510,16 @@ function copyAffiliateId(affiliateId) {
         showMessage('success', 'تم نسخ معرف المسوق إلى الحافظة!');
     }).catch(() => {
         showMessage('error', 'فشل في نسخ المعرف');
+    });
+}
+
+// نسخ الرابط العام
+function copyGeneralLink() {
+    const generalLink = document.getElementById('generalTrackingLink').value;
+    navigator.clipboard.writeText(generalLink).then(() => {
+        showMessage('success', 'تم نسخ الرابط العام بنجاح!');
+    }).catch(() => {
+        showMessage('error', 'فشل في نسخ الرابط');
     });
 }
 
