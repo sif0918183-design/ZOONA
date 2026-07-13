@@ -592,9 +592,10 @@ html, body {
       <button class="cat-btn" onclick="filterCategory('إكسسوارات موبايلات', this)">إكسسوارات موبايلات</button>
       <button class="cat-btn" onclick="filterCategory('أجهزة كهربائية', this)">الكهربائيات</button>
       <button class="cat-btn" onclick="filterCategory('ألعاب أطفال', this)">ألعاب أطفال</button>
-      <button class="cat-btn" onclick="filterCategory('مستحضرات تجميل', this)">تجميل</button>
+      <button class="cat-btn" onclick="filterCategory('تجميل', this)">تجميل</button>
       <button class="cat-btn" onclick="filterCategory('أزياء نسائية', this)">أزياء نسائية</button>
       <button class="cat-btn" onclick="filterCategory('المنزل والمطبخ', this)">المنزل والمطبخ</button>
+      <button class="cat-btn" onclick="filterCategory('اللياقة والرياضة', this)">اللياقة والرياضة</button>
     </div>
 
     <div class="section-title" id="sectionTitle">🔥 المنتجات المميزة</div>
@@ -639,9 +640,13 @@ html, body {
           <div class="cat-name">ألعاب أطفال</div>
           <p>كل ما يسعد أطفالك</p>
         </div>
-        <div class="cat-item" style="background-image: url('https://images.pexels.com/photos/3373739/pexels-photo-3373739.jpeg?auto=compress&cs=tinysrgb&w=600')" onclick="filterCategory('مستحضرات تجميل', null); switchTab('home');">
+        <div class="cat-item" style="background-image: url('https://images.pexels.com/photos/3373739/pexels-photo-3373739.jpeg?auto=compress&cs=tinysrgb&w=600')" onclick="filterCategory('تجميل', null); switchTab('home');">
           <div class="cat-name">التجميل</div>
           <p>منتجات عناية أصلية</p>
+        </div>
+        <div class="cat-item" style="background-image: url('https://images.pexels.com/photos/3642537/pexels-photo-3642537.jpeg?auto=compress&cs=tinysrgb&w=600')" onclick="filterCategory('اللياقة والرياضة', null); switchTab('home');">
+          <div class="cat-name">اللياقة والرياضة</div>
+          <p>معدات وأدوات رياضية متميزة</p>
         </div>
       </div>
     </div>
@@ -1022,10 +1027,30 @@ const categorySlugs = {
   'أجهزة كهربائية': 'electrical-appliances',
   'ألعاب أطفال': 'toys',
   'إكسسوارات موبايلات': 'accessories',
+  'تجميل': 'cosmetics',
   'مستحضرات تجميل': 'cosmetics',
   'أزياء نسائية': 'women-fashion',
-  'المنزل والمطبخ': 'home-kitchen'
+  'المنزل والمطبخ': 'home-kitchen',
+  'اللياقة والرياضة': 'sports-fitness',
+  'الرياضة واللياقة': 'sports-fitness'
 };
+
+function matchCategory(prodCat, filterCat) {
+  if (!prodCat) return false;
+  const parts = prodCat.split('/').map(s => s.trim());
+  return parts.some(part => {
+    const normalizedPart = part === 'مستحضرات تجميل' ? 'تجميل' : part;
+    const normalizedFilter = filterCat === 'مستحضرات تجميل' ? 'تجميل' : filterCat;
+    return normalizedPart === normalizedFilter;
+  });
+}
+
+function hasCategoryOverlap(cat1, cat2) {
+  if (!cat1 || !cat2) return false;
+  const parts1 = cat1.split('/').map(s => s.trim().replace('مستحضرات تجميل', 'تجميل'));
+  const parts2 = cat2.split('/').map(s => s.trim().replace('مستحضرات تجميل', 'تجميل'));
+  return parts1.some(p => parts2.includes(p));
+}
 
 function transliterateArabic(text) {
   const mapping = {
@@ -1172,7 +1197,9 @@ function renderProducts(products) {
     grid.innerHTML = '<div style="padding:40px 20px; text-align:center; color:#aaa; grid-column:1/-1;"><i class="fas fa-box-open" style="font-size:50px; display:block; margin-bottom:12px;"></i>لا توجد منتجات في هذا القسم</div>';
     return;
   }
-  grid.innerHTML = products.map(p => `
+  grid.innerHTML = products.map(p => {
+    const displayCategory = p.category ? p.category.split('/').map(c => c.trim() === 'مستحضرات تجميل' ? 'تجميل' : c.trim()).join(' / ') : '';
+    return `
     <div class="product-card" onclick="openModal(${p.id})">
       <div class="product-img-wrap">
         <img src="${p.image}" alt="${p.name}" loading="lazy" onerror="this.src='assets/splash-logo.png'">
@@ -1180,7 +1207,7 @@ function renderProducts(products) {
       </div>
       <div class="product-info">
         ${p.is_out_of_stock ? `<div class="out-of-stock-overlay"><div class="out-of-stock-text">نفذت الكمية</div></div>` : ''}
-        <div class="product-label">${p.category}</div>
+        <div class="product-label">${displayCategory}</div>
         <div class="product-name">${p.name}</div>
         <div class="product-prices">
           <span class="product-price">${p.price.toLocaleString()} SDG</span>
@@ -1191,7 +1218,7 @@ function renderProducts(products) {
         </button>
       </div>
     </div>
-  `).join('');
+  `; }).join('');
 
   // Restore button states
   cart.forEach(item => {
@@ -1216,7 +1243,7 @@ function filterCategory(cat, btn, fromPopState = false) {
     document.getElementById('sectionTitle').textContent = '🔥 المنتجات المميزة';
     if (!fromPopState) window.history.pushState({ category: 'الكل' }, 'ZOONA - متجر إلكتروني', '/');
   } else {
-    filteredProducts = allProducts.filter(p => p.category === cat);
+    filteredProducts = allProducts.filter(p => matchCategory(p.category, cat));
     document.getElementById('sectionTitle').textContent = `📦 ${cat}`;
     if (!fromPopState) {
       const slug = slugify(cat);
@@ -1238,9 +1265,9 @@ function filterCategory(cat, btn, fromPopState = false) {
 // ── Search ──
 function handleSearch(val) {
   const q = val.trim().toLowerCase();
-  let base = currentCategory === 'الكل' ? allProducts : allProducts.filter(p => p.category === currentCategory);
+  let base = currentCategory === 'الكل' ? allProducts : allProducts.filter(p => matchCategory(p.category, currentCategory));
   if (q) {
-    filteredProducts = base.filter(p => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || p.category.toLowerCase().includes(q));
+    filteredProducts = base.filter(p => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || (p.category && p.category.toLowerCase().includes(q)));
   } else {
     filteredProducts = [...base];
   }
@@ -1306,7 +1333,7 @@ function renderSimilarProducts(product) {
   if (!grid) return;
 
   const similar = allProducts
-    .filter(p => p.category === product.category && p.id !== product.id)
+    .filter(p => hasCategoryOverlap(p.category, product.category) && p.id !== product.id)
     .slice(0, 10);
 
   if (similar.length === 0) {
@@ -1427,7 +1454,13 @@ function checkUrlForProduct() {
 
     // Fallback to dynamic matching if not in static mapping
     if (!cat) {
-      const categories = [...new Set(allProducts.map(p => p.category))];
+      const categoriesSet = new Set();
+      allProducts.forEach(p => {
+        if (p.category) {
+          p.category.split('/').forEach(c => categoriesSet.add(c.trim()));
+        }
+      });
+      const categories = [...categoriesSet];
       cat = categories.find(c => slugify(c) === slug);
     }
 
@@ -1443,7 +1476,10 @@ function checkUrlForProduct() {
   if (slug) {
     const product = allProducts.find(p => slugify(p.name) === slug);
     if (product) {
-      if (product.category) filterCategory(product.category, null, true);
+      if (product.category) {
+        const primaryCat = product.category.split('/')[0].trim();
+        filterCategory(primaryCat, null, true);
+      }
       openModal(product.id, true);
     }
   }
