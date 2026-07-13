@@ -315,22 +315,41 @@ textarea.form-control{resize:vertical;min-height:80px}
       </div>
 
       <!-- Category -->
-      <div class="form-group">
-        <label class="form-label">القسم <span>*</span></label>
-        <select id="fCategory" class="form-control" required>
-          <option value="">اختر القسم</option>
-          <option value="موبايلات"> موبايلات</option>
-          <option value="إكسسوارات موبايلات"> إكسسوارات موبايلات</option>
-          <option value="أجهزة إلكترونية"> أجهزة إلكترونية</option>
-          <option value="أجهزة كهربائية"> أجهزة كهربائية</option>
-          <option value="ألعاب أطفال"> ألعاب أطفال</option>
-          <option value="مستحضرات تجميل"> مستحضرات تجميل</option>
-          <option value="أزياء نسائية"> أزياء نسائية</option>
-          <option value="أزياء رجالية"> أزياء رجالية</option>
-          <option value="المنزل والمطبخ"> المنزل والمطبخ</option>
-          <option value="الرياضة واللياقة">⚽ الرياضة واللياقة</option>
-          <option value="عام"> عام</option>
-        </select>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">القسم الأول <span>*</span></label>
+          <select id="fCategory" class="form-control" required>
+            <option value="">اختر القسم الأول</option>
+            <option value="موبايلات"> موبايلات</option>
+            <option value="إكسسوارات موبايلات"> إكسسوارات موبايلات</option>
+            <option value="أجهزة إلكترونية"> أجهزة إلكترونية</option>
+            <option value="أجهزة كهربائية"> أجهزة كهربائية</option>
+            <option value="ألعاب أطفال"> ألعاب أطفال</option>
+            <option value="تجميل"> تجميل</option>
+            <option value="أزياء نسائية"> أزياء نسائية</option>
+            <option value="أزياء رجالية"> أزياء رجالية</option>
+            <option value="المنزل والمطبخ"> المنزل والمطبخ</option>
+            <option value="اللياقة والرياضة">⚽ اللياقة والرياضة</option>
+            <option value="عام"> عام</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">القسم الثاني (اختياري)</label>
+          <select id="fCategory2" class="form-control">
+            <option value="">بدون قسم ثانٍ</option>
+            <option value="موبايلات"> موبايلات</option>
+            <option value="إكسسوارات موبايلات"> إكسسوارات موبايلات</option>
+            <option value="أجهزة إلكترونية"> أجهزة إلكترونية</option>
+            <option value="أجهزة كهربائية"> أجهزة كهربائية</option>
+            <option value="ألعاب أطفال"> ألعاب أطفال</option>
+            <option value="تجميل"> تجميل</option>
+            <option value="أزياء نسائية"> أزياء نسائية</option>
+            <option value="أزياء رجالية"> أزياء رجالية</option>
+            <option value="المنزل والمطبخ"> المنزل والمطبخ</option>
+            <option value="اللياقة والرياضة">⚽ اللياقة والرياضة</option>
+            <option value="عام"> عام</option>
+          </select>
+        </div>
       </div>
 
       <!-- Prices -->
@@ -634,13 +653,24 @@ async function loadProducts() {
 
 function updateStats() {
   document.getElementById('statTotal').textContent = allProducts.length;
-  const cats = [...new Set(allProducts.map(p => p.category))];
-  document.getElementById('statCats').textContent = cats.length;
+  const catsSet = new Set();
+  allProducts.forEach(p => {
+    if (p.category) {
+      p.category.split('/').forEach(c => catsSet.add(c.trim() === 'مستحضرات تجميل' ? 'تجميل' : c.trim()));
+    }
+  });
+  document.getElementById('statCats').textContent = catsSet.size;
   document.getElementById('statDiscount').textContent = allProducts.filter(p => p.discount).length;
 }
 
 function buildCategoryFilter() {
-  const cats = ['الكل', ...new Set(allProducts.map(p => p.category))];
+  const catsSet = new Set();
+  allProducts.forEach(p => {
+    if (p.category) {
+      p.category.split('/').forEach(c => catsSet.add(c.trim() === 'مستحضرات تجميل' ? 'تجميل' : c.trim()));
+    }
+  });
+  const cats = ['الكل', ...catsSet];
   const filter = document.getElementById('catFilter');
   filter.innerHTML = cats.map((c, i) =>
     `<div class="cat-chip ${i===0?'active':''}" onclick="filterCat('${c}',this)">${c}</div>`
@@ -657,8 +687,12 @@ function filterCat(cat, el) {
 function applyFilters() {
   const q = document.getElementById('searchInput').value.trim().toLowerCase();
   filtered = allProducts.filter(p => {
-    const matchCat = currentCat === 'الكل' || p.category === currentCat;
-    const matchSearch = !q || p.name.toLowerCase().includes(q) || (p.description && p.description.toLowerCase().includes(q)) || p.category.toLowerCase().includes(q);
+    let matchCat = currentCat === 'الكل';
+    if (!matchCat && p.category) {
+      const parts = p.category.split('/').map(s => s.trim() === 'مستحضرات تجميل' ? 'تجميل' : s.trim());
+      matchCat = parts.includes(currentCat);
+    }
+    const matchSearch = !q || p.name.toLowerCase().includes(q) || (p.description && p.description.toLowerCase().includes(q)) || (p.category && p.category.toLowerCase().includes(q));
     return matchCat && matchSearch;
   });
   renderProducts();
@@ -671,13 +705,15 @@ function renderProducts() {
     grid.innerHTML = `<div class="empty"><i class="fas fa-box-open"></i><p>لا توجد منتجات مطابقة</p></div>`;
     return;
   }
-  grid.innerHTML = filtered.map(p => `
+  grid.innerHTML = filtered.map(p => {
+    const displayCategory = p.category ? p.category.split('/').map(c => c.trim() === 'مستحضرات تجميل' ? 'تجميل' : c.trim()).join(' / ') : '';
+    return `
     <div class="prod-card" style="${p.is_out_of_stock ? 'opacity:0.8;' : ''}">
       <img class="prod-img" src="${p.image || '../assets/splash-logo.png'}" alt="${p.name}" onerror="this.src='../assets/splash-logo.png'">
       ${p.is_out_of_stock ? `<div class="prod-badge" style="background:#666; right:auto; left:8px;">نفذت الكمية</div>` : ''}
       ${p.discount ? `<div class="prod-badge">-${p.discount}%</div>` : ''}
       <div class="prod-body">
-        <div class="prod-cat">${p.category}</div>
+        <div class="prod-cat">${displayCategory}</div>
         <div class="prod-name">${p.name}</div>
         <div class="prod-price">${Number(p.price).toLocaleString()} SDG</div>
         ${p.old_price ? `<div class="prod-old">${Number(p.old_price).toLocaleString()} SDG</div>` : ''}
@@ -687,7 +723,7 @@ function renderProducts() {
         </div>
       </div>
     </div>
-  `).join('');
+  `; }).join('');
 }
 
 // ── Add Modal ──
@@ -709,7 +745,17 @@ function openEditModal(id) {
   document.getElementById('formSubmitBtn').innerHTML = '<i class="fas fa-save"></i> حفظ التعديلات';
   document.getElementById('fEditId').value = id;
   document.getElementById('fName').value = p.name;
-  document.getElementById('fCategory').value = p.category;
+
+  if (p.category && p.category.includes('/')) {
+    const parts = p.category.split('/').map(s => s.trim() === 'مستحضرات تجميل' ? 'تجميل' : s.trim());
+    document.getElementById('fCategory').value = parts[0];
+    document.getElementById('fCategory2').value = parts[1] || '';
+  } else {
+    const catVal = p.category === 'مستحضرات تجميل' ? 'تجميل' : (p.category || '');
+    document.getElementById('fCategory').value = catVal;
+    document.getElementById('fCategory2').value = '';
+  }
+
   document.getElementById('fPrice').value = p.price;
   document.getElementById('fOldPrice').value = p.old_price || '';
   document.getElementById('fDiscount').value = p.discount || '';
@@ -855,9 +901,16 @@ async function submitForm(e) {
   
   const deliveryCities = getDeliveryCitiesFromForm();
 
+  const primaryCat = document.getElementById('fCategory').value;
+  const secondaryCat = document.getElementById('fCategory2') ? document.getElementById('fCategory2').value : '';
+  let finalCategory = primaryCat;
+  if (secondaryCat && secondaryCat !== primaryCat) {
+    finalCategory = `${primaryCat}/${secondaryCat}`;
+  }
+
   const data = {
     name: document.getElementById('fName').value.trim(),
-    category: document.getElementById('fCategory').value,
+    category: finalCategory,
     price: Number(document.getElementById('fPrice').value) || 0,
     old_price: Number(document.getElementById('fOldPrice').value) || null,
     discount: Number(document.getElementById('fDiscount').value) || null,
