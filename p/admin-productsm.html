@@ -289,6 +289,100 @@ textarea.form-control{resize:vertical;min-height:80px}
     </div>
   </div>
 
+  <!-- Warehouse Bulk Update Section -->
+  <div class="bulk-container" style="padding: 0 16px 16px;">
+    <div class="bulk-card" style="background:#fff; border-radius:14px; box-shadow:0 2px 8px rgba(0,0,0,.07); overflow:hidden; border: 1px solid var(--border);">
+      <div class="bulk-header" onclick="toggleBulkSection()" style="background:linear-gradient(135deg, #1565C0, #0d47a1); color:#fff; padding:14px 20px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; font-weight:700; user-select:none;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <i class="fas fa-warehouse"></i>
+          <span>التحديث الجماعي لأسعار ومدن المستودعات</span>
+        </div>
+        <i class="fas fa-chevron-down" id="bulkToggleIcon" style="transition:.3s;"></i>
+      </div>
+
+      <div class="bulk-body" id="bulkBody" style="display:none; padding:20px;">
+        <!-- Warehouse Selection -->
+        <div class="form-group" style="margin-bottom:16px;">
+          <label class="form-label" style="font-weight:700; color:#1565C0;">اختر المستودع <span>*</span></label>
+          <select id="bulkWarehouseSelect" class="form-control" onchange="onBulkWarehouseChange()" style="border: 2px solid #1565C0;">
+            <option value="">-- اختر مستودعاً --</option>
+          </select>
+        </div>
+
+        <!-- Collective Delivery Cities Management -->
+        <div id="bulkDeliverySection" style="display:none; border:2px solid #1565C0; border-radius:12px; padding:16px; margin-bottom:20px; background:#f9fbff;">
+          <div style="font-weight:700; color:#1565C0; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+            <span><i class="fas fa-shipping-fast"></i> إدارة مدن التوصيل الجماعية للمستودع</span>
+            <button type="button" class="act-btn edit-btn" onclick="copyCitiesFromFirstProduct()" style="max-width:240px; padding:6px 10px; font-size:11px; margin:0; border-radius:6px; display:inline-flex;">
+              <i class="fas fa-copy"></i> نسخ المدن من أول منتج في المستودع
+            </button>
+          </div>
+
+          <div class="delivery-cities-section" style="border-color:#1565C0;">
+            <!-- COD Cities -->
+            <div class="delivery-type-group" style="background:#fff;">
+              <div class="delivery-type-header" style="color:#1565C0;">الدفع عند الاستلام (COD)</div>
+              <div class="delivery-cities-list" id="bulkCodCitiesList"></div>
+              <div class="add-city-row">
+                <input type="text" id="bulkNewCodCity" class="form-control" placeholder="المدينة" style="flex:2; height:36px; padding:6px 10px; font-size:13px;">
+                <input type="number" id="bulkNewCodPrice" class="form-control" placeholder="السعر" style="flex:1; height:36px; padding:6px 10px; font-size:13px;">
+                <button type="button" class="add-city-btn" onclick="addBulkDeliveryCity('cod')" style="background:#1565C0; height:36px; padding:0 12px; border-radius:6px;">+</button>
+              </div>
+            </div>
+
+            <!-- Prepaid Cities -->
+            <div class="delivery-type-group" style="background:#fff;">
+              <div class="delivery-type-header" style="color:#1565C0;">دفع مقدم</div>
+              <div class="delivery-cities-list" id="bulkPrepaidCitiesList"></div>
+              <div class="add-city-row">
+                <input type="text" id="bulkNewPrepaidCity" class="form-control" placeholder="المدينة" style="flex:2; height:36px; padding:6px 10px; font-size:13px;">
+                <input type="number" id="bulkNewPrepaidPrice" class="form-control" placeholder="السعر" style="flex:1; height:36px; padding:6px 10px; font-size:13px;">
+                <button type="button" class="add-city-btn" onclick="addBulkDeliveryCity('prepaid')" style="background:#1565C0; height:36px; padding:0 12px; border-radius:6px;">+</button>
+              </div>
+            </div>
+          </div>
+          <div style="font-size:11px; color:#555; margin-top:8px;"><i class="fas fa-info-circle"></i> عند الضغط على زر "تأكيد الحفظ النهائي" في الأسفل، سيتم تطبيق هذه المدن والأسعار على جميع منتجات هذا المستودع وتجاوز مدن التوصيل الحالية لها.</div>
+        </div>
+
+        <!-- Price Parsing and Updating Area -->
+        <div id="bulkPricesSection" style="display:none; margin-bottom:20px;">
+          <div class="form-group">
+            <label class="form-label" style="font-weight:700;"><i class="fas fa-paste"></i> ألصق نص تحديث الأسعار هنا</label>
+            <span style="font-size:11px; color:#666; display:block; margin-bottom:6px;">
+              كل اسم منتج وسعره في سطر واحد مفصولين بـ 👉 (مثال: HONOR Pad X7👉760000 WiFi 🇸🇦🔥)
+            </span>
+            <textarea id="bulkPasteArea" class="form-control" style="font-family: monospace; font-size:13px; min-height:120px; border:2px solid #ccc; direction:ltr; text-align:left;" placeholder="HONOR Pad X7(128-4)👉760000 WiFi 🇸🇦🔥&#10;HONOR Pad X7(128-4)👉760000 Sim🇸🇦🔥"></textarea>
+          </div>
+
+          <div style="display:flex; gap:10px; margin-bottom:16px;">
+            <button type="button" class="add-btn" onclick="activateBulkPrices()" style="background:linear-gradient(135deg, #2E7D32, #1B5E20); flex:2; justify-content:center; box-shadow:0 3px 10px rgba(46,125,50,.3); height:42px;">
+              <i class="fas fa-bolt"></i> تفعيل الأسعار المقترحة مؤقتاً
+            </button>
+            <button type="button" class="add-btn" onclick="clearBulkPrices()" style="background:#757575; box-shadow:none; flex:1; justify-content:center; height:42px;">
+              مسح
+            </button>
+          </div>
+          <div id="bulkParsingSummary" style="font-size:13px; font-weight:700; margin-bottom:12px; display:none; padding:10px; border-radius:8px; background:#f5f5f5;"></div>
+        </div>
+
+        <!-- Miniature Products List -->
+        <div id="bulkProductsListSection" style="display:none; margin-bottom:20px;">
+          <div style="font-weight:700; margin-bottom:8px; color:var(--text);"><i class="fas fa-list-ul"></i> منتجات المستودع المعروضة للتعديل:</div>
+          <div id="bulkProductsMiniList" style="max-height:250px; overflow-y:auto; border:1px solid #ddd; border-radius:10px; background:#fafafa; padding:8px;">
+            <!-- compact rows loaded dynamically -->
+          </div>
+        </div>
+
+        <!-- Bulk Save Button -->
+        <div id="bulkFooterSection" style="display:none; text-align:center;">
+          <button type="button" class="modal-submit" id="bulkConfirmBtn" onclick="confirmBulkUpdates()" style="background:linear-gradient(135deg, #1565C0, #0d47a1); box-shadow:0 4px 14px rgba(21,101,192,.3); margin-top:0; width:100%;">
+            <i class="fas fa-cloud-upload-alt"></i> تأكيد الحفظ النهائي لقاعدة البيانات
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Products Area -->
   <div class="products-area">
     <div class="count-label" id="countLabel"></div>
@@ -568,6 +662,10 @@ let deleteTargetId = null;
 let imgTabMode = 'upload';
 let uploadedImageUrl = '';
 
+// Warehouse bulk update global variables
+let bulkTempPrices = {};
+let bulkDeliveryCitiesData = { cod: [], prepaid: [] };
+
 // Session configuration - 30 days persistence
 const SESSION_KEY = 'admin_auth';
 const SESSION_EXPIRY_DAYS = 30;
@@ -645,6 +743,7 @@ async function loadProducts() {
     buildCategoryFilter();
     applyFilters();
     updateStats();
+    populateBulkWarehouses(); // Refresh bulk warehouses list when products load
   } catch(e) {
     console.error('Error loading products:', e);
     showToast('❌ خطأ في تحميل المنتجات', 'red');
@@ -1064,6 +1163,469 @@ function setDeliveryCitiesToForm(cities) {
   }
   renderDeliveryCities('cod');
   renderDeliveryCities('prepaid');
+}
+
+// ── Warehouse Bulk Updates JS Logic ──
+
+function toggleBulkSection() {
+  const body = document.getElementById('bulkBody');
+  const icon = document.getElementById('bulkToggleIcon');
+  if (body.style.display === 'none') {
+    body.style.display = 'block';
+    icon.style.transform = 'rotate(180deg)';
+    populateBulkWarehouses();
+  } else {
+    body.style.display = 'none';
+    icon.style.transform = 'rotate(0deg)';
+  }
+}
+
+function populateBulkWarehouses() {
+  const select = document.getElementById('bulkWarehouseSelect');
+  if (!select) return;
+  const currentVal = select.value;
+
+  // Get unique warehouses from allProducts
+  const warehouses = new Set();
+  allProducts.forEach(p => {
+    if (p.warehouse) warehouses.add(p.warehouse);
+  });
+
+  // Add standard warehouses if not already present
+  const defaultWarehouses = [
+    "الخرطوم", "الخرطوم 2", "الخرطوم 3",
+    "بورتسودان", "بورتسودان 2", "بورتسودان 3",
+    "عطبرة", "عطبرة 2", "عطبرة 3",
+    "مدني", "كسلا", "كسلا 2", "كسلا 3",
+    "القضارف", "الأبيض", "كوستي"
+  ];
+  defaultWarehouses.forEach(w => warehouses.add(w));
+
+  const sortedWarehouses = Array.from(warehouses).sort((a, b) => a.localeCompare(b, 'ar'));
+
+  select.innerHTML = '<option value="">-- اختر مستودعاً --</option>' +
+    sortedWarehouses.map(w => `<option value="${w}">${w}</option>`).join('');
+
+  if (currentVal && sortedWarehouses.includes(currentVal)) {
+    select.value = currentVal;
+  }
+}
+
+function onBulkWarehouseChange() {
+  const wh = document.getElementById('bulkWarehouseSelect').value;
+  const bDelivery = document.getElementById('bulkDeliverySection');
+  const bPrices = document.getElementById('bulkPricesSection');
+  const bList = document.getElementById('bulkProductsListSection');
+  const bFooter = document.getElementById('bulkFooterSection');
+
+  if (!wh) {
+    bDelivery.style.display = 'none';
+    bPrices.style.display = 'none';
+    bList.style.display = 'none';
+    bFooter.style.display = 'none';
+    return;
+  }
+
+  // Show sections
+  bDelivery.style.display = 'block';
+  bPrices.style.display = 'block';
+  bList.style.display = 'block';
+  bFooter.style.display = 'block';
+
+  // Clear bulk temp prices & UI
+  bulkTempPrices = {};
+  document.getElementById('bulkPasteArea').value = '';
+  document.getElementById('bulkParsingSummary').style.display = 'none';
+
+  // Load delivery cities from first product as default initial list
+  const whProds = allProducts.filter(p => p.warehouse === wh);
+  bulkDeliveryCitiesData = { cod: [], prepaid: [] };
+  if (whProds.length > 0) {
+    let cities = whProds[0].delivery_cities || [];
+    if (typeof cities === 'string') {
+      try { cities = JSON.parse(cities); } catch(e) { cities = []; }
+    } else if (!Array.isArray(cities)) {
+      cities = [];
+    }
+    cities.forEach(city => {
+      const type = city.type === 'cod' ? 'cod' : 'prepaid';
+      bulkDeliveryCitiesData[type].push({
+        name: city.name,
+        price: Number(city.price) || 0,
+        type: type
+      });
+    });
+  }
+  renderBulkDeliveryCities('cod');
+  renderBulkDeliveryCities('prepaid');
+
+  renderBulkProductsMiniList();
+}
+
+function renderBulkProductsMiniList() {
+  const wh = document.getElementById('bulkWarehouseSelect').value;
+  if (!wh) return;
+
+  const listEl = document.getElementById('bulkProductsMiniList');
+  const whProds = allProducts.filter(p => p.warehouse === wh);
+
+  if (whProds.length === 0) {
+    listEl.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">لا توجد منتجات في هذا المستودع حالياً</div>';
+    return;
+  }
+
+  listEl.innerHTML = whProds.map(p => {
+    const hasTempPrice = p.id in bulkTempPrices;
+    const currentPrice = Number(p.price);
+    const tempPrice = hasTempPrice ? bulkTempPrices[p.id] : null;
+
+    let cities = p.delivery_cities || [];
+    if (typeof cities === 'string') {
+      try { cities = JSON.parse(cities); } catch(e) { cities = []; }
+    } else if (!Array.isArray(cities)) {
+      cities = [];
+    }
+    const citiesStr = cities.length > 0
+      ? cities.map(c => `${c.name} (${Number(c.price).toLocaleString()} SDG)`).join('، ')
+      : 'لا يوجد';
+
+    return `
+      <div class="bulk-mini-row" id="bulk-row-${p.id}" style="padding:10px; border-bottom:1px solid #eee; display:flex; flex-direction:column; gap:4px; ${hasTempPrice ? 'background:#e8f5e9; border-right:4px solid #2e7d32;' : ''}">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <span style="font-weight:700; font-size:13px; color:#222;">${p.name}</span>
+          <span style="font-size:11px; color:#777; background:#e0e0e0; padding:2px 6px; border-radius:4px;">ID: ${p.id}</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; font-size:12px;">
+          <div>السعر الحالي: <strong style="color:#222;">${currentPrice.toLocaleString()} SDG</strong></div>
+          ${hasTempPrice ? `
+            <div style="color:#2e7d32; font-weight:bold;">
+              <i class="fas fa-arrow-right"></i> السعر الجديد المقترح: ${tempPrice.toLocaleString()} SDG
+            </div>
+          ` : ''}
+        </div>
+        <div style="font-size:11px; color:#666; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+          <i class="fas fa-map-marker-alt"></i> مدن التوصيل: ${citiesStr}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function findBestProductMatch(parsedName, products) {
+  if (!parsedName || products.length === 0) return null;
+
+  // Normalization function (lowercases, removes spaces, punctuation, special symbols)
+  function normalize(str) {
+    return str.toLowerCase()
+      .replace(/[\s\-_()\[\]{}|\\\/,.:;!?+*&^%$#@~`"']/g, '')
+      .replace(/[^\w\u0600-\u06FF]/g, ''); // keep only English & Arabic alphanumeric
+  }
+
+  // Tokenization function
+  function tokenize(str) {
+    return str.toLowerCase()
+      .split(/[\s\-_()\[\]{}|\\\/,.:;!?+*&^%$#@~`"']+/)
+      .filter(t => t.length > 0)
+      .map(t => t.replace(/[^\w\u0600-\u06FF]/g, ''))
+      .filter(t => t.length > 0);
+  }
+
+  const normParsed = normalize(parsedName);
+  const tokensParsed = tokenize(parsedName);
+
+  if (normParsed.length === 0) return null;
+
+  let bestMatch = null;
+  let bestScore = 0;
+
+  for (const p of products) {
+    const normP = normalize(p.name);
+    const tokensP = tokenize(p.name);
+
+    // 1. Direct exact normalized match
+    if (normParsed === normP) {
+      return { product: p, score: 1.0, type: 'exact' };
+    }
+
+    // 2. Substring match
+    if (normP.includes(normParsed) || normParsed.includes(normP)) {
+      const score = Math.min(normParsed.length, normP.length) / Math.max(normParsed.length, normP.length);
+      const finalScore = 0.8 + (score * 0.15); // ranges 0.8 to 0.95
+      if (finalScore > bestScore) {
+        bestScore = finalScore;
+        bestMatch = { product: p, score: finalScore, type: 'substring' };
+      }
+    }
+
+    // 3. Token overlap match
+    if (tokensParsed.length > 0 && tokensP.length > 0) {
+      let matchCount = 0;
+      tokensParsed.forEach(t => {
+        if (tokensP.includes(t)) matchCount++;
+      });
+      const tokenScore = matchCount / Math.max(tokensParsed.length, tokensP.length);
+      if (tokenScore > bestScore) {
+        bestScore = tokenScore;
+        bestMatch = { product: p, score: tokenScore, type: 'token' };
+      }
+    }
+  }
+
+  // Accept if score is above the safety threshold (0.5)
+  if (bestMatch && bestScore >= 0.5) {
+    return bestMatch;
+  }
+
+  return null;
+}
+
+function activateBulkPrices() {
+  const wh = document.getElementById('bulkWarehouseSelect').value;
+  if (!wh) {
+    showToast('⚠️ يرجى اختيار مستودع أولاً', 'red');
+    return;
+  }
+
+  const text = document.getElementById('bulkPasteArea').value;
+  if (!text.trim()) {
+    showToast('⚠️ يرجى إدخال النص الخاص بتحديث الأسعار', 'red');
+    return;
+  }
+
+  const whProds = allProducts.filter(p => p.warehouse === wh);
+  if (whProds.length === 0) {
+    showToast('❌ لا توجد منتجات في هذا المستودع لتعديلها', 'red');
+    return;
+  }
+
+  const lines = text.split('\n');
+  let matchedCount = 0;
+  let unmatchedLines = [];
+
+  bulkTempPrices = {}; // Reset
+
+  lines.forEach(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+
+    const idx = trimmed.indexOf('👉');
+    if (idx === -1) {
+      unmatchedLines.push(trimmed);
+      return;
+    }
+
+    const leftPart = trimmed.substring(0, idx).trim();
+    const rightPart = trimmed.substring(idx + 1).trim();
+
+    // Extract first continuous digits as price
+    const cleanedRight = rightPart.replace(/,/g, '');
+    const priceMatch = cleanedRight.match(/\d+/);
+
+    if (!priceMatch) {
+      unmatchedLines.push(trimmed);
+      return;
+    }
+
+    const priceStr = priceMatch[0];
+    const newPrice = parseInt(priceStr);
+
+    // To preserve qualifiers like "WiFi" or "Sim" that might be after the price,
+    // we construct the full search text by taking leftPart and combining it with
+    // any remaining text in rightPart (with the price string removed)
+    const priceIndex = cleanedRight.indexOf(priceStr);
+    const remainingRight = cleanedRight.substring(0, priceIndex) + cleanedRight.substring(priceIndex + priceStr.length);
+    const fullSearchText = (leftPart + " " + remainingRight).trim();
+
+    // Smart match the product
+    const matchResult = findBestProductMatch(fullSearchText, whProds);
+    if (matchResult) {
+      bulkTempPrices[matchResult.product.id] = newPrice;
+      matchedCount++;
+    } else {
+      unmatchedLines.push(trimmed);
+    }
+  });
+
+  renderBulkProductsMiniList();
+
+  // Show summary report
+  const summaryEl = document.getElementById('bulkParsingSummary');
+  summaryEl.style.display = 'block';
+
+  if (matchedCount > 0) {
+    let summaryText = `✅ تم مطابقة وتحديث ${matchedCount} من منتجات المستودع مؤقتاً.`;
+    if (unmatchedLines.length > 0) {
+      summaryText += ` <span style="color:#d32f2f;">(تعذر مطابقة ${unmatchedLines.length} أسطر)</span>`;
+      console.warn('[BulkUpdate] Unmatched lines:', unmatchedLines);
+    }
+    summaryEl.innerHTML = summaryText;
+    summaryEl.style.color = '#2e7d32';
+    showToast(`✅ تم تطبيق الأسعار لـ ${matchedCount} منتج مؤقتاً`, 'green');
+  } else {
+    summaryEl.innerHTML = `❌ لم يتم مطابقة أي منتج! يرجى التحقق من الأسماء المكتوبة.`;
+    summaryEl.style.color = '#d32f2f';
+    showToast(`❌ لم يتم مطابقة أي منتج`, 'red');
+  }
+}
+
+function clearBulkPrices() {
+  bulkTempPrices = {};
+  document.getElementById('bulkPasteArea').value = '';
+  document.getElementById('bulkParsingSummary').style.display = 'none';
+  renderBulkProductsMiniList();
+  showToast('🧹 تم مسح الأسعار المقترحة المؤقتة');
+}
+
+// ── Collective Delivery Cities functions ──
+
+function addBulkDeliveryCity(type) {
+  const cityInput = document.getElementById(type === 'cod' ? 'bulkNewCodCity' : 'bulkNewPrepaidCity');
+  const priceInput = document.getElementById(type === 'cod' ? 'bulkNewCodPrice' : 'bulkNewPrepaidPrice');
+  const name = cityInput.value.trim();
+  const price = parseInt(priceInput.value) || 0;
+
+  if (!name) {
+    showToast('يرجى إدخال اسم المدينة', 'red');
+    return;
+  }
+
+  bulkDeliveryCitiesData[type].push({ name, price, type });
+  cityInput.value = '';
+  priceInput.value = '';
+  renderBulkDeliveryCities(type);
+}
+
+function removeBulkDeliveryCity(type, index) {
+  bulkDeliveryCitiesData[type].splice(index, 1);
+  renderBulkDeliveryCities(type);
+}
+
+function renderBulkDeliveryCities(type) {
+  const listEl = document.getElementById(type === 'cod' ? 'bulkCodCitiesList' : 'bulkPrepaidCitiesList');
+  if (bulkDeliveryCitiesData[type].length === 0) {
+    listEl.innerHTML = '<span style="color:#999;font-size:12px;">لا توجد مدن مضافة</span>';
+  } else {
+    listEl.innerHTML = bulkDeliveryCitiesData[type].map((city, i) =>
+      '<div class="city-tag">' + city.name + ' - ' + city.price.toLocaleString() + ' SDG ' +
+      '<button type="button" class="city-remove" onclick="removeBulkDeliveryCity(\'' + type + '\',' + i + ')">✕</button></div>'
+    ).join('');
+  }
+}
+
+function copyCitiesFromFirstProduct() {
+  const wh = document.getElementById('bulkWarehouseSelect').value;
+  if (!wh) return;
+  const whProds = allProducts.filter(p => p.warehouse === wh);
+  if (whProds.length === 0) {
+    showToast('❌ لا توجد منتجات في هذا المستودع لنسخ مدن التوصيل منها', 'red');
+    return;
+  }
+  const firstProd = whProds[0];
+  let cities = firstProd.delivery_cities || [];
+  if (typeof cities === 'string') {
+    try { cities = JSON.parse(cities); } catch(e) { cities = []; }
+  } else if (!Array.isArray(cities)) {
+    cities = [];
+  }
+
+  bulkDeliveryCitiesData = { cod: [], prepaid: [] };
+  cities.forEach(city => {
+    const type = city.type === 'cod' ? 'cod' : 'prepaid';
+    bulkDeliveryCitiesData[type].push({
+      name: city.name,
+      price: Number(city.price) || 0,
+      type: type
+    });
+  });
+  renderBulkDeliveryCities('cod');
+  renderBulkDeliveryCities('prepaid');
+  showToast('✅ تم نسخ مدن التوصيل من المنتج: ' + firstProd.name, 'green');
+}
+
+async function confirmBulkUpdates() {
+  const wh = document.getElementById('bulkWarehouseSelect').value;
+  if (!wh) {
+    showToast('⚠️ يرجى اختيار مستودع أولاً', 'red');
+    return;
+  }
+
+  const whProds = allProducts.filter(p => p.warehouse === wh);
+  if (whProds.length === 0) {
+    showToast('❌ لا توجد منتجات في هذا المستودع لتحديثها', 'red');
+    return;
+  }
+
+  const finalCities = [...bulkDeliveryCitiesData.cod, ...bulkDeliveryCitiesData.prepaid];
+  const priceChangesCount = Object.keys(bulkTempPrices).length;
+
+  const confirmMsg = `هل أنت متأكد من حفظ التعديلات لـ ${whProds.length} منتج في مستودع "${wh}"؟\n` +
+                     `- عدد المنتجات التي ستتغير أسعارها: ${priceChangesCount}\n` +
+                     `- سيتم تطبيق مدن التوصيل الجماعية المحددة على جميع منتجات هذا المستودع.`;
+
+  if (!confirm(confirmMsg)) return;
+
+  const btn = document.getElementById('bulkConfirmBtn');
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> جاري حفظ التحديثات الجماعية...';
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const p of whProds) {
+    const data = {};
+    let needsUpdate = false;
+
+    // 1. Price check & discount calculation
+    if (p.id in bulkTempPrices) {
+      const newPrice = bulkTempPrices[p.id];
+      data.price = newPrice;
+
+      let oldPrice = p.old_price;
+      let discount = p.discount;
+      if (oldPrice && oldPrice > newPrice) {
+        discount = Math.round((1 - newPrice / oldPrice) * 100);
+      } else {
+        oldPrice = null;
+        discount = null;
+      }
+      data.old_price = oldPrice;
+      data.discount = discount;
+      needsUpdate = true;
+    }
+
+    // 2. Apply bulk delivery cities to all warehouse products
+    data.delivery_cities = finalCities;
+    needsUpdate = true;
+
+    if (needsUpdate) {
+      try {
+        await supabaseFetch(`products?id=eq.${p.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(data)
+        });
+        successCount++;
+      } catch (err) {
+        console.error(`[BulkUpdate] Failed to update product ${p.id}:`, err);
+        failCount++;
+      }
+    }
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = originalHtml;
+
+  if (failCount === 0) {
+    showToast(`✅ تم حفظ التحديثات الجماعية بنجاح لـ ${successCount} منتج`, 'green');
+  } else {
+    showToast(`⚠️ تم تحديث ${successCount} منتج، وفشل تحديث ${failCount} منتج`, 'orange');
+  }
+
+  // Reload all products to sync local state
+  await loadProducts();
+
+  // Re-trigger warehouse selection change to reload the miniature products list
+  onBulkWarehouseChange();
 }
 
 </script>
