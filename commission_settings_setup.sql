@@ -30,7 +30,7 @@ INSERT INTO admin_settings (key, value) VALUES
 ('commission_threshold', '100000'),
 ('commission_low_rate', '8'),
 ('commission_high_rate', '6'),
-('admin_password', 'zoona2025')
+('admin_password', '723b2cb10f2197274835b66b5c7d2b8f95c22faf0f7ed1395e77ee276a947de7')
 ON CONFLICT (key) DO NOTHING;
 
 -- Ensure RLS is active on other relevant tables for the affiliate system
