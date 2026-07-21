@@ -1525,7 +1525,9 @@ function activatePercentPriceUpdate() {
   whProds.forEach(p => {
     const originalPrice = Number(p.price) || 0;
     const modifier = 1 + (percentVal / 100);
-    const newPrice = Math.round(originalPrice * modifier);
+    const rawNewPrice = originalPrice * modifier;
+    // Round to the nearest thousand
+    const newPrice = Math.round(rawNewPrice / 1000) * 1000;
     bulkTempPrices[p.id] = newPrice;
   });
 
