@@ -55,7 +55,8 @@ CREATE TABLE IF NOT EXISTS admin_settings (
 );
 
 -- Insert admin password
-INSERT INTO admin_settings (key, value) VALUES ('admin_password', 'zoona2025')
+-- Insert admin password (SHA-256 hash of SAmy55@#)
+INSERT INTO admin_settings (key, value) VALUES ('admin_password', '723b2cb10f2197274835b66b5c7d2b8f95c22faf0f7ed1395e77ee276a947de7')
     ON CONFLICT (key) DO NOTHING;
 
 -- RLS for admin_settings (no public access)
