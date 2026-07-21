@@ -1080,15 +1080,10 @@
                         return commonWords.length >= 2;
                     });
                     
-                    if (product) {
-                        // إذا كانت هناك عمولة ثابتة محددة للمنتج (غير صفر) نستخدمها
-                        if (product.commission && product.commission > 0) {
-                            totalCommission += product.commission * (orderProduct.quantity || 1);
-                        } else if (product.price) {
-                            // وإلا نستخدم نظام النسبة المئوية المتدرج
-                            const rate = product.price < commissionSettings.threshold ? commissionSettings.lowRate : commissionSettings.highRate;
-                            totalCommission += Math.round((product.price * (rate / 100))) * (orderProduct.quantity || 1);
-                        }
+                    if (product && product.price) {
+                        // استخدام نظام النسبة المئوية المتدرج بصرامة فقط بناءً على إعدادات العمولة
+                        const rate = product.price < commissionSettings.threshold ? commissionSettings.lowRate : commissionSettings.highRate;
+                        totalCommission += Math.round((product.price * (rate / 100))) * (orderProduct.quantity || 1);
                     }
                 });
                 

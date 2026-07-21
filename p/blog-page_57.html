@@ -1823,15 +1823,10 @@ function calculateOrderCommission(order, products) {
                 return cleanOrderProduct.includes(cleanProductName) || cleanProductName.includes(cleanOrderProduct);
             });
             
-            if (product) {
-                if (product.commission && product.commission > 0) {
-                    // استخدام العمولة الثابتة إذا كانت محددة
-                    totalCommission += product.commission * (orderProduct.quantity || 1);
-                } else if (product.price) {
-                    // استخدام نظام النسبة المتدرج
-                    const rate = product.price < commissionSettings.threshold ? commissionSettings.lowRate : commissionSettings.highRate;
-                    totalCommission += Math.round(product.price * (rate / 100)) * (orderProduct.quantity || 1);
-                }
+            if (product && product.price) {
+                // استخدام نظام النسبة المتدرج بصرامة فقط بناءً على إعدادات العمولة
+                const rate = product.price < commissionSettings.threshold ? commissionSettings.lowRate : commissionSettings.highRate;
+                totalCommission += Math.round(product.price * (rate / 100)) * (orderProduct.quantity || 1);
             }
         });
     }
