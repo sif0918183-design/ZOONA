@@ -22,6 +22,7 @@ const categorySlugs = {
   'إكسسوارات موبايلات': 'accessories',
   'تجميل': 'cosmetics',
   'مستحضرات تجميل': 'cosmetics',
+  'عطور': 'perfumes',
   'أزياء نسائية': 'women-fashion',
   'المنزل والمطبخ': 'home-kitchen',
   'اللياقة والرياضة': 'sports-fitness',

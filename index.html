@@ -593,6 +593,7 @@ html, body {
       <button class="cat-btn" onclick="filterCategory('أجهزة كهربائية', this)">الكهربائيات</button>
       <button class="cat-btn" onclick="filterCategory('ألعاب أطفال', this)">ألعاب أطفال</button>
       <button class="cat-btn" onclick="filterCategory('تجميل', this)">تجميل</button>
+      <button class="cat-btn" onclick="filterCategory('عطور', this)">عطور</button>
       <button class="cat-btn" onclick="filterCategory('أزياء نسائية', this)">أزياء نسائية</button>
       <button class="cat-btn" onclick="filterCategory('المنزل والمطبخ', this)">المنزل والمطبخ</button>
       <button class="cat-btn" onclick="filterCategory('اللياقة والرياضة', this)">اللياقة والرياضة</button>
@@ -643,6 +644,10 @@ html, body {
         <div class="cat-item" style="background-image: url('https://images.pexels.com/photos/3373739/pexels-photo-3373739.jpeg?auto=compress&cs=tinysrgb&w=600')" onclick="filterCategory('تجميل', null); switchTab('home');">
           <div class="cat-name">التجميل</div>
           <p>منتجات عناية أصلية</p>
+        </div>
+        <div class="cat-item" style="background-image: url('https://images.pexels.com/photos/9659891/pexels-photo-9659891.jpeg?auto=compress&cs=tinysrgb&w=600')" onclick="filterCategory('عطور', null); switchTab('home');">
+          <div class="cat-name">العطور</div>
+          <p>أرقى العطور والروائح المتميزة</p>
         </div>
         <div class="cat-item" style="background-image: url('https://images.pexels.com/photos/3642537/pexels-photo-3642537.jpeg?auto=compress&cs=tinysrgb&w=600')" onclick="filterCategory('اللياقة والرياضة', null); switchTab('home');">
           <div class="cat-name">اللياقة والرياضة</div>
@@ -975,6 +980,7 @@ html, body {
           <option value="المنزل والمطبخ">المنزل والمطبخ</option>
           <option value="أزياء">أزياء</option>
           <option value="مستحضرات تجميل">مستحضرات تجميل</option>
+          <option value="عطور">عطور</option>
           <option value="ألعاب أطفال">ألعاب أطفال</option>
           <option value="معدات رياضية">معدات رياضية</option>
           <option value="أخرى">أخرى</option>
@@ -1029,6 +1035,7 @@ const categorySlugs = {
   'إكسسوارات موبايلات': 'accessories',
   'تجميل': 'cosmetics',
   'مستحضرات تجميل': 'cosmetics',
+  'عطور': 'perfumes',
   'أزياء نسائية': 'women-fashion',
   'المنزل والمطبخ': 'home-kitchen',
   'اللياقة والرياضة': 'sports-fitness',
