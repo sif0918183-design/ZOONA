@@ -362,6 +362,31 @@ textarea.form-control{resize:vertical;min-height:80px}
               مسح
             </button>
           </div>
+
+          <!-- OR divider -->
+          <div style="text-align: center; margin: 20px 0; border-top: 1px dashed #ccc; position: relative;">
+            <span style="position: absolute; top: -10px; background: #fff; padding: 0 10px; color: #666; font-size: 12px; font-weight: bold; left: 50%; transform: translateX(-50%);">أو</span>
+          </div>
+
+          <!-- Percentage bulk update section -->
+          <div class="form-group" style="background: #F5F6FA; padding: 15px; border-radius: 14px; border: 1.5px solid #ddd; margin-bottom: 20px;">
+            <label class="form-label" style="font-weight:700; display: flex; align-items: center; gap: 6px; color: #1565C0; margin-bottom: 4px;">
+              <i class="fas fa-percentage"></i> تحديث جميع أسعار المستودع بنسبة مئوية موحدة
+            </label>
+            <span style="font-size:11px; color:#666; display:block; margin-bottom:10px;">
+              أدخل نسبة التعديل لتطبيقها على جميع منتجات هذا المستودع دفعة واحدة (مثال: 5 للزيادة بنسبة 5%، أو -5 للخصم بنسبة 5%).
+            </span>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <div style="position: relative; flex: 1; max-width: 150px;">
+                <input id="bulkPercentInput" type="number" step="0.1" class="form-control" style="font-weight: bold; text-align: center; height: 38px; border: 2px solid #ccc; padding-right: 25px;" placeholder="0">
+                <span style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-weight: bold; color: #555;">%</span>
+              </div>
+              <button type="button" class="add-btn" onclick="activatePercentPriceUpdate()" style="background: linear-gradient(135deg, #1565C0, #0d47a1); margin: 0; padding: 0 16px; height: 38px; font-size: 13px; font-weight: 700; justify-content: center; box-shadow: 0 3px 8px rgba(21,101,192,.2); flex: 1;">
+                <i class="fas fa-magic"></i> تطبيق النسبة مؤقتاً
+              </button>
+            </div>
+          </div>
+
           <div id="bulkParsingSummary" style="font-size:13px; font-weight:700; margin-bottom:12px; display:none; padding:10px; border-radius:8px; background:#f5f5f5;"></div>
         </div>
 
@@ -1235,6 +1260,8 @@ function onBulkWarehouseChange() {
   // Clear bulk temp prices & UI
   bulkTempPrices = {};
   document.getElementById('bulkPasteArea').value = '';
+  const bulkPercentInp = document.getElementById('bulkPercentInput');
+  if (bulkPercentInp) bulkPercentInp.value = '';
   document.getElementById('bulkParsingSummary').style.display = 'none';
 
   // Load delivery cities from first product as default initial list
@@ -1468,9 +1495,58 @@ function activateBulkPrices() {
   }
 }
 
+function activatePercentPriceUpdate() {
+  const wh = document.getElementById('bulkWarehouseSelect').value;
+  if (!wh) {
+    showToast('⚠️ يرجى اختيار مستودع أولاً', 'red');
+    return;
+  }
+
+  const percentStr = document.getElementById('bulkPercentInput').value.trim();
+  if (percentStr === '') {
+    showToast('⚠️ يرجى إدخال نسبة التعديل المئوية', 'red');
+    return;
+  }
+
+  const percentVal = parseFloat(percentStr);
+  if (isNaN(percentVal)) {
+    showToast('⚠️ النسبة المئوية غير صالحة', 'red');
+    return;
+  }
+
+  const whProds = allProducts.filter(p => p.warehouse === wh);
+  if (whProds.length === 0) {
+    showToast('❌ لا توجد منتجات في هذا المستودع لتعديلها', 'red');
+    return;
+  }
+
+  bulkTempPrices = {}; // Reset
+
+  whProds.forEach(p => {
+    const originalPrice = Number(p.price) || 0;
+    const modifier = 1 + (percentVal / 100);
+    const newPrice = Math.round(originalPrice * modifier);
+    bulkTempPrices[p.id] = newPrice;
+  });
+
+  renderBulkProductsMiniList();
+
+  // Clear paste area to avoid confusion
+  document.getElementById('bulkPasteArea').value = '';
+
+  // Show summary report
+  const summaryEl = document.getElementById('bulkParsingSummary');
+  summaryEl.style.display = 'block';
+  summaryEl.style.color = '#1565C0';
+  summaryEl.innerHTML = `✅ تم احتساب الأسعار مؤقتاً بتعديل مئوي قدره (${percentVal > 0 ? '+' : ''}${percentVal}%) لـ ${whProds.length} منتج. اضغط على زر الحفظ بالأسفل للتأكيد النهائي في قاعدة البيانات.`;
+
+  showToast(`✅ تم تطبيق نسبة ${percentVal}% مؤقتاً`, 'green');
+}
+
 function clearBulkPrices() {
   bulkTempPrices = {};
   document.getElementById('bulkPasteArea').value = '';
+  document.getElementById('bulkPercentInput').value = '';
   document.getElementById('bulkParsingSummary').style.display = 'none';
   renderBulkProductsMiniList();
   showToast('🧹 تم مسح الأسعار المقترحة المؤقتة');
