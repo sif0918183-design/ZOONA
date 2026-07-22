@@ -146,10 +146,21 @@
             box-shadow: 0 4px 15px rgba(230, 57, 70, 0.3);
         }
 
-        #submitBtn:hover {
+        #submitBtn:hover:not(:disabled) {
             background: linear-gradient(135deg, #d62839 0%, #c1121f 100%);
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(230, 57, 70, 0.4);
+        }
+
+        #submitBtn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        #submitBtn:disabled:hover {
+            transform: none !important;
+            box-shadow: 0 4px 15px rgba(230, 57, 70, 0.3) !important;
         }
 
         #downloadPDF {
@@ -175,6 +186,38 @@
             background: linear-gradient(135deg, #1d3557 0%, #14213d 100%);
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(69, 123, 157, 0.4);
+        }
+
+        /* زر العودة إلى الرئيسية */
+        #backToHomeBtn {
+            text-decoration: none;
+            display: none;
+            margin-top: 10px;
+        }
+
+        #backToHomeBtn button {
+            width: 100%;
+            padding: 15px;
+            border-radius: 10px;
+            border: none;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: 'Tajawal', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(56, 161, 105, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        #backToHomeBtn button:hover {
+            background: linear-gradient(135deg, #2f855a 0%, #276749 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(56, 161, 105, 0.4);
         }
 
         .success-message, .error-message {
@@ -751,6 +794,13 @@
         <button id="downloadPDF">
             <i class="fas fa-download"></i> تحميل نسخة PDF من إيصال الطلب
         </button>
+
+        <!-- زر العودة إلى الصفحة الرئيسية -->
+        <a href="https://zoonasd.com" id="backToHomeBtn">
+            <button>
+                <i class="fas fa-arrow-right"></i> عودة إلى الرئيسية
+            </button>
+        </a>
         
         <div class="success-message" id="successMsg"></div>
         <div class="error-message" id="errorMsg"></div>
@@ -1071,7 +1121,7 @@
             try {
                 console.log('💰 معالجة بيانات المسوق:', orderData.affiliateId);
 
-                // التحقق من وجود المسوق في جدول المستخدمين
+                // التحقق من وجود المسوق في جدول affiliate_users
                 const affiliates = await callSupabase(`affiliate_users?select=affiliate_id&affiliate_id=eq.${orderData.affiliateId}`);
 
                 if (!affiliates || affiliates.length === 0) {
@@ -2130,6 +2180,7 @@
             const downloadBtn = document.getElementById('downloadPDF');
             const submitBtn = document.getElementById('submitBtn');
             const orderIdElement = document.getElementById('orderId');
+            const backToHomeBtn = document.getElementById('backToHomeBtn');
             
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -2172,20 +2223,29 @@
                 try {
                     console.log('🔍 فحص معرف المسوق قبل الإرسال:', formData.affiliateId);
                     
-                    // استدعاء إنشاء الطلب مع إعادة المحاولة التلقائية
                     await createNewOrder(formData);
                     
                     console.log('✅ تم حفظ بيانات المسوق في قاعدة البيانات');
                     
                     saveUserInfo();
-                    
-                    // تنظيف بيانات المسوق بعد نجاح الطلب
                     clearAffiliateIdFromStorage();
                     
+                    // ✅ عرض رسالة النجاح
                     successMsg.textContent = "تم إرسال طلبك بنجاح! يمكنك الآن تحميل نسخة PDF من إيصال الطلب.";
                     orderIdElement.textContent = `رقم الطلب: ${orderId}`;
+                    
+                    // ✅ إظهار زر تحميل PDF
                     downloadBtn.classList.add('show');
                     downloadBtn.setAttribute('data-order', JSON.stringify(formData));
+                    
+                    // ✅ إظهار زر العودة إلى الرئيسية
+                    backToHomeBtn.style.display = 'block';
+                    
+                    // ✅ تعطيل زر الإرسال بشكل دائم (يمنع التكرار)
+                    submitBtn.disabled = true;
+                    submitBtn.style.opacity = '0.6';
+                    submitBtn.style.cursor = 'not-allowed';
+                    submitBtn.innerHTML = '<i class="fas fa-check-circle"></i> تم الإرسال بنجاح';
                     
                     // مسح السلة
                     localStorage.removeItem('cartItems');
@@ -2194,7 +2254,6 @@
                     console.log('✅ تم إرسال الطلب بنجاح:', orderId);
                     console.log('👤 معرف المستخدم المرتبط بالطلب:', userId);
                     
-                    // التحقق من تنظيف بيانات المسوق
                     setTimeout(() => {
                         const isClean = checkRemainingAffiliateData();
                         if (!isClean) {
@@ -2206,8 +2265,11 @@
                 } catch (err) {
                     console.error('❌ خطأ في إرسال الطلب:', err);
                     errorMsg.textContent = "حدث خطأ أثناء إرسال الطلب. يرجى المحاولة مرة أخرى.";
-                } finally {
+                    
+                    // ✅ في حالة الخطأ، إعادة تفعيل الزر
                     submitBtn.disabled = false;
+                    submitBtn.style.opacity = '1';
+                    submitBtn.style.cursor = 'pointer';
                     submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال الطلب';
                 }
             });
