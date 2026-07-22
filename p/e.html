@@ -7,7 +7,6 @@
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-
   gtag('config', 'G-72BVNRWMWS');
 </script>
     <meta charset="UTF-8">
@@ -786,20 +785,37 @@
         </div>
     </div>
 
+    <!-- خريطة التوصيل -->
+    <div class="map-overlay" id="mapOverlay">
+        <div class="map-container">
+            <div id="locationMap"></div>
+            <div class="map-controls">
+                <button class="map-control-btn" id="locateMe"><i class="fas fa-crosshairs"></i> موقعي الحالي</button>
+                <button class="map-control-btn" id="confirmLocation"><i class="fas fa-check"></i> تأكيد الموقع</button>
+                <button class="map-control-btn" id="cancelLocation"><i class="fas fa-times"></i> إلغاء</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ========== تكوين API (Proxy) ==========
+        // استخدام Map للـ Caching مع مهلة 10 ثوانٍ لمنع الطلبات المتكررة
         let requestCache = new Map();
+        const CACHE_DURATION = 10000; // 10 ثوانٍ
 
-        async function fetchWithRetry(url, fetchOptions, maxRetries = 5, delay = 500) {
+        // دالة fetch مع Retry للتغلب على أخطاء التضارب (409)
+        async function fetchWithRetry(url, fetchOptions, maxRetries = 3, delay = 1000) {
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
                     const response = await fetch(url, fetchOptions);
-                    // في حال حدوث تضارب (409) أو أخطاء مؤقتة، نكرر المحاولة مع تأخير تدرجي
-                    if (response.status === 409 && attempt < maxRetries) {
-                        console.warn(`⚠️ تضارب (409) تم رصده في المحاولة ${attempt}. جاري إعادة المحاولة خلال ${delay * attempt}ms...`);
+                    
+                    // في حال حدوث تضارب (409) أو أخطاء مؤقتة (5xx)، نكرر المحاولة مع تأخير تدرجي
+                    if ((response.status === 409 || response.status >= 500) && attempt < maxRetries) {
+                        console.warn(`⚠️ خطأ ${response.status} تم رصده في المحاولة ${attempt}. جاري إعادة المحاولة خلال ${delay * attempt}ms...`);
                         await new Promise(resolve => setTimeout(resolve, delay * attempt));
                         continue;
                     }
+                    
                     return response;
                 } catch (error) {
                     if (attempt === maxRetries) throw error;
@@ -809,18 +825,22 @@
             }
         }
 
+        // دالة استدعاء Supabase عبر البروكسي
         async function callSupabase(endpoint, options = {}) {
             const isGet = !options.method || options.method.toUpperCase() === 'GET';
             const cacheKey = `${endpoint}`;
 
+            // للطلبات GET، نستخدم الكاش مع مهلة أطول
             if (isGet) {
                 const cached = requestCache.get(cacheKey);
-                if (cached && (Date.now() - cached.timestamp < 3000)) { // ذاكرة تخزين مؤقت لمدة 3 ثوانٍ لمنع التكرار المتزامن
+                if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
+                    console.log(`✅ استخدام الكاش لـ ${endpoint}`);
                     return cached.data;
                 }
             } else {
                 // مسح الكاش عند حدوث أي عملية كتابة لضمان تحديث البيانات
                 requestCache.clear();
+                console.log('🗑️ تم مسح الكاش بسبب عملية كتابة');
             }
 
             const url = `/api/orders?endpoint=${encodeURIComponent(endpoint)}`;
@@ -832,22 +852,29 @@
                 }
             };
 
-            const response = await fetchWithRetry(url, fetchOptions);
+            try {
+                const response = await fetchWithRetry(url, fetchOptions);
 
-            if (response.status === 204) return null;
-            if (!response.ok) {
-                const err = await response.json().catch(() => ({ error: 'Request failed' }));
-                throw new Error(err.error || 'Request failed');
-            }
+                if (response.status === 204) return null;
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({ error: 'Request failed' }));
+                    throw new Error(err.error || `Request failed with status ${response.status}`);
+                }
 
-            const data = await response.json();
-            if (isGet) {
-                requestCache.set(cacheKey, { data, timestamp: Date.now() });
+                const data = await response.json();
+                
+                // تخزين في الكاش للطلبات GET فقط
+                if (isGet) {
+                    requestCache.set(cacheKey, { data, timestamp: Date.now() });
+                }
+                return data;
+            } catch (error) {
+                console.error(`❌ خطأ في استدعاء ${endpoint}:`, error);
+                throw error;
             }
-            return data;
         }
 
-        // ========== دوال API للعمل مع Supabase عبر البروكسي ==========
+        // ========== دوال API ==========
         
         // متغيرات النظام
         let cartItems = JSON.parse(localStorage.getItem('cartItems')) || [];
@@ -971,6 +998,7 @@
             }
         }
         
+        // ========== دالة إنشاء الطلب المحسنة ==========
         async function createNewOrder(orderData) {
             try {
                 console.log('📝 بدء إنشاء طلب جديد:', orderData.orderId);
@@ -1258,6 +1286,7 @@
             return totalCommission;
         }
         
+        // ========== دالة تنظيف بيانات المسوق ==========
         function clearAffiliateIdFromStorage() {
             const affiliateKeys = ['currentAffiliateId', 'affiliateId', 'ref'];
             affiliateKeys.forEach(key => {
@@ -2141,14 +2170,16 @@
                 };
                 
                 try {
-                    console.log('🔍 فحص معرف المسوق قبل المسح:', getAffiliateId());
+                    console.log('🔍 فحص معرف المسوق قبل الإرسال:', formData.affiliateId);
                     
+                    // استدعاء إنشاء الطلب مع إعادة المحاولة التلقائية
                     await createNewOrder(formData);
                     
                     console.log('✅ تم حفظ بيانات المسوق في قاعدة البيانات');
                     
                     saveUserInfo();
                     
+                    // تنظيف بيانات المسوق بعد نجاح الطلب
                     clearAffiliateIdFromStorage();
                     
                     successMsg.textContent = "تم إرسال طلبك بنجاح! يمكنك الآن تحميل نسخة PDF من إيصال الطلب.";
@@ -2156,12 +2187,14 @@
                     downloadBtn.classList.add('show');
                     downloadBtn.setAttribute('data-order', JSON.stringify(formData));
                     
+                    // مسح السلة
                     localStorage.removeItem('cartItems');
                     cartItems = [];
                     
                     console.log('✅ تم إرسال الطلب بنجاح:', orderId);
                     console.log('👤 معرف المستخدم المرتبط بالطلب:', userId);
                     
+                    // التحقق من تنظيف بيانات المسوق
                     setTimeout(() => {
                         const isClean = checkRemainingAffiliateData();
                         if (!isClean) {
