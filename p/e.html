@@ -788,21 +788,63 @@
 
     <script>
         // ========== تكوين API (Proxy) ==========
+        let requestCache = new Map();
+
+        async function fetchWithRetry(url, fetchOptions, maxRetries = 5, delay = 500) {
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    const response = await fetch(url, fetchOptions);
+                    // في حال حدوث تضارب (409) أو أخطاء مؤقتة، نكرر المحاولة مع تأخير تدرجي
+                    if (response.status === 409 && attempt < maxRetries) {
+                        console.warn(`⚠️ تضارب (409) تم رصده في المحاولة ${attempt}. جاري إعادة المحاولة خلال ${delay * attempt}ms...`);
+                        await new Promise(resolve => setTimeout(resolve, delay * attempt));
+                        continue;
+                    }
+                    return response;
+                } catch (error) {
+                    if (attempt === maxRetries) throw error;
+                    console.warn(`⚠️ خطأ في الاتصال بالمحاولة ${attempt}. جاري إعادة المحاولة...`);
+                    await new Promise(resolve => setTimeout(resolve, delay * attempt));
+                }
+            }
+        }
+
         async function callSupabase(endpoint, options = {}) {
+            const isGet = !options.method || options.method.toUpperCase() === 'GET';
+            const cacheKey = `${endpoint}`;
+
+            if (isGet) {
+                const cached = requestCache.get(cacheKey);
+                if (cached && (Date.now() - cached.timestamp < 3000)) { // ذاكرة تخزين مؤقت لمدة 3 ثوانٍ لمنع التكرار المتزامن
+                    return cached.data;
+                }
+            } else {
+                // مسح الكاش عند حدوث أي عملية كتابة لضمان تحديث البيانات
+                requestCache.clear();
+            }
+
             const url = `/api/orders?endpoint=${encodeURIComponent(endpoint)}`;
-            const response = await fetch(url, {
+            const fetchOptions = {
                 ...options,
                 headers: {
                     'Content-Type': 'application/json',
                     ...options.headers
                 }
-            });
+            };
+
+            const response = await fetchWithRetry(url, fetchOptions);
+
             if (response.status === 204) return null;
             if (!response.ok) {
-                const err = await response.json();
+                const err = await response.json().catch(() => ({ error: 'Request failed' }));
                 throw new Error(err.error || 'Request failed');
             }
-            return response.json();
+
+            const data = await response.json();
+            if (isGet) {
+                requestCache.set(cacheKey, { data, timestamp: Date.now() });
+            }
+            return data;
         }
 
         // ========== دوال API للعمل مع Supabase عبر البروكسي ==========
@@ -1943,8 +1985,8 @@
                 return 'السلة فارغة. أضف منتجات أولاً';
             }
             
-            if (!city) {
-                return 'يرجى اختيار مدينة التوصيل';
+            if (!city || !selectedCity) {
+                return 'يرجى اختيار مدينة التوصيل بشكل صحيح';
             }
             
             if (!address.trim()) {

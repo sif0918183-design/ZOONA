@@ -173,6 +173,11 @@ export default async function handler(req, res) {
 
     const response = await fetch(fetchUrl, fetchOptions);
 
+    if (!response.ok) {
+      const errorText = await response.clone().text().catch(() => 'No text');
+      console.error(`[Orders-Proxy] Supabase returned error status ${response.status} for ${req.method} to ${endpoint}: ${errorText}`);
+    }
+
     if (response.status === 204) {
       return res.status(204).end();
     }
