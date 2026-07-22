@@ -44,7 +44,7 @@
             padding: 30px;
             border-radius: 16px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-            max-width: 500px;
+            max-width: 600px;
             width: 100%;
             margin: auto;
             border: 1px solid #f0f0f0;
@@ -188,7 +188,6 @@
             box-shadow: 0 6px 20px rgba(69, 123, 157, 0.4);
         }
 
-        /* زر العودة إلى الرئيسية */
         #backToHomeBtn {
             text-decoration: none;
             display: none;
@@ -317,7 +316,7 @@
 
         .warehouse-section {
             background: #e8f5e8;
-            padding: 10px;
+            padding: 15px;
             border-radius: 8px;
             margin: 10px 0;
             border-right: 4px solid #38a169;
@@ -326,10 +325,71 @@
         .warehouse-title {
             font-weight: bold;
             color: #2d3748;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
             gap: 8px;
+            font-size: 1.05rem;
+        }
+
+        .warehouse-products-names {
+            font-size: 0.85rem;
+            color: #718096;
+            font-weight: normal;
+            margin-right: 8px;
+        }
+
+        .warehouse-city-select {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed #cbd5e0;
+        }
+
+        .warehouse-city-select label {
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 0.95rem;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .warehouse-city-select select {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1.5px solid #e2e8f0;
+            font-size: 15px;
+            font-family: 'Tajawal', sans-serif;
+            background-color: #fafafa;
+            color: #2d3748;
+            transition: all 0.3s ease;
+        }
+
+        .warehouse-city-select select:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+            background-color: #fff;
+        }
+
+        .warehouse-subtotal {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .warehouse-subtotal .amount {
+            color: #e63946;
+        }
+
+        .warehouse-not-selected {
+            color: #e53e3e;
+            font-size: 0.85rem;
+            margin-top: 6px;
         }
 
         .shipping-cost {
@@ -570,6 +630,13 @@
             .map-control-btn {
                 width: 100%;
             }
+            .warehouse-section {
+                padding: 12px;
+            }
+            .warehouse-city-select select {
+                font-size: 14px;
+                padding: 8px 10px;
+            }
         }
 
         .pdf-template {
@@ -692,6 +759,14 @@
             color: #276749;
             display: none;
         }
+
+        .warehouse-city-select .city-option-cod {
+            color: #2d3748;
+        }
+
+        .warehouse-city-select .city-option-prepaid {
+            color: #2b6cb0;
+        }
     </style>
 </head>
 <body>
@@ -739,35 +814,20 @@
                 </div>
             </div>
             
-            <!-- ملخص المنتجات -->
+            <!-- ملخص المنتجات مع اختيار مدينة لكل مستودع -->
             <div class="products-summary" id="productsSummary">
                 <h4><i class="fas fa-shopping-cart"></i> المنتجات المطلوبة</h4>
                 <div id="productsList"></div>
                 <div class="summary-details" id="summaryDetails"></div>
             </div>
             
-            <!-- إطار معلومات التوصيل الموحد -->
+            <!-- إطار معلومات التوصيل الموحد (للعنوان فقط) -->
             <div class="shipping-container">
-                <h3><i class="fas fa-truck"></i> معلومات التوصيل</h3>
+                <h3><i class="fas fa-truck"></i> عنوان التوصيل</h3>
                 
-                <!-- (2) حقل المدينة -->
+                <!-- حقل وصف العنوان -->
                 <div class="form-group">
-                    <label for="deliveryCity" class="required">مدينة التوصيل</label>
-                    <div class="input-with-icon">
-                        <i class="fas fa-city"></i>
-                        <select id="deliveryCity" required>
-                            <option value="">اختر مدينة التوصيل</option>
-                        </select>
-                    </div>
-                    <div id="cityWarning" class="location-warning" style="display: none;">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <span>لا يوجد توصيل إلى هذا العنوان</span>
-                    </div>
-                </div>
-                
-                <!-- (3) حقل وصف العنوان -->
-                <div class="form-group">
-                    <label for="address" class="required">وصف العنوان(ضيف وصف مختصر) </label>
+                    <label for="address" class="required">وصف العنوان (أضف وصف مختصر)</label>
                     <div class="input-with-icon">
                         <i class="fas fa-map-marker-alt"></i>
                         <textarea id="address" placeholder="اكتب وصفًا موجزًا (الحي، الشارع، رقم المنزل، معلم بارز...)" required rows="3"></textarea>
@@ -819,7 +879,6 @@
             <div><span class="pdf-label">الاسم الكامل:</span> <span id="pdfName"></span></div>
             <div><span class="pdf-label">رقم الهاتف:</span> <span id="pdfPhone"></span></div>
             <div><span class="pdf-label">رقم إضافي:</span> <span id="pdfPhone2"></span></div>
-            <div><span class="pdf-label">مدينة التوصيل:</span> <span id="pdfCity"></span></div>
             <div><span class="pdf-label">عنوان التوصيل:</span> <span id="pdfAddress"></span></div>
             <div><span class="pdf-label">نوع الدفع:</span> <span id="pdfPaymentType"></span></div>
         </div>
@@ -849,38 +908,31 @@
 
     <script>
         // ========== تكوين API (Proxy) ==========
-        // استخدام Map للـ Caching مع مهلة 10 ثوانٍ لمنع الطلبات المتكررة
         let requestCache = new Map();
-        const CACHE_DURATION = 10000; // 10 ثوانٍ
+        const CACHE_DURATION = 10000;
 
-        // دالة fetch مع Retry للتغلب على أخطاء التضارب (409)
         async function fetchWithRetry(url, fetchOptions, maxRetries = 3, delay = 1000) {
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
                     const response = await fetch(url, fetchOptions);
-                    
-                    // في حال حدوث تضارب (409) أو أخطاء مؤقتة (5xx)، نكرر المحاولة مع تأخير تدرجي
                     if ((response.status === 409 || response.status >= 500) && attempt < maxRetries) {
-                        console.warn(`⚠️ خطأ ${response.status} تم رصده في المحاولة ${attempt}. جاري إعادة المحاولة خلال ${delay * attempt}ms...`);
+                        console.warn(`⚠️ خطأ ${response.status} في المحاولة ${attempt}. إعادة المحاولة...`);
                         await new Promise(resolve => setTimeout(resolve, delay * attempt));
                         continue;
                     }
-                    
                     return response;
                 } catch (error) {
                     if (attempt === maxRetries) throw error;
-                    console.warn(`⚠️ خطأ في الاتصال بالمحاولة ${attempt}. جاري إعادة المحاولة...`);
+                    console.warn(`⚠️ خطأ في الاتصال بالمحاولة ${attempt}. إعادة المحاولة...`);
                     await new Promise(resolve => setTimeout(resolve, delay * attempt));
                 }
             }
         }
 
-        // دالة استدعاء Supabase عبر البروكسي
         async function callSupabase(endpoint, options = {}) {
             const isGet = !options.method || options.method.toUpperCase() === 'GET';
             const cacheKey = `${endpoint}`;
 
-            // للطلبات GET، نستخدم الكاش مع مهلة أطول
             if (isGet) {
                 const cached = requestCache.get(cacheKey);
                 if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
@@ -888,7 +940,6 @@
                     return cached.data;
                 }
             } else {
-                // مسح الكاش عند حدوث أي عملية كتابة لضمان تحديث البيانات
                 requestCache.clear();
                 console.log('🗑️ تم مسح الكاش بسبب عملية كتابة');
             }
@@ -904,16 +955,12 @@
 
             try {
                 const response = await fetchWithRetry(url, fetchOptions);
-
                 if (response.status === 204) return null;
                 if (!response.ok) {
                     const err = await response.json().catch(() => ({ error: 'Request failed' }));
                     throw new Error(err.error || `Request failed with status ${response.status}`);
                 }
-
                 const data = await response.json();
-                
-                // تخزين في الكاش للطلبات GET فقط
                 if (isGet) {
                     requestCache.set(cacheKey, { data, timestamp: Date.now() });
                 }
@@ -925,17 +972,14 @@
         }
 
         // ========== دوال API ==========
-        
-        // متغيرات النظام
         let cartItems = JSON.parse(localStorage.getItem('cartItems')) || [];
         let userAddress = '';
         let userLocation = null;
         let userInfo = JSON.parse(localStorage.getItem('userInfo')) || {};
         let citiesData = { cashOnDelivery: [], prepaid: [] };
-        let selectedCity = null;
+        let warehouseSelections = {}; // { warehouseName: { city: null, type: null, price: 0 } }
         let userId = null;
         
-        // بيانات المدن السودانية بالإحداثيات
         const sudanCities = {
             "بورتسودان": { lat: 19.6158, lng: 37.2164 },
             "كسلا": { lat: 15.4500, lng: 36.4000 },
@@ -958,7 +1002,6 @@
         };
         
         // ========== نظام معرف المستخدم الفريد ==========
-        
         function generateUserId() {
             const timestamp = Date.now().toString(36);
             const random = Math.random().toString(36).substr(2, 9);
@@ -971,8 +1014,6 @@
                 userId = generateUserId();
                 localStorage.setItem('zoonaUserId', userId);
                 console.log('✅ تم إنشاء معرف مستخدم جديد:', userId);
-            } else {
-                console.log('✅ تم تحميل معرف المستخدم الموجود:', userId);
             }
             return userId;
         }
@@ -985,41 +1026,31 @@
         }
         
         // ========== دوال إدارة معرف المسوق ==========
-        
         function getAffiliateId() {
             const urlParams = new URLSearchParams(window.location.search);
             let affiliateId = urlParams.get('ref');
-            
             if (!affiliateId || affiliateId === 'direct') {
                 affiliateId = localStorage.getItem('currentAffiliateId');
             }
-            
             if ((!affiliateId || affiliateId === 'direct') && cartItems.length > 0) {
                 const productWithAffiliate = cartItems.find(item => item.affiliateId && item.affiliateId !== 'direct');
                 if (productWithAffiliate) {
                     affiliateId = productWithAffiliate.affiliateId;
                 }
             }
-            
             if (affiliateId && affiliateId !== 'direct' && affiliateId !== 'null' && affiliateId !== 'undefined') {
-                console.log('✅ تم العثور على معرف المسوق:', affiliateId);
                 return affiliateId;
             }
-            
-            console.log('ℹ️ لم يتم العثور على معرف مسوق - استخدام direct');
             return 'direct';
         }
         
         async function trackAffiliateClick() {
             const currentAffiliateId = getAffiliateId();
-            
             if (currentAffiliateId !== 'direct') {
                 try {
                     const today = new Date().toISOString().split('T')[0];
-                    
                     const clicks = await callSupabase(`affiliate_clicks?select=*&affiliate_id=eq.${currentAffiliateId}&click_date=eq.${today}`);
                     const existingClick = clicks && clicks.length > 0 ? clicks[0] : null;
-
                     if (existingClick) {
                         await callSupabase(`affiliate_clicks?id=eq.${existingClick.id}`, {
                             method: 'PATCH',
@@ -1040,7 +1071,6 @@
                             }])
                         });
                     }
-
                     console.log('✅ تم تتبع نقرة المسوق بنجاح');
                 } catch (error) {
                     console.error('❌ خطأ في تتبع النقرة:', error);
@@ -1048,12 +1078,11 @@
             }
         }
         
-        // ========== دالة إنشاء الطلب المحسنة ==========
+        // ========== دالة إنشاء الطلب ==========
         async function createNewOrder(orderData) {
             try {
                 console.log('📝 بدء إنشاء طلب جديد:', orderData.orderId);
 
-                // 1. إدخال الطلب الرئيسي
                 await callSupabase('orders', {
                     method: 'POST',
                     body: JSON.stringify([{
@@ -1062,8 +1091,8 @@
                         name: orderData.name,
                         phone: orderData.phone,
                         phone2: orderData.phone2 || null,
-                        city: orderData.city,
-                        city_type: orderData.cityType,
+                        city: orderData.city || 'متعدد',
+                        city_type: orderData.cityType || 'cod',
                         shipping_cost: orderData.shippingCost || 0,
                         total_amount: orderData.total,
                         address: orderData.address,
@@ -1080,7 +1109,6 @@
 
                 console.log('✅ تم إدخال الطلب الرئيسي بنجاح');
 
-                // 2. إدخال منتجات الطلب
                 if (orderData.products && orderData.products.length > 0) {
                     const orderProducts = orderData.products.map(item => ({
                         order_id: orderData.orderId,
@@ -1091,16 +1119,13 @@
                         warehouse: item.warehouse,
                         created_at: new Date().toISOString()
                     }));
-
                     await callSupabase('order_products', {
                         method: 'POST',
                         body: JSON.stringify(orderProducts)
                     });
-
                     console.log('✅ تم إدخال', orderProducts.length, 'منتج بنجاح');
                 }
 
-                // 3. معالجة بيانات المسوق إذا كان موجوداً
                 if (orderData.affiliateId && orderData.affiliateId !== 'direct') {
                     await saveAffiliateData(orderData);
                     await updateAffiliateStats(orderData.affiliateId);
@@ -1108,7 +1133,6 @@
 
                 console.log('✅ تم إنشاء الطلب بنجاح:', orderData.orderId);
                 return { success: true, orderId: orderData.orderId };
-
             } catch (error) {
                 console.error('❌ خطأ في إنشاء الطلب:', error);
                 throw error;
@@ -1116,21 +1140,16 @@
         }
         
         // ========== دوال إدارة بيانات المسوق ==========
-        
         async function saveAffiliateData(orderData) {
             try {
                 console.log('💰 معالجة بيانات المسوق:', orderData.affiliateId);
-
-                // التحقق من وجود المسوق في جدول affiliate_users
                 const affiliates = await callSupabase(`affiliate_users?select=affiliate_id&affiliate_id=eq.${orderData.affiliateId}`);
-
                 if (!affiliates || affiliates.length === 0) {
-                    console.warn('⚠️ المسوق غير موجود، سيتم تسجيل الطلب كطلب مباشر');
+                    console.warn('⚠️ المسوق غير موجود');
                     orderData.affiliateId = 'direct';
                     return;
                 }
 
-                // جلب إعدادات العمولة
                 let commissionSettings = { threshold: 100000, lowRate: 8, highRate: 6 };
                 try {
                     const settings = await callSupabase('admin_settings?select=*');
@@ -1138,46 +1157,34 @@
                         const threshold = settings.find(s => s.key === 'commission_threshold');
                         const lowRate = settings.find(s => s.key === 'commission_low_rate');
                         const highRate = settings.find(s => s.key === 'commission_high_rate');
-
                         if (threshold) commissionSettings.threshold = parseInt(threshold.value);
                         if (lowRate) commissionSettings.lowRate = parseInt(lowRate.value);
                         if (highRate) commissionSettings.highRate = parseInt(highRate.value);
                     }
-                } catch (e) {
-                    console.error('❌ خطأ في جلب الإعدادات:', e);
-                }
+                } catch (e) { console.error('❌ خطأ في جلب الإعدادات:', e); }
 
-                // جلب المنتجات لحساب العمولة بدقة
                 let products = [];
                 try {
                     products = await callSupabase('products?select=id,name,commission,price');
-                } catch (e) {
-                    console.error('❌ خطأ في جلب المنتجات:', e);
-                }
+                } catch (e) { console.error('❌ خطأ في جلب المنتجات:', e); }
 
                 let totalCommission = 0;
                 let commissionDetail = "";
-
                 if (products && products.length > 0) {
                     orderData.products.forEach(item => {
                         const product = products.find(p => p.id == item.id || (p.name && item.name && p.name.trim() === item.name.trim()));
-                        // استخدام نظام النسبة المتدرج بصرامة فقط للمنتج بناءً على سعره بدون التوصيل
                         const price = product ? product.price : item.price;
                         const rate = price < commissionSettings.threshold ? commissionSettings.lowRate : commissionSettings.highRate;
                         totalCommission += Math.round(price * (rate / 100)) * item.quantity;
                     });
                     commissionDetail = `Calculated strictly by rates (Threshold: ${commissionSettings.threshold}, Rates: ${commissionSettings.lowRate}%/${commissionSettings.highRate}%)`;
                 } else {
-                    // Fallback باستخدام النسبة المتدرجة على إجمالي الطلب بدون سعر التوصيل
                     const netTotal = (orderData.total - (orderData.shippingCost || 0));
                     const rate = netTotal < commissionSettings.threshold ? commissionSettings.lowRate : commissionSettings.highRate;
                     totalCommission = Math.round(netTotal * (rate / 100));
-                    commissionDetail = "Tiered fallback strictly by rates (products fetch failed)";
+                    commissionDetail = "Tiered fallback strictly by rates";
                 }
 
-                console.log('💰 حساب العمولة:', totalCommission, 'SDG');
-
-                // حفظ طلب المسوق
                 await callSupabase('affiliate_orders', {
                     method: 'POST',
                     body: JSON.stringify([{
@@ -1190,9 +1197,7 @@
                         updated_at: new Date().toISOString()
                     }])
                 });
-
                 console.log('✅ تم حفظ بيانات المسوق بنجاح');
-
             } catch (error) {
                 console.error('❌ خطأ في حفظ بيانات المسوق:', error);
                 throw error;
@@ -1201,28 +1206,11 @@
 
         async function updateAffiliateStats(affiliateId) {
             try {
-                console.log('📊 تحديث إحصائيات المسوق:', affiliateId);
-
-                // حساب عدد النقرات
                 let clicks = [];
-                try {
-                    clicks = await callSupabase(`affiliate_clicks?select=id&affiliate_id=eq.${affiliateId}`);
-                } catch (e) {
-                    console.error('❌ خطأ في حساب النقرات:', e);
-                }
-
-                // حساب عدد الطلبات
+                try { clicks = await callSupabase(`affiliate_clicks?select=id&affiliate_id=eq.${affiliateId}`); } catch (e) {}
                 let orders = [];
-                try {
-                    orders = await callSupabase(`orders?select=id&affiliate_id=eq.${affiliateId}`);
-                } catch (e) {
-                    console.error('❌ خطأ في حساب الطلبات:', e);
-                }
-
-                // حساب العمولة المؤكدة
+                try { orders = await callSupabase(`orders?select=id&affiliate_id=eq.${affiliateId}`); } catch (e) {}
                 const confirmedCommission = await calculateConfirmedCommission(affiliateId);
-
-                // تحديث بيانات المسوق
                 await callSupabase(`affiliate_users?affiliate_id=eq.${affiliateId}`, {
                     method: 'PATCH',
                     body: JSON.stringify({
@@ -1232,9 +1220,7 @@
                         last_updated: new Date().toISOString()
                     })
                 });
-
                 console.log('✅ تم تحديث إحصائيات المسوق بنجاح');
-
             } catch (error) {
                 console.error('❌ خطأ في تحديث الإحصائيات:', error);
             }
@@ -1242,7 +1228,6 @@
 
         async function calculateConfirmedCommission(affiliateId) {
             try {
-                // جلب إعدادات العمولة
                 let commissionSettings = { threshold: 100000, lowRate: 8, highRate: 6 };
                 try {
                     const settings = await callSupabase('admin_settings?select=*');
@@ -1250,89 +1235,51 @@
                         const threshold = settings.find(s => s.key === 'commission_threshold');
                         const lowRate = settings.find(s => s.key === 'commission_low_rate');
                         const highRate = settings.find(s => s.key === 'commission_high_rate');
-
                         if (threshold) commissionSettings.threshold = parseInt(threshold.value);
                         if (lowRate) commissionSettings.lowRate = parseInt(lowRate.value);
                         if (highRate) commissionSettings.highRate = parseInt(highRate.value);
                     }
-                } catch (e) {
-                    console.error('❌ خطأ في جلب الإعدادات في حساب العمولة المؤكدة:', e);
-                }
-
-                // جلب الطلبات المؤكدة للمسوق
+                } catch (e) {}
                 let confirmedOrders = [];
                 try {
                     confirmedOrders = await callSupabase(`orders?select=*,order_products(*)&affiliate_id=eq.${affiliateId}&status=in.("confirmed","delivered")`);
-                } catch (e) {
-                    console.error('❌ خطأ في جلب الطلبات المؤكدة:', e);
-                }
-
-                // جلب المنتجات لحساب العمولة
+                } catch (e) {}
                 let products = [];
-                try {
-                    products = await callSupabase('products?select=*');
-                } catch (e) {
-                    console.error('❌ خطأ في جلب المنتجات:', e);
-                }
-
+                try { products = await callSupabase('products?select=*'); } catch (e) {}
                 let totalConfirmedCommission = 0;
-
                 if (confirmedOrders && confirmedOrders.length > 0) {
                     confirmedOrders.forEach(order => {
                         const commission = getProductCommission(order.order_products, products, commissionSettings);
                         totalConfirmedCommission += commission;
                     });
                 }
-
-                console.log(`💰 العمولة المؤكدة للمسوق ${affiliateId}:`, totalConfirmedCommission);
                 return totalConfirmedCommission;
-
             } catch (error) {
                 console.error('❌ خطأ في حساب العمولة المؤكدة:', error);
                 return 0;
             }
         }
 
-        function getProductCommission(orderProducts, products, commissionSettings = { threshold: 100000, lowRate: 8, highRate: 6 }) {
-            if (!orderProducts || !Array.isArray(orderProducts) || orderProducts.length === 0 || !products || products.length === 0) {
-                return 0;
-            }
-            
+        function getProductCommission(orderProducts, products, commissionSettings) {
+            if (!orderProducts || !Array.isArray(orderProducts) || orderProducts.length === 0 || !products || products.length === 0) return 0;
             let totalCommission = 0;
-            
             orderProducts.forEach(orderProduct => {
                 if (!orderProduct.product_name) return;
-                
-                const cleanText = (text) => {
-                    return text.toLowerCase()
-                        .replace(/[❤️✨]/g, '')
-                        .replace(/\s+/g, ' ')
-                        .trim();
-                };
-                
+                const cleanText = (text) => text.toLowerCase().replace(/[❤️✨]/g, '').replace(/\s+/g, ' ').trim();
                 const cleanOrderProduct = cleanText(orderProduct.product_name);
-                
                 const product = products.find(p => {
                     if (!p.name) return false;
-                    
                     const cleanProductName = cleanText(p.name);
                     const orderWords = cleanOrderProduct.split(' ');
                     const productWords = cleanProductName.split(' ');
-                    
-                    const commonWords = orderWords.filter(word => 
-                        productWords.some(pWord => pWord.includes(word) || word.includes(pWord))
-                    );
-                    
+                    const commonWords = orderWords.filter(word => productWords.some(pWord => pWord.includes(word) || word.includes(pWord)));
                     return commonWords.length >= 2;
                 });
-                
                 if (product && product.price) {
-                    // حساب العمولة بصرامة فقط باستخدام النسبة المئوية المتدرجة المحفوظة بدون سعر التوصيل
                     const rate = product.price < commissionSettings.threshold ? commissionSettings.lowRate : commissionSettings.highRate;
                     totalCommission += Math.round(product.price * (rate / 100)) * (orderProduct.quantity || 1);
                 }
             });
-            
             return totalCommission;
         }
         
@@ -1340,87 +1287,41 @@
         function clearAffiliateIdFromStorage() {
             const affiliateKeys = ['currentAffiliateId', 'affiliateId', 'ref'];
             affiliateKeys.forEach(key => {
-                if (localStorage.getItem(key)) {
-                    localStorage.removeItem(key);
-                    console.log(`🗑️ تم مسح المفتاح: ${key}`);
-                }
+                if (localStorage.getItem(key)) localStorage.removeItem(key);
             });
-            
             const keysToRemove = [];
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
-                if (key && (key.includes('affiliate') || key.includes('ref'))) {
-                    keysToRemove.push(key);
-                }
+                if (key && (key.includes('affiliate') || key.includes('ref'))) keysToRemove.push(key);
             }
-            keysToRemove.forEach(key => {
-                localStorage.removeItem(key);
-                console.log('🗑️ تم حذف المفتاح:', key);
-            });
-            
-            cartItems.forEach(item => {
-                if (item.affiliateId) {
-                    delete item.affiliateId;
-                }
-            });
+            keysToRemove.forEach(key => localStorage.removeItem(key));
+            cartItems.forEach(item => { if (item.affiliateId) delete item.affiliateId; });
             localStorage.setItem('cartItems', JSON.stringify(cartItems));
-            
             if (window.history.replaceState && window.location.search.includes('ref=')) {
                 const url = new URL(window.location);
                 url.searchParams.delete('ref');
                 window.history.replaceState({}, '', url);
-                console.log('🔗 تم إزالة معرف المسوق من الرابط');
             }
-            
             console.log('✅ تم تنظيف جميع بيانات المسوق بنجاح');
-            
-            setTimeout(() => {
-                checkRemainingAffiliateData();
-            }, 100);
         }
         
         function checkRemainingAffiliateData() {
-            console.log('🔍 فحص المفاتيح المتبقية في localStorage:');
             const remainingKeys = [];
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
-                if (key && (key.includes('affiliate') || key.includes('ref'))) {
-                    remainingKeys.push({key, value: localStorage.getItem(key)});
-                }
+                if (key && (key.includes('affiliate') || key.includes('ref'))) remainingKeys.push(key);
             }
-            if (remainingKeys.length > 0) {
-                console.warn('⚠️ المفاتيح المتبقية:', remainingKeys);
-                return false;
-            } else {
-                console.log('✅ لا توجد مفاتيح متبقية للمسوق');
-                return true;
-            }
+            return remainingKeys.length === 0;
         }
         
         // ========== دوال التكامل مع الشريط العلوي ==========
-        
         function loadSavedLocationFromTopbar() {
             const savedLocationData = localStorage.getItem('deliveryLocationData');
             if (savedLocationData) {
                 try {
                     const locationData = JSON.parse(savedLocationData);
-                    console.log('📍 تم تحميل بيانات الموقع من deliveryLocationData:', locationData);
-                    
-                    if (locationData.city && locationData.address) {
-                        userAddress = locationData.address;
-                        document.getElementById('address').value = userAddress;
-                        
-                        if (locationData.lat && locationData.lon) {
-                            userLocation = {
-                                lat: locationData.lat,
-                                lng: locationData.lon,
-                                link: `https://www.google.com/maps?q=${locationData.lat},${locationData.lon}`
-                            };
-                            
-                            updateLocationButton(true);
-                        }
-                        
-                        autoSelectCityFromDeliveryData(locationData.city);
+                    if (locationData.address) {
+                        document.getElementById('address').value = locationData.address;
                     }
                     return locationData;
                 } catch (e) {
@@ -1430,500 +1331,27 @@
             return null;
         }
         
-        function updateLocationButton(isSaved) {
-            const locationBtn = document.getElementById('locationMainBtn');
-            const locationBtnText = document.getElementById('locationBtnText');
-            
-            if (!locationBtn || !locationBtnText) return;
-            
-            if (isSaved) {
-                locationBtn.classList.add('location-btn-saved');
-                locationBtnText.innerHTML = '✅ تم تحديد موقعك – <small>تغيير؟</small>';
-            } else {
-                locationBtn.classList.remove('location-btn-saved');
-                locationBtnText.innerHTML = '📍 تحديد موقع التوصيل';
-            }
-        }
-        
-        // ========== دوال تحديد المدينة تلقائياً ==========
-        
-        function calculateDistance(lat1, lng1, lat2, lng2) {
-            const R = 6371;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLng = (lng2 - lng1) * Math.PI / 180;
-            const a = 
-                Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-                Math.sin(dLng/2) * Math.sin(dLng/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
-        }
-        
-        function findNearestCity(lat, lng) {
-            let closestCity = null;
-            let minDistance = Infinity;
-            
-            for (const [cityName, coords] of Object.entries(sudanCities)) {
-                const distance = calculateDistance(lat, lng, coords.lat, coords.lng);
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    closestCity = cityName;
-                }
-            }
-            
-            return { name: closestCity, distance: minDistance };
-        }
-        
-        function autoSelectCityFromCoordinates(lat, lng) {
-            if (!lat || !lng) return;
-            
-            console.log('📍 البحث عن المدينة بناءً على الإحداثيات:', lat, lng);
-            
-            const nearestCity = findNearestCity(lat, lng);
-            
-            if (nearestCity.distance < 50) {
-                const citySelect = document.getElementById('deliveryCity');
-                if (citySelect) {
-                    let cityFound = false;
-                    for (let i = 0; i < citySelect.options.length; i++) {
-                        const option = citySelect.options[i];
-                        if (option.text.includes(nearestCity.name)) {
-                            citySelect.value = option.value;
-                            const [type, name] = option.value.split('_');
-                            const cities = type === 'cod' ? citiesData.cashOnDelivery : citiesData.prepaid;
-                            const city = cities.find(c => c.name === name);
-                            
-                            if (city) {
-                                selectedCity = { type, ...city };
-                                hideCityWarning();
-                                cityFound = true;
-                                console.log('✅ تم تحديد المدينة تلقائيا:', nearestCity.name);
-                                break;
-                            }
-                        }
-                    }
-                    
-                    if (!cityFound) {
-                        console.log('❌ المدينة غير متاحة في قائمة التوصيل:', nearestCity.name);
-                        showCityWarning();
-                    }
-                }
-            } else {
-                console.log('❌ لا توجد مدينة قريبة ضمن نطاق التوصيل');
-                showCityWarning();
-            }
-            
-            calculateTotal();
-        }
-        
-        function autoSelectCityFromDeliveryData(cityName) {
-            if (!cityName) {
-                console.log('❌ اسم المدينة فارغ');
-                return false;
-            }
-            
-            console.log('🚀 بدء التعرف التلقائي على المدينة من deliveryLocationData:', cityName);
-            
-            const citySelect = document.getElementById('deliveryCity');
-            if (!citySelect || citySelect.options.length <= 1) {
-                console.log('⏳ خيارات المدن لم تحمل بعد، إعادة المحاولة...');
-                setTimeout(() => autoSelectCityFromDeliveryData(cityName), 500);
-                return false;
-            }
-            
-            const matchedCity = matchCityWithAvailableOptions(cityName);
-            if (!matchedCity) {
-                console.log('❌ فشل مطابقة المدينة مع الخيارات المتاحة');
-                return false;
-            }
-            
-            citySelect.value = matchedCity.value;
-            
-            const [type, name] = matchedCity.value.split('_');
-            const cities = type === 'cod' ? citiesData.cashOnDelivery : citiesData.prepaid;
-            const city = cities.find(c => c.name === name);
-            
-            if (city) {
-                selectedCity = { type, ...city };
-                hideCityWarning();
-                calculateTotal();
-                
-                console.log('✅ تم تحديد المدينة تلقائياً بنجاح:', name);
-                console.log('💰 نوع الدفع:', type === 'cod' ? 'دفع عند الاستلام' : 'دفع مقدم');
-                console.log('💵 تكلفة الشحن:', city.price.toLocaleString(), 'SDG');
-                
-                showAutoCityDetectionMessage(name);
-                
-                return true;
-            }
-            
-            console.log('❌ فشل في تحديث بيانات المدينة المحددة');
-            return false;
-        }
-        
-        function matchCityWithAvailableOptions(cityName) {
-            if (!cityName) {
-                console.log('❌ اسم المدينة فارغ');
-                return null;
-            }
-            
-            console.log('🔄 جاري مطابقة المدينة مع الخيارات المتاحة:', cityName);
-            
-            const citySelect = document.getElementById('deliveryCity');
-            if (!citySelect) {
-                console.log('❌ عنصر اختيار المدينة غير موجود');
-                return null;
-            }
-            
-            const normalizedCityName = cityName.trim().toLowerCase();
-            
-            for (let i = 0; i < citySelect.options.length; i++) {
-                const option = citySelect.options[i];
-                const optionText = option.textContent;
-                const normalizedOptionText = optionText.toLowerCase();
-                
-                console.log(`🔍 فحص الخيار: ${optionText}`);
-                
-                if (normalizedOptionText.includes(normalizedCityName)) {
-                    console.log('✅ تم العثور على تطابق:', option.value);
-                    return {
-                        element: option,
-                        value: option.value,
-                        text: optionText
-                    };
-                }
-                
-                for (const knownCity of Object.keys(sudanCities)) {
-                    if (normalizedOptionText.includes(knownCity.toLowerCase()) && 
-                        knownCity.toLowerCase().includes(normalizedCityName)) {
-                        console.log('✅ تم العثور على تطابق عبر المدينة المعرفة:', option.value);
-                        return {
-                            element: option,
-                            value: option.value,
-                            text: optionText
-                        };
-                    }
-                }
-            }
-            
-            console.log('❌ لا يوجد تطابق للمدينة في الخيارات المتاحة');
-            console.log('📋 الخيارات المتاحة:', Array.from(citySelect.options).map(opt => opt.textContent));
-            return null;
-        }
-        
-        function showAutoCityDetectionMessage(cityName) {
-            const autoCityElement = document.getElementById('autoCityDetection');
-            const autoCityMessage = document.getElementById('autoCityMessage');
-            
-            if (autoCityElement && autoCityMessage) {
-                autoCityMessage.textContent = `تم التعرف تلقائيا على مدينة التوصيل: ${cityName}`;
-                autoCityElement.style.display = 'block';
-                
-                setTimeout(() => {
-                    autoCityElement.style.display = 'none';
-                }, 5000);
-            }
-        }
-        
-        function waitForCityOptions(maxAttempts = 10) {
-            return new Promise((resolve, reject) => {
-                let attempts = 0;
-                
-                function checkCityOptions() {
-                    attempts++;
-                    const citySelect = document.getElementById('deliveryCity');
-                    
-                    if (citySelect && citySelect.options.length > 1) {
-                        console.log('✅ خيارات المدن جاهزة');
-                        resolve(true);
-                    } else if (attempts >= maxAttempts) {
-                        console.log('❌ فشل تحميل خيارات المدن بعد عدة محاولات');
-                        resolve(false);
-                    } else {
-                        console.log(`⏳ انتظار تحميل خيارات المدن... (المحاولة ${attempts})`);
-                        setTimeout(checkCityOptions, 500);
-                    }
-                }
-                
-                checkCityOptions();
-            });
-        }
-        
-        function showCityWarning() {
-            document.getElementById('cityWarning').style.display = 'flex';
-        }
-        
-        function hideCityWarning() {
-            document.getElementById('cityWarning').style.display = 'none';
-        }
-        
-        // ========== دوال الخريطة ==========
-        let map, marker, selectedLocation;
-        
-        function initMap() {
-            const khartoumCenter = [15.5007, 32.5599];
-            
-            map = L.map('locationMap').setView(khartoumCenter, 12);
-            
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(map);
-            
-            map.on('click', function(e) {
-                if (marker) {
-                    map.removeLayer(marker);
-                }
-                
-                marker = L.marker(e.latlng).addTo(map)
-                    .bindPopup('الموقع المحدد للتوصيل')
-                    .openPopup();
-                
-                selectedLocation = e.latlng;
-            });
-        }
-        
-        function openMap() {
-            document.getElementById('mapOverlay').style.display = 'flex';
-            
-            if (!map) {
-                initMap();
-            } else {
-                setTimeout(() => {
-                    map.invalidateSize();
-                }, 100);
-            }
-        }
-        
-        function closeMap() {
-            document.getElementById('mapOverlay').style.display = 'none';
-            selectedLocation = null;
-            
-            if (marker) {
-                map.removeLayer(marker);
-                marker = null;
-            }
-        }
-        
-        function locateMe() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    function(position) {
-                        const lat = position.coords.latitude;
-                        const lng = position.coords.longitude;
-                        
-                        map.setView([lat, lng], 15);
-                        
-                        if (marker) {
-                            map.removeLayer(marker);
-                        }
-                        
-                        marker = L.marker([lat, lng]).addTo(map)
-                            .bindPopup('موقعك الحالي')
-                            .openPopup();
-                        
-                        selectedLocation = { lat, lng };
-                    },
-                    function(error) {
-                        console.error('خطأ في الحصول على الموقع:', error);
-                        alert('تعذر الحصول على موقعك الحالي. يرجى تحديد الموقع يدوياً على الخريطة.');
-                    }
-                );
-            } else {
-                alert('متصفحك لا يدعم خاصية تحديد الموقع. يرجى تحديد الموقع يدوياً على الخريطة.');
-            }
-        }
-        
-        function confirmLocation() {
-            if (selectedLocation) {
-                userLocation = {
-                    lat: selectedLocation.lat,
-                    lng: selectedLocation.lng,
-                    link: `https://www.google.com/maps?q=${selectedLocation.lat},${selectedLocation.lng}`
-                };
-                
-                localStorage.setItem('userLocation', JSON.stringify(userLocation));
-                updateLocationButton(true);
-                autoSelectCityFromCoordinates(selectedLocation.lat, selectedLocation.lng);
-                closeMap();
-                
-                console.log('📍 تم تحديد موقع جديد:', userLocation);
-                alert('✅ تم تحديد موقعك بنجاح! تم تحديد المدينة تلقائيا');
-            } else {
-                alert('يرجى تحديد موقع على الخريطة أولاً');
-            }
-        }
-        
-        function setupMapButton() {
-            const locationMainBtn = document.getElementById('locationMainBtn');
-            const cancelLocation = document.getElementById('cancelLocation');
-            const confirmLocation = document.getElementById('confirmLocation');
-            const locateMe = document.getElementById('locateMe');
-            
-            if (locationMainBtn) {
-                locationMainBtn.addEventListener('click', openMap);
-            }
-            if (cancelLocation) {
-                cancelLocation.addEventListener('click', closeMap);
-            }
-            if (confirmLocation) {
-                confirmLocation.addEventListener('click', confirmLocation);
-            }
-            if (locateMe) {
-                locateMe.addEventListener('click', locateMe);
-            }
-        }
-        
-        // ========== دوال إدارة البيانات المحلية ==========
-        
-        async function loadSavedData() {
-            if (userInfo.name) {
-                document.getElementById('name').value = userInfo.name;
-                document.getElementById('name').classList.add('auto-filled');
-            }
-            
-            if (userInfo.phone) {
-                document.getElementById('phone').value = userInfo.phone;
-                document.getElementById('phone').classList.add('auto-filled');
-            }
-            
-            if (userInfo.phone2) {
-                document.getElementById('phone2').value = userInfo.phone2;
-                document.getElementById('phone2').classList.add('auto-filled');
-            }
-            
-            if (userLocation && userLocation.lat && userLocation.lng) {
-                updateLocationButton(true);
-            } else {
-                updateLocationButton(false);
-            }
-        }
-        
-        function saveUserInfo() {
-            const userInfo = {
-                name: document.getElementById('name').value,
-                phone: document.getElementById('phone').value,
-                phone2: document.getElementById('phone2').value
-            };
-            
-            localStorage.setItem('userInfo', JSON.stringify(userInfo));
-            console.log('✅ تم حفظ بيانات المستخدم للمستقبل');
-        }
-        
-        // ========== دوال عرض المنتجات ==========
-        
-        function displayProductsSummary() {
-            const productsList = document.getElementById('productsList');
-            const summaryDetails = document.getElementById('summaryDetails');
-            
-            if (cartItems.length === 0) {
-                productsList.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">لا توجد منتجات في السلة</p>';
-                summaryDetails.innerHTML = '';
-                return;
-            }
-            
-            let productsHTML = '';
-            let totalProducts = 0;
-            let totalAmount = 0;
-            
+        // ========== دوال عرض المنتجات مع اختيار مدينة لكل مستودع ==========
+        function getUniqueWarehouses() {
             const warehouses = {};
-            
             cartItems.forEach(item => {
-                const simplifiedItem = {
-                    id: item.id,
-                    name: item.name,
-                    price: item.price,
-                    quantity: item.quantity,
-                    warehouse: item.warehouse
-                };
-                
-                if (!warehouses[simplifiedItem.warehouse]) {
-                    warehouses[simplifiedItem.warehouse] = [];
+                if (!warehouses[item.warehouse]) {
+                    warehouses[item.warehouse] = [];
                 }
-                
-                warehouses[simplifiedItem.warehouse].push(simplifiedItem);
+                warehouses[item.warehouse].push(item);
             });
-            
-            Object.keys(warehouses).forEach(warehouse => {
-                productsHTML += `<div class="warehouse-section">`;
-                productsHTML += `<div class="warehouse-title"><i class="fas fa-warehouse"></i> ${warehouse}</div>`;
-                
-                warehouses[warehouse].forEach(item => {
-                    const itemTotal = item.price * item.quantity;
-                    totalProducts += item.quantity;
-                    totalAmount += itemTotal;
-                    
-                    productsHTML += `
-                        <div class="product-item">
-                            <div>
-                                <div class="product-name">${item.name}</div>
-                                <div class="product-details">الكمية: ${item.quantity} | السعر: ${item.price.toLocaleString()} SDG</div>
-                            </div>
-                            <div class="product-price">${itemTotal.toLocaleString()} SDG</div>
-                        </div>
-                    `;
-                });
-                
-                productsHTML += `</div>`;
-            });
-            
-            productsList.innerHTML = productsHTML;
-            
-            let summaryHTML = '';
-            summaryHTML += `<div class="summary-row"><span>عدد المنتجات:</span><span>${totalProducts}</span></div>`;
-            summaryHTML += `<div class="summary-row"><span>المجموع الجزئي:</span><span>${totalAmount.toLocaleString()} SDG</span></div>`;
-            
-            if (selectedCity) {
-                const shippingCost = calculateShippingCost();
-                summaryHTML += `<div class="summary-row"><span>تكاليف الشحن:</span><span>${shippingCost.toLocaleString()} SDG</span></div>`;
-                
-                const grandTotal = totalAmount + shippingCost;
-                summaryHTML += `<div class="summary-total summary-row"><span>الإجمالي الكلي:</span><span>${grandTotal.toLocaleString()} SDG</span></div>`;
-            } else {
-                summaryHTML += `<div class="summary-total summary-row"><span>المجموع الكلي:</span><span>${totalAmount.toLocaleString()} SDG</span></div>`;
-            }
-            
-            summaryDetails.innerHTML = summaryHTML;
+            return warehouses;
         }
-        
-        // ========== دوال المدن والتكلفة ==========
-        
-        function calculateShippingCost() {
-            if (!selectedCity) return 0;
+
+        function getAvailableCitiesForWarehouse(warehouseName) {
+            // جمع المدن المتاحة من جميع منتجات المستودع
+            const warehouseItems = cartItems.filter(item => item.warehouse === warehouseName);
+            const codCities = [];
+            const prepaidCities = [];
             
-            const uniqueWarehouses = [...new Set(cartItems.map(item => item.warehouse))];
-            return selectedCity.price * uniqueWarehouses.length;
-        }
-        
-        function calculateTotal() {
-            if (cartItems.length === 0) {
-                document.getElementById('totalAmount').textContent = '0 SDG';
-                return 0;
-            }
-            
-            let productsTotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            let shippingTotal = calculateShippingCost();
-            let grandTotal = productsTotal + shippingTotal;
-            
-            document.getElementById('totalAmount').textContent = `${grandTotal.toLocaleString()} SDG`;
-            
-            if (selectedCity) {
-                document.getElementById('paymentType').textContent = 
-                    selectedCity.type === 'cod' ? 'دفع عند الاستلام' : 'دفع مقدم';
-            }
-            
-            displayProductsSummary();
-            
-            return grandTotal;
-        }
-        
-        function loadCitiesData() {
-            citiesData.cashOnDelivery = [];
-            citiesData.prepaid = [];
-            
-            cartItems.forEach(item => {
+            warehouseItems.forEach(item => {
                 let cod = Array.isArray(item.cashOnDelivery) ? item.cashOnDelivery : [];
                 let pre = Array.isArray(item.prepaid) ? item.prepaid : [];
-
                 if (cod.length === 0 && pre.length === 0 && item.delivery_cities) {
                     let dc = item.delivery_cities;
                     if (typeof dc === 'string') {
@@ -1934,98 +1362,262 @@
                         pre = dc.filter(c => c.type === 'prepaid');
                     }
                 }
-
                 cod.forEach(city => {
-                    if (!citiesData.cashOnDelivery.find(c => c.name === city.name)) {
-                        citiesData.cashOnDelivery.push(city);
+                    if (!codCities.find(c => c.name === city.name)) {
+                        codCities.push(city);
                     }
                 });
-                
                 pre.forEach(city => {
-                    if (!citiesData.prepaid.find(c => c.name === city.name)) {
-                        citiesData.prepaid.push(city);
+                    if (!prepaidCities.find(c => c.name === city.name)) {
+                        prepaidCities.push(city);
                     }
                 });
             });
             
-            renderCityOptions();
+            return { cod: codCities, prepaid: prepaidCities };
         }
-        
-        function renderCityOptions() {
-            const citySelect = document.getElementById('deliveryCity');
-            if (!citySelect) {
-                console.log('❌ عنصر اختيار المدينة غير موجود');
+
+        function renderWarehouseSections() {
+            const productsList = document.getElementById('productsList');
+            const warehouses = getUniqueWarehouses();
+            const warehouseNames = Object.keys(warehouses);
+            
+            if (warehouseNames.length === 0) {
+                productsList.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">لا توجد منتجات في السلة</p>';
                 return;
             }
-            
-            citySelect.innerHTML = '<option value="">اختر مدينة التوصيل</option>';
-            
-            if (citiesData.cashOnDelivery.length === 0 && citiesData.prepaid.length === 0) {
-                citySelect.innerHTML = '<option value="">لا توجد مدن متاحة</option>';
-                console.log('⚠️ لا توجد مدن متاحة للعرض');
-                return;
-            }
-            
-            console.log('🏗️ جاري تحميل خيارات المدن...');
-            
-            citiesData.cashOnDelivery.forEach(city => {
-                const option = document.createElement('option');
-                option.value = `cod_${city.name}`;
-                option.textContent = `${city.name} - ${city.price.toLocaleString()} SDG (دفع عند الاستلام)`;
-                option.setAttribute('data-city-name', city.name);
-                citySelect.appendChild(option);
-            });
-            
-            citiesData.prepaid.forEach(city => {
-                const option = document.createElement('option');
-                option.value = `prepaid_${city.name}`;
-                option.textContent = `${city.name} - ${city.price.toLocaleString()} SDG (دفع مقدم)`;
-                option.setAttribute('data-city-name', city.name);
-                citySelect.appendChild(option);
-            });
-            
-            console.log(`✅ تم تحميل ${citySelect.options.length - 1} خيار مدينة`);
-            
-            citySelect.addEventListener('change', function() {
-                if (this.value) {
-                    const [type, name] = this.value.split('_');
-                    const cities = type === 'cod' ? citiesData.cashOnDelivery : citiesData.prepaid;
-                    const city = cities.find(c => c.name === name);
-                    
-                    if (city) {
-                        selectedCity = { type, ...city };
-                        hideCityWarning();
-                        calculateTotal();
-                        
-                        console.log('✅ تم اختيار المدينة يدوياً:', name);
-                        console.log('💰 نوع الدفع:', type === 'cod' ? 'دفع عند الاستلام' : 'دفع مقدم');
-                        console.log('💵 تكلفة الشحن:', city.price.toLocaleString(), 'SDG');
-                    }
+
+            let html = '';
+            let warehouseIndex = 1;
+
+            warehouseNames.forEach(warehouseName => {
+                const items = warehouses[warehouseName];
+                const cities = getAvailableCitiesForWarehouse(warehouseName);
+                const allCities = [...cities.cod, ...cities.prepaid];
+                
+                // تهيئة اختيار المستودع إذا لم يكن موجوداً
+                if (!warehouseSelections[warehouseName]) {
+                    warehouseSelections[warehouseName] = { city: null, type: null, price: 0 };
+                }
+
+                const productNames = items.map(item => item.name).join('، ');
+                
+                html += `<div class="warehouse-section" data-warehouse="${warehouseName}">`;
+                html += `<div class="warehouse-title">
+                    <i class="fas fa-warehouse"></i> 
+                    المستودع ${warehouseIndex}
+                    <span class="warehouse-products-names">(${productNames})</span>
+                </div>`;
+
+                // عرض المنتجات في المستودع
+                items.forEach(item => {
+                    const itemTotal = item.price * item.quantity;
+                    html += `
+                        <div class="product-item">
+                            <div>
+                                <div class="product-name">${item.name}</div>
+                                <div class="product-details">الكمية: ${item.quantity} | السعر: ${item.price.toLocaleString()} SDG</div>
+                            </div>
+                            <div class="product-price">${itemTotal.toLocaleString()} SDG</div>
+                        </div>
+                    `;
+                });
+
+                // اختيار مدينة التوصيل للمستودع
+                html += `<div class="warehouse-city-select">`;
+                html += `<label>مدينة التوصيل ${warehouseIndex}</label>`;
+                html += `<select data-warehouse="${warehouseName}" class="warehouse-city-selector">`;
+                html += `<option value="">-- اختر مدينة التوصيل --</option>`;
+
+                if (allCities.length === 0) {
+                    html += `<option value="" disabled>لا توجد مدن متاحة لهذا المستودع</option>`;
                 } else {
-                    selectedCity = null;
-                    calculateTotal();
-                    console.log('❌ لم يتم اختيار مدينة');
+                    // عرض مدن الدفع عند الاستلام أولاً
+                    cities.cod.forEach(city => {
+                        const selected = warehouseSelections[warehouseName].city === city.name && warehouseSelections[warehouseName].type === 'cod' ? 'selected' : '';
+                        html += `<option value="cod_${city.name}" ${selected} class="city-option-cod">
+                            ${city.name} - ${city.price.toLocaleString()} SDG (دفع عند الاستلام)
+                        </option>`;
+                    });
+                    // ثم مدن الدفع المقدم
+                    cities.prepaid.forEach(city => {
+                        const selected = warehouseSelections[warehouseName].city === city.name && warehouseSelections[warehouseName].type === 'prepaid' ? 'selected' : '';
+                        html += `<option value="prepaid_${city.name}" ${selected} class="city-option-prepaid">
+                            ${city.name} - ${city.price.toLocaleString()} SDG (دفع مقدم)
+                        </option>`;
+                    });
+                }
+
+                html += `</select>`;
+
+                // عرض المجموع الفرعي للمستودع
+                const warehouseTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                const shippingCost = warehouseSelections[warehouseName].price || 0;
+                const totalWithShipping = warehouseSelections[warehouseName].city ? warehouseTotal + shippingCost : 0;
+                
+                html += `<div class="warehouse-subtotal">`;
+                html += `<span>مجموع المستودع ${warehouseIndex}:</span>`;
+                if (warehouseSelections[warehouseName].city) {
+                    html += `<span class="amount">${totalWithShipping.toLocaleString()} SDG (شامل ${shippingCost.toLocaleString()} SDG توصيل)</span>`;
+                } else {
+                    html += `<span class="amount" style="color: #a0aec0;">${warehouseTotal.toLocaleString()} SDG (لم يتم اختيار مدينة)</span>`;
+                }
+                html += `</div>`;
+
+                if (!warehouseSelections[warehouseName].city && allCities.length > 0) {
+                    html += `<div class="warehouse-not-selected"><i class="fas fa-exclamation-circle"></i> يرجى اختيار مدينة توصيل لإضافة هذا المستودع إلى المجموع الكلي</div>`;
+                } else if (allCities.length === 0) {
+                    html += `<div class="warehouse-not-selected"><i class="fas fa-exclamation-circle"></i> لا توجد مدن متاحة للتوصيل لهذا المستودع</div>`;
+                }
+
+                html += `</div>`;
+                html += `</div>`;
+                warehouseIndex++;
+            });
+
+            productsList.innerHTML = html;
+
+            // إضافة مستمعي الأحداث لاختيارات المدن
+            document.querySelectorAll('.warehouse-city-selector').forEach(select => {
+                select.addEventListener('change', function() {
+                    const warehouseName = this.dataset.warehouse;
+                    const value = this.value;
+                    
+                    if (value) {
+                        const [type, cityName] = value.split('_');
+                        const cities = type === 'cod' ? 
+                            getAvailableCitiesForWarehouse(warehouseName).cod : 
+                            getAvailableCitiesForWarehouse(warehouseName).prepaid;
+                        const city = cities.find(c => c.name === cityName);
+                        
+                        if (city) {
+                            warehouseSelections[warehouseName] = {
+                                city: city.name,
+                                type: type,
+                                price: city.price
+                            };
+                        }
+                    } else {
+                        warehouseSelections[warehouseName] = { city: null, type: null, price: 0 };
+                    }
+                    
+                    updateSummaryAndTotal();
+                });
+            });
+        }
+
+        function updateSummaryAndTotal() {
+            const summaryDetails = document.getElementById('summaryDetails');
+            const totalAmount = document.getElementById('totalAmount');
+            const paymentType = document.getElementById('paymentType');
+            
+            let totalProducts = 0;
+            let totalAmountValue = 0;
+            let totalShipping = 0;
+            let allCod = true;
+            let anyCitySelected = false;
+            let warehouseDetails = [];
+            
+            const warehouses = getUniqueWarehouses();
+            const warehouseNames = Object.keys(warehouses);
+            
+            warehouseNames.forEach((warehouseName, index) => {
+                const items = warehouses[warehouseName];
+                const warehouseTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                totalProducts += items.reduce((sum, item) => sum + item.quantity, 0);
+                
+                const selection = warehouseSelections[warehouseName];
+                let shippingCost = 0;
+                let warehouseTotalWithShipping = warehouseTotal;
+                
+                if (selection && selection.city) {
+                    shippingCost = selection.price || 0;
+                    warehouseTotalWithShipping = warehouseTotal + shippingCost;
+                    totalShipping += shippingCost;
+                    anyCitySelected = true;
+                    if (selection.type !== 'cod') {
+                        allCod = false;
+                    }
+                    warehouseDetails.push({
+                        name: warehouseName,
+                        index: index + 1,
+                        city: selection.city,
+                        type: selection.type,
+                        total: warehouseTotalWithShipping,
+                        shipping: shippingCost,
+                        products: warehouseTotal
+                    });
+                } else {
+                    warehouseDetails.push({
+                        name: warehouseName,
+                        index: index + 1,
+                        city: null,
+                        type: null,
+                        total: 0,
+                        shipping: 0,
+                        products: warehouseTotal
+                    });
                 }
             });
             
-            const deliveryLocationData = localStorage.getItem('deliveryLocationData');
-            if (deliveryLocationData) {
-                try {
-                    const locationData = JSON.parse(deliveryLocationData);
-                    if (locationData.city) {
-                        console.log('🔄 محاولة التعرف التلقائي بعد تحميل الخيارات...');
-                        setTimeout(() => {
-                            autoSelectCityFromDeliveryData(locationData.city);
-                        }, 300);
-                    }
-                } catch (e) {
-                    console.error('❌ خطأ في تحميل deliveryLocationData:', e);
+            // حساب المجموع الكلي فقط للمستودعات التي تم اختيار مدينة لها
+            let grandTotal = 0;
+            warehouseDetails.forEach(detail => {
+                if (detail.city) {
+                    grandTotal += detail.total;
                 }
+            });
+            
+            totalAmountValue = grandTotal;
+            
+            // تحديث الملخص
+            let summaryHTML = '';
+            summaryHTML += `<div class="summary-row"><span>عدد المنتجات الكلي:</span><span>${totalProducts}</span></div>`;
+            
+            warehouseDetails.forEach(detail => {
+                if (detail.city) {
+                    summaryHTML += `<div class="summary-row" style="font-size:0.85rem; color:#2d3748; padding-right:10px; border-right:2px solid #38a169;">
+                        <span>المستودع ${detail.index} (${detail.city})</span>
+                        <span>${detail.total.toLocaleString()} SDG</span>
+                    </div>`;
+                } else {
+                    summaryHTML += `<div class="summary-row" style="font-size:0.85rem; color:#a0aec0; padding-right:10px; border-right:2px solid #e2e8f0;">
+                        <span>المستودع ${detail.index} (لم يتم الاختيار)</span>
+                        <span>${detail.products.toLocaleString()} SDG</span>
+                    </div>`;
+                }
+            });
+            
+            if (anyCitySelected) {
+                summaryHTML += `<div class="summary-row"><span>إجمالي تكاليف الشحن:</span><span>${totalShipping.toLocaleString()} SDG</span></div>`;
+                summaryHTML += `<div class="summary-total summary-row"><span>المجموع الكلي:</span><span>${grandTotal.toLocaleString()} SDG</span></div>`;
+                totalAmount.textContent = `${grandTotal.toLocaleString()} SDG`;
+                paymentType.textContent = allCod ? 'دفع عند الاستلام (جميع المستودعات)' : 'دفع مقدم (بعض المستودعات)';
+            } else {
+                summaryHTML += `<div class="summary-total summary-row" style="color:#a0aec0;">
+                    <span>المجموع الكلي:</span>
+                    <span>يرجى اختيار مدينة توصيل لكل مستودع</span>
+                </div>`;
+                totalAmount.textContent = '0 SDG';
+                paymentType.textContent = '';
             }
+            
+            summaryDetails.innerHTML = summaryHTML;
         }
-        
+
+        // ========== دوال المدن والتكلفة (للتوافق مع النظام القديم) ==========
+        function loadCitiesData() {
+            // تم دمج وظيفة المدن في نظام المستودعات
+            renderWarehouseSections();
+            updateSummaryAndTotal();
+        }
+
+        function calculateTotal() {
+            // تم استبداله بوظيفة updateSummaryAndTotal
+            updateSummaryAndTotal();
+        }
+
         // ========== دوال المساعدة ==========
-        
         function generateOrderId() {
             const timestamp = Date.now().toString(36);
             const random = Math.random().toString(36).substr(2, 5);
@@ -2050,33 +1642,38 @@
             const name = document.getElementById('name').value;
             const phone = document.getElementById('phone').value;
             const address = document.getElementById('address').value;
-            const city = document.getElementById('deliveryCity').value;
             
             if (!name.trim()) {
                 return 'يرجى إدخال الاسم الكامل';
             }
-            
             if (!phone.match(/^[0-9]{10}$/)) {
                 return 'يرجى إدخال رقم هاتف صحيح (10 أرقام)';
             }
-            
             if (cartItems.length === 0) {
                 return 'السلة فارغة. أضف منتجات أولاً';
             }
-            
-            if (!city || !selectedCity) {
-                return 'يرجى اختيار مدينة التوصيل بشكل صحيح';
-            }
-            
             if (!address.trim()) {
                 return 'يرجى إدخال وصف عنوان التوصيل';
+            }
+            
+            // التحقق من اختيار مدينة لكل مستودع
+            const warehouses = getUniqueWarehouses();
+            const warehouseNames = Object.keys(warehouses);
+            let allSelected = true;
+            warehouseNames.forEach(name => {
+                if (!warehouseSelections[name] || !warehouseSelections[name].city) {
+                    allSelected = false;
+                }
+            });
+            
+            if (!allSelected) {
+                return 'يرجى اختيار مدينة توصيل لكل مستودع';
             }
             
             return null;
         }
         
         // ========== دوال PDF ==========
-        
         function setupPDFDownload() {
             const downloadBtn = document.getElementById('downloadPDF');
             downloadBtn.addEventListener('click', async () => {
@@ -2090,21 +1687,14 @@
                 
                 const setPdfContent = (id, value) => {
                     const element = document.getElementById(id);
-                    if (element) {
-                        element.textContent = value;
-                    } else {
-                        console.warn(`⚠️ العنصر ${id} غير موجود في قالب PDF`);
-                    }
+                    if (element) element.textContent = value;
                 };
                 
                 setPdfContent('pdfUserId', orderData.userId || '');
                 setPdfContent('pdfName', orderData.name || '');
                 setPdfContent('pdfPhone', orderData.phone || '');
                 setPdfContent('pdfPhone2', orderData.phone2 || 'غير متوفر');
-                setPdfContent('pdfCity', orderData.city || '');
                 setPdfContent('pdfAddress', orderData.address || '');
-                setPdfContent('pdfLocation', orderData.location ? 
-                    `(${orderData.location.lat.toFixed(6)}, ${orderData.location.lng.toFixed(6)})` : 'لم يتم التحديد');
                 setPdfContent('pdfPaymentType', orderData.cityType === 'cod' ? 'دفع عند الاستلام' : 'دفع مقدم');
                 setPdfContent('pdfTotal', `${orderData.total.toLocaleString()} SDG`);
                 setPdfContent('pdfDate', getFormattedDate());
@@ -2117,7 +1707,7 @@
                     const productElement = document.createElement('div');
                     productElement.className = 'pdf-product-item';
                     productElement.innerHTML = `
-                        <span>${item.name} (${item.quantity})</span>
+                        <span>${item.name} (${item.quantity}) - ${item.warehouse}</span>
                         <span>${(item.price * item.quantity).toLocaleString()} SDG</span>
                     `;
                     pdfProductsList.appendChild(productElement);
@@ -2147,7 +1737,6 @@
                     
                     downloadBtn.innerHTML = '<i class="fas fa-download"></i> تحميل نسخة PDF من الطلب';
                     downloadBtn.disabled = false;
-                    
                 } catch (error) {
                     console.error('❌ خطأ في إنشاء PDF:', error);
                     document.getElementById('errorMsg').textContent = 'حدث خطأ أثناء إنشاء PDF. يرجى المحاولة مرة أخرى.';
@@ -2158,21 +1747,37 @@
         }
         
         // ========== تهيئة الصفحة ==========
-        
         document.addEventListener('DOMContentLoaded', function() {
             userId = getOrCreateUserId();
             displayUserId();
             
             trackAffiliateClick();
             
-            loadSavedData();
-            displayProductsSummary();
-            loadCitiesData();
-            setupMapButton();
+            // تحميل البيانات المحفوظة
+            if (userInfo.name) {
+                document.getElementById('name').value = userInfo.name;
+                document.getElementById('name').classList.add('auto-filled');
+            }
+            if (userInfo.phone) {
+                document.getElementById('phone').value = userInfo.phone;
+                document.getElementById('phone').classList.add('auto-filled');
+            }
+            if (userInfo.phone2) {
+                document.getElementById('phone2').value = userInfo.phone2;
+                document.getElementById('phone2').classList.add('auto-filled');
+            }
             
-            setTimeout(() => {
-                loadSavedLocationFromTopbar();
-            }, 1000);
+            loadSavedLocationFromTopbar();
+            
+            // تهيئة اختيارات المستودعات
+            const warehouses = getUniqueWarehouses();
+            Object.keys(warehouses).forEach(name => {
+                if (!warehouseSelections[name]) {
+                    warehouseSelections[name] = { city: null, type: null, price: 0 };
+                }
+            });
+            
+            loadCitiesData();
             
             const form = document.getElementById('orderForm');
             const successMsg = document.getElementById('successMsg');
@@ -2199,7 +1804,35 @@
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
                 
                 const orderId = generateOrderId();
-                const total = calculateTotal();
+                
+                // حساب المجاميع
+                let totalProductsPrice = 0;
+                let totalShipping = 0;
+                let grandTotal = 0;
+                let selectedCities = [];
+                let paymentType = 'cod';
+                
+                const warehouses = getUniqueWarehouses();
+                Object.keys(warehouses).forEach(name => {
+                    const items = warehouses[name];
+                    const warehouseTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                    const selection = warehouseSelections[name];
+                    if (selection && selection.city) {
+                        const shippingCost = selection.price || 0;
+                        totalProductsPrice += warehouseTotal;
+                        totalShipping += shippingCost;
+                        grandTotal += warehouseTotal + shippingCost;
+                        selectedCities.push({
+                            warehouse: name,
+                            city: selection.city,
+                            type: selection.type,
+                            shipping: shippingCost
+                        });
+                        if (selection.type !== 'cod') {
+                            paymentType = 'mixed';
+                        }
+                    }
+                });
                 
                 const formData = {
                     orderId: orderId,
@@ -2208,65 +1841,44 @@
                     phone: document.getElementById('phone').value,
                     phone2: document.getElementById('phone2').value,
                     products: cartItems,
-                    city: selectedCity.name,
-                    cityType: selectedCity.type,
-                    shippingCost: calculateShippingCost(),
-                    total: total,
+                    city: selectedCities.map(c => c.city).join('، '),
+                    cityType: paymentType === 'mixed' ? 'mixed' : 'cod',
+                    shippingCost: totalShipping,
+                    total: grandTotal,
                     address: document.getElementById('address').value,
                     location: userLocation,
                     date: new Date().toISOString(),
                     timestamp: Date.now(),
                     status: 'new',
-                    affiliateId: getAffiliateId()
+                    affiliateId: getAffiliateId(),
+                    warehouseSelections: selectedCities
                 };
                 
                 try {
-                    console.log('🔍 فحص معرف المسوق قبل الإرسال:', formData.affiliateId);
-                    
                     await createNewOrder(formData);
-                    
-                    console.log('✅ تم حفظ بيانات المسوق في قاعدة البيانات');
                     
                     saveUserInfo();
                     clearAffiliateIdFromStorage();
                     
-                    // ✅ عرض رسالة النجاح
                     successMsg.textContent = "تم إرسال طلبك بنجاح! يمكنك الآن تحميل نسخة PDF من إيصال الطلب.";
                     orderIdElement.textContent = `رقم الطلب: ${orderId}`;
                     
-                    // ✅ إظهار زر تحميل PDF
                     downloadBtn.classList.add('show');
                     downloadBtn.setAttribute('data-order', JSON.stringify(formData));
-                    
-                    // ✅ إظهار زر العودة إلى الرئيسية
                     backToHomeBtn.style.display = 'block';
                     
-                    // ✅ تعطيل زر الإرسال بشكل دائم (يمنع التكرار)
                     submitBtn.disabled = true;
                     submitBtn.style.opacity = '0.6';
                     submitBtn.style.cursor = 'not-allowed';
                     submitBtn.innerHTML = '<i class="fas fa-check-circle"></i> تم الإرسال بنجاح';
                     
-                    // مسح السلة
                     localStorage.removeItem('cartItems');
                     cartItems = [];
                     
                     console.log('✅ تم إرسال الطلب بنجاح:', orderId);
-                    console.log('👤 معرف المستخدم المرتبط بالطلب:', userId);
-                    
-                    setTimeout(() => {
-                        const isClean = checkRemainingAffiliateData();
-                        if (!isClean) {
-                            console.warn('⚠️ لا يزال هناك بيانات مسوق متبقية، إجراء تنظيف إضافي...');
-                            clearAffiliateIdFromStorage();
-                        }
-                    }, 500);
-                    
                 } catch (err) {
                     console.error('❌ خطأ في إرسال الطلب:', err);
                     errorMsg.textContent = "حدث خطأ أثناء إرسال الطلب. يرجى المحاولة مرة أخرى.";
-                    
-                    // ✅ في حالة الخطأ، إعادة تفعيل الزر
                     submitBtn.disabled = false;
                     submitBtn.style.opacity = '1';
                     submitBtn.style.cursor = 'pointer';
@@ -2281,9 +1893,7 @@
             }
             
             console.log('🛒 عدد المنتجات في السلة:', cartItems.length);
-            console.log('📍 بيانات الموقع:', userLocation);
             console.log('👤 معرف المستخدم الفريد:', userId);
-            console.log('👤 معرف المسوق الحالي:', getAffiliateId());
         });
     </script>
 </body>
