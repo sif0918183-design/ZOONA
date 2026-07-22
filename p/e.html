@@ -759,19 +759,16 @@
     <div class="order-container">
         <h2>طلب جديد</h2>
         
-        <!-- قسم معرف المستخدم الفريد (مخفي) -->
         <div class="user-id-container">
             <span class="user-id-label">معرف المستخدم:</span>
             <span class="user-id-value" id="userIdDisplay">جاري التحميل...</span>
         </div>
         
-        <!-- رسالة التعرف التلقائي على المدينة -->
         <div id="autoCityDetection" class="auto-city-detection">
             <i class="fas fa-check-circle"></i>
             <span id="autoCityMessage"></span>
         </div>
         
-        <!-- تم إخفاء رسالة المسوق نهائياً -->
         <div id="affiliateNotice" class="affiliate-notice"></div>
         
         <form id="orderForm">
@@ -800,18 +797,15 @@
                 </div>
             </div>
             
-            <!-- ملخص المنتجات مع اختيار مدينة لكل مستودع -->
             <div class="products-summary" id="productsSummary">
                 <h4><i class="fas fa-shopping-cart"></i> المنتجات المطلوبة</h4>
                 <div id="productsList"></div>
                 <div class="summary-details" id="summaryDetails"></div>
             </div>
             
-            <!-- إطار معلومات التوصيل الموحد (للعنوان فقط) -->
             <div class="shipping-container">
                 <h3><i class="fas fa-truck"></i> عنوان التوصيل</h3>
                 
-                <!-- حقل وصف العنوان -->
                 <div class="form-group">
                     <label for="address" class="required">وصف العنوان (أضف وصف مختصر)</label>
                     <div class="input-with-icon">
@@ -821,7 +815,6 @@
                 </div>
             </div>
             
-            <!-- المجموع الكلي -->
             <div class="total-container">
                 <div>
                     <div class="total-label">المجموع الكلي</div>
@@ -841,7 +834,6 @@
             <i class="fas fa-download"></i> تحميل نسخة PDF من إيصال الطلب
         </button>
 
-        <!-- زر العودة إلى الصفحة الرئيسية -->
         <a href="https://zoonasd.com" id="backToHomeBtn">
             <button>
                 <i class="fas fa-arrow-right"></i> عودة إلى الرئيسية
@@ -852,7 +844,6 @@
         <div class="error-message" id="errorMsg"></div>
     </div>
     
-    <!-- قالب PDF -->
     <div id="pdfTemplate" class="pdf-template">
         <div class="pdf-header">
             <h1>طلب جديد - Zoona mall</h1>
@@ -880,7 +871,6 @@
         </div>
     </div>
 
-    <!-- خريطة التوصيل -->
     <div class="map-overlay" id="mapOverlay">
         <div class="map-container">
             <div id="locationMap"></div>
@@ -962,7 +952,7 @@
         let userAddress = '';
         let userLocation = null;
         let userInfo = JSON.parse(localStorage.getItem('userInfo')) || {};
-        let warehouseSelections = {}; // { warehouseName: { city: null, type: null, price: 0 } }
+        let warehouseSelections = {};
         let userId = null;
         
         const sudanCities = {
@@ -1065,63 +1055,65 @@
         
         // ========== دالة إنشاء الطلب ==========
         async function createNewOrder(orderData) {
-            try {
-                console.log('📝 بدء إنشاء طلب جديد:', orderData.orderId);
+            console.log('📝 بدء إنشاء طلب جديد:', orderData.orderId);
 
-                await callSupabase('orders', {
+            // 1. إنشاء الطلب الرئيسي
+            await callSupabase('orders', {
+                method: 'POST',
+                body: JSON.stringify([{
+                    order_id: orderData.orderId,
+                    user_id: orderData.userId,
+                    name: orderData.name,
+                    phone: orderData.phone,
+                    phone2: orderData.phone2 || null,
+                    city: orderData.city || 'متعدد',
+                    city_type: orderData.cityType || 'cod',
+                    shipping_cost: orderData.shippingCost || 0,
+                    total_amount: orderData.total,
+                    address: orderData.address,
+                    location_lat: orderData.location?.lat || null,
+                    location_lng: orderData.location?.lng || null,
+                    location_link: orderData.location?.link || null,
+                    payment_type: orderData.cityType === 'cod' ? 'دفع عند الاستلام' : 'دفع مقدم',
+                    affiliate_id: orderData.affiliateId || 'direct',
+                    status: 'new',
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                }])
+            });
+            console.log('✅ تم إدخال الطلب الرئيسي بنجاح');
+
+            // 2. إدخال منتجات الطلب
+            if (orderData.products && orderData.products.length > 0) {
+                const orderProducts = orderData.products.map(item => ({
+                    order_id: orderData.orderId,
+                    product_id: item.id,
+                    product_name: item.name,
+                    quantity: item.quantity,
+                    price: item.price,
+                    warehouse: item.warehouse,
+                    created_at: new Date().toISOString()
+                }));
+                await callSupabase('order_products', {
                     method: 'POST',
-                    body: JSON.stringify([{
-                        order_id: orderData.orderId,
-                        user_id: orderData.userId,
-                        name: orderData.name,
-                        phone: orderData.phone,
-                        phone2: orderData.phone2 || null,
-                        city: orderData.city || 'متعدد',
-                        city_type: orderData.cityType || 'cod',
-                        shipping_cost: orderData.shippingCost || 0,
-                        total_amount: orderData.total,
-                        address: orderData.address,
-                        location_lat: orderData.location?.lat || null,
-                        location_lng: orderData.location?.lng || null,
-                        location_link: orderData.location?.link || null,
-                        payment_type: orderData.cityType === 'cod' ? 'دفع عند الاستلام' : 'دفع مقدم',
-                        affiliate_id: orderData.affiliateId || 'direct',
-                        status: 'new',
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString()
-                    }])
+                    body: JSON.stringify(orderProducts)
                 });
-
-                console.log('✅ تم إدخال الطلب الرئيسي بنجاح');
-
-                if (orderData.products && orderData.products.length > 0) {
-                    const orderProducts = orderData.products.map(item => ({
-                        order_id: orderData.orderId,
-                        product_id: item.id,
-                        product_name: item.name,
-                        quantity: item.quantity,
-                        price: item.price,
-                        warehouse: item.warehouse,
-                        created_at: new Date().toISOString()
-                    }));
-                    await callSupabase('order_products', {
-                        method: 'POST',
-                        body: JSON.stringify(orderProducts)
-                    });
-                    console.log('✅ تم إدخال', orderProducts.length, 'منتج بنجاح');
-                }
-
-                if (orderData.affiliateId && orderData.affiliateId !== 'direct') {
-                    await saveAffiliateData(orderData);
-                    await updateAffiliateStats(orderData.affiliateId);
-                }
-
-                console.log('✅ تم إنشاء الطلب بنجاح:', orderData.orderId);
-                return { success: true, orderId: orderData.orderId };
-            } catch (error) {
-                console.error('❌ خطأ في إنشاء الطلب:', error);
-                throw error;
+                console.log('✅ تم إدخال', orderProducts.length, 'منتج بنجاح');
             }
+
+            // 3. معالجة بيانات المسوق (بدون انتظار النتيجة لتجنب تعطيل المستخدم)
+            if (orderData.affiliateId && orderData.affiliateId !== 'direct') {
+                // تشغيل في الخلفية دون انتظار
+                saveAffiliateData(orderData).catch(err => {
+                    console.error('❌ خطأ غير حرج في حفظ بيانات المسوق:', err);
+                });
+                updateAffiliateStats(orderData.affiliateId).catch(err => {
+                    console.error('❌ خطأ غير حرج في تحديث إحصائيات المسوق:', err);
+                });
+            }
+
+            console.log('✅ تم إنشاء الطلب بنجاح:', orderData.orderId);
+            return { success: true, orderId: orderData.orderId };
         }
         
         // ========== دوال إدارة بيانات المسوق ==========
@@ -1131,7 +1123,6 @@
                 const affiliates = await callSupabase(`affiliate_users?select=affiliate_id&affiliate_id=eq.${orderData.affiliateId}`);
                 if (!affiliates || affiliates.length === 0) {
                     console.warn('⚠️ المسوق غير موجود');
-                    orderData.affiliateId = 'direct';
                     return;
                 }
 
@@ -1185,7 +1176,6 @@
                 console.log('✅ تم حفظ بيانات المسوق بنجاح');
             } catch (error) {
                 console.error('❌ خطأ في حفظ بيانات المسوق:', error);
-                throw error;
             }
         }
 
@@ -1290,15 +1280,6 @@
             console.log('✅ تم تنظيف جميع بيانات المسوق بنجاح');
         }
         
-        function checkRemainingAffiliateData() {
-            const remainingKeys = [];
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key && (key.includes('affiliate') || key.includes('ref'))) remainingKeys.push(key);
-            }
-            return remainingKeys.length === 0;
-        }
-        
         // ========== دوال التكامل مع الشريط العلوي ==========
         function loadSavedLocationFromTopbar() {
             const savedLocationData = localStorage.getItem('deliveryLocationData');
@@ -1387,7 +1368,7 @@
                 html += `<div class="warehouse-section" data-warehouse="${warehouseName}">`;
                 html += `<div class="warehouse-title">
                     <i class="fas fa-warehouse"></i> 
-                    ${warehouseName}
+                    مستودع ${warehouseName}
                 </div>`;
 
                 items.forEach(item => {
@@ -1427,7 +1408,6 @@
 
                 html += `</select>`;
 
-                // عرض المجموع الفرعي للمستودع
                 const shippingCost = warehouseSelections[warehouseName].price || 0;
                 const totalWithShipping = warehouseSelections[warehouseName].city ? warehouseTotal + shippingCost : 0;
                 
@@ -1440,7 +1420,6 @@
                 }
                 html += `</div>`;
 
-                // تحذير عدم اختيار مدينة - يظهر فقط عند عدم الاختيار
                 if (!warehouseSelections[warehouseName].city && allCities.length > 0) {
                     html += `<div class="warehouse-not-selected show"><i class="fas fa-exclamation-circle"></i> يرجى اختيار مدينة توصيل لإضافة هذا المستودع إلى المجموع الكلي</div>`;
                 } else {
@@ -1535,26 +1514,24 @@
                 }
             });
             
-            // حساب المجموع الكلي فقط للمستودعات التي تم اختيار مدينة لها
             warehouseDetails.forEach(detail => {
                 if (detail.selected) {
                     grandTotal += detail.total;
                 }
             });
             
-            // تحديث الملخص
             let summaryHTML = '';
             summaryHTML += `<div class="summary-row"><span>عدد المنتجات الكلي:</span><span>${totalProducts}</span></div>`;
             
             warehouseDetails.forEach(detail => {
                 if (detail.selected) {
                     summaryHTML += `<div class="summary-row" style="font-size:0.78rem; color:#2d3748; padding-right:8px; border-right:2px solid #38a169;">
-                        <span>${detail.name} (${detail.city})</span>
+                        <span>مستودع ${detail.name} (${detail.city})</span>
                         <span>${detail.total.toLocaleString()} SDG</span>
                     </div>`;
                 } else {
                     summaryHTML += `<div class="summary-row" style="font-size:0.78rem; color:#a0aec0; padding-right:8px; border-right:2px solid #e2e8f0;">
-                        <span>${detail.name} (لم يتم الاختيار)</span>
+                        <span>مستودع ${detail.name} (لم يتم الاختيار)</span>
                         <span>${detail.products.toLocaleString()} SDG</span>
                     </div>`;
                 }
@@ -1576,7 +1553,6 @@
             
             summaryDetails.innerHTML = summaryHTML;
             
-            // تحديث حالة التحذيرات
             document.querySelectorAll('.warehouse-section').forEach(section => {
                 const warehouseName = section.dataset.warehouse;
                 const warningEl = section.querySelector('.warehouse-not-selected');
@@ -1688,7 +1664,7 @@
                     const productElement = document.createElement('div');
                     productElement.className = 'pdf-product-item';
                     productElement.innerHTML = `
-                        <span>${item.name} (${item.quantity}) - ${item.warehouse}</span>
+                        <span>${item.name} (${item.quantity}) - مستودع ${item.warehouse}</span>
                         <span>${(item.price * item.quantity).toLocaleString()} SDG</span>
                     `;
                     pdfProductsList.appendChild(productElement);
@@ -1725,6 +1701,15 @@
                     downloadBtn.disabled = false;
                 }
             });
+        }
+        
+        function saveUserInfo() {
+            const userInfo = {
+                name: document.getElementById('name').value,
+                phone: document.getElementById('phone').value,
+                phone2: document.getElementById('phone2').value
+            };
+            localStorage.setItem('userInfo', JSON.stringify(userInfo));
         }
         
         // ========== تهيئة الصفحة ==========
