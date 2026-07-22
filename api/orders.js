@@ -20,7 +20,8 @@ export default async function handler(req, res) {
     'https://zoona-git-secure-tiered-commission-v2-d1be82-sifians-projects.vercel.app',
     'https://zoona-git-fix-admin-login-and-rls-v3-203597-sifians-projects.vercel.app',
     'https://zoona-git-add-marketer-guide-modal-3611-3e20ab-sifians-projects.vercel.app',
-    'https://zoona-git-feature-add-fitness-category-1f2a90-sifians-projects.vercel.app'
+    'https://zoona-git-feature-add-fitness-category-1f2a90-sifians-projects.vercel.app',
+    'https://zoona-git-feat-add-perfumes-category-11-43fd62-sifians-projects.vercel.app'
   ];
 
   // Check if origin starts with any allowed origin
@@ -171,6 +172,11 @@ export default async function handler(req, res) {
     }
 
     const response = await fetch(fetchUrl, fetchOptions);
+
+    if (!response.ok) {
+      const errorText = await response.clone().text().catch(() => 'No text');
+      console.error(`[Orders-Proxy] Supabase returned error status ${response.status} for ${req.method} to ${endpoint}: ${errorText}`);
+    }
 
     if (response.status === 204) {
       return res.status(204).end();
