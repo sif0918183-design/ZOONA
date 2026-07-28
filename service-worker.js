@@ -60,6 +60,69 @@ self.addEventListener('fetch', event => {
   // تجاهل طلبات غير GET والطلبات الخارجية غير المقصودة
   if (event.request.method !== 'GET') return;
 
+  // Intercept Supabase Storage Image requests
+  if (url.href.includes('supabase.co/storage/v1/object/public/')) {
+    event.respondWith(
+      Promise.resolve().then(async () => {
+        const todayStr = new Date().toISOString().split('T')[0];
+        let isFirstOpenToday = false;
+
+        // Check last image cache check marker in CacheStorage
+        const coreCache = await caches.open(CACHE_NAME);
+        const markerResponse = await coreCache.match('/last-image-cache-check-marker');
+
+        if (markerResponse) {
+          const markerDate = await markerResponse.text();
+          if (markerDate !== todayStr) {
+            isFirstOpenToday = true;
+          }
+        } else {
+          isFirstOpenToday = true;
+        }
+
+        if (isFirstOpenToday) {
+          // First open of the day: Clear the old images cache and write today's marker
+          await caches.delete(IMAGE_CACHE_NAME);
+          await coreCache.put('/last-image-cache-check-marker', new Response(todayStr));
+          console.log('SW: First open today. Cleared old image cache and set today marker:', todayStr);
+        }
+
+        if (isFirstOpenToday) {
+          // Stale-While-Revalidate Strategy (first open of the day)
+          const cachedResponse = await caches.match(event.request);
+          const fetchPromise = fetch(event.request)
+            .then(networkResponse => {
+              // Standard or Opaque response (status 0) can be cached
+              if (networkResponse && (networkResponse.ok || networkResponse.status === 0)) {
+                const responseClone = networkResponse.clone();
+                caches.open(IMAGE_CACHE_NAME).then(cache => cache.put(event.request, responseClone));
+              }
+              return networkResponse;
+            })
+            .catch(() => cachedResponse);
+          return cachedResponse || fetchPromise;
+        } else {
+          // Cache-First Strategy (subsequent opens)
+          const cachedResponse = await caches.match(event.request);
+          if (cachedResponse) return cachedResponse;
+
+          try {
+            const networkResponse = await fetch(event.request);
+            if (networkResponse && (networkResponse.ok || networkResponse.status === 0)) {
+              const responseClone = networkResponse.clone();
+              const cache = await caches.open(IMAGE_CACHE_NAME);
+              await cache.put(event.request, responseClone);
+            }
+            return networkResponse;
+          } catch (e) {
+            return caches.match(event.request);
+          }
+        }
+      })
+    );
+    return;
+  }
+
   // 1. API Requests: Network-First
   if (url.pathname.includes('/api/')) {
     event.respondWith(

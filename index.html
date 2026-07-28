@@ -884,7 +884,7 @@ html, body {
 <div class="modal-overlay" id="productModal" onclick="closeModal(event)">
   <div class="product-modal" id="modalContent">
     <button class="modal-close" onclick="closeModal(null)"><i class="fas fa-times"></i></button>
-    <img src="" alt="" class="modal-img" id="modalImg">
+    <img src="" alt="" class="modal-img" id="modalImg" loading="lazy" decoding="async">
     <div class="modal-name" id="modalName"></div>
     <div class="modal-price-wrap">
       <div class="modal-price" id="modalPrice"></div>
@@ -1108,8 +1108,7 @@ window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('splash').style.display = 'none';
       document.getElementById('app').style.display = 'flex';
       document.getElementById('floatBtns').style.display = 'flex';
-      // Disabled for WebView apps
-      // registerServiceWorker();
+      registerServiceWorker();
       // setTimeout(maybeShowNotifPrompt, 4000);
     }, 400);
   }, 1800);
@@ -1209,7 +1208,7 @@ function renderProducts(products) {
     return `
     <div class="product-card" onclick="openModal(${p.id})">
       <div class="product-img-wrap">
-        <img src="${p.image}" alt="${p.name}" loading="lazy" onerror="this.src='assets/splash-logo.png'">
+        <img src="${p.image}" alt="${p.name}" loading="lazy" decoding="async" onerror="this.src='assets/splash-logo.png'">
         ${p.discount ? `<div class="product-discount-badge">-${p.discount}%</div>` : ''}
       </div>
       <div class="product-info">
@@ -1352,7 +1351,7 @@ function renderSimilarProducts(product) {
   grid.innerHTML = similar.map(p => `
     <a href="/${slugify(p.name)}" class="similar-product-card" onclick="openModal(${p.id}); return false;">
       <div class="similar-img-wrap">
-        <img src="${p.image}" alt="${p.name}" loading="lazy" onerror="this.src='assets/splash-logo.png'">
+        <img src="${p.image}" alt="${p.name}" loading="lazy" decoding="async" onerror="this.src='assets/splash-logo.png'">
       </div>
       <div class="similar-info">
         <div class="similar-name">${p.name}</div>
@@ -1604,7 +1603,7 @@ function renderCart() {
 
   const itemsHtml = cart.map((item, idx) => `
     <div class="cart-item">
-      <img src="${item.image || 'assets/splash-logo.png'}" class="cart-item-img" alt="${item.name}" onerror="this.src='assets/splash-logo.png'">
+      <img src="${item.image || 'assets/splash-logo.png'}" class="cart-item-img" alt="${item.name}" loading="lazy" decoding="async" onerror="this.src='assets/splash-logo.png'">
       <div class="cart-item-info">
         <div class="cart-item-name">${item.name}</div>
         <div class="cart-item-price">${(item.price * item.quantity).toLocaleString()} SDG</div>
@@ -2092,14 +2091,15 @@ function getAffiliateId() {
 }
 
 // ── Service Worker ──
-// Disabled for WebView apps - no need for custom SW
-// function registerServiceWorker() {
-//   if ('serviceWorker' in navigator) {
-//     navigator.serviceWorker.register('service-worker.js')
-//       .then(r => { console.log('SW registered'); initFirebaseMessaging(r); })
-//       .catch(e => console.error('SW error:', e));
-//   }
-// }
+function registerServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js')
+      .then(registration => {
+        console.log('SW registered successfully');
+      })
+      .catch(e => console.error('SW error:', e));
+  }
+}
 
 // ── Firebase Notifications (Disabled for WebView apps) ──
 //.async function initFirebaseMessaging(registration) {
