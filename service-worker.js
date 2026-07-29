@@ -70,8 +70,8 @@ self.addEventListener('fetch', event => {
   // تجاهل طلبات غير GET والطلبات الخارجية غير المقصودة
   if (event.request.method !== 'GET') return;
 
-  // Intercept Supabase Storage Image requests
-  if (url.href.includes('supabase.co/storage/v1/object/public/')) {
+  // Intercept Supabase Storage Image requests (both original and transformed)
+  if (url.href.includes('supabase.co/storage/v1/object/public/') || url.href.includes('supabase.co/storage/v1/render/image/public/')) {
     event.respondWith(
       (async () => {
         // If it's the first open of today, use Stale-While-Revalidate/Network-First

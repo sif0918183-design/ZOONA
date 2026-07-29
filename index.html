@@ -884,7 +884,7 @@ html, body {
 <div class="modal-overlay" id="productModal" onclick="closeModal(event)">
   <div class="product-modal" id="modalContent">
     <button class="modal-close" onclick="closeModal(null)"><i class="fas fa-times"></i></button>
-    <img src="" alt="" class="modal-img" id="modalImg" loading="lazy" decoding="async">
+    <img src="" alt="" class="modal-img" id="modalImg">
     <div class="modal-name" id="modalName"></div>
     <div class="modal-price-wrap">
       <div class="modal-price" id="modalPrice"></div>
@@ -1042,6 +1042,15 @@ const categorySlugs = {
   'الرياضة واللياقة': 'sports-fitness'
 };
 
+function getOptimizedImageUrl(src, width = 300, quality = 70) {
+  if (!src) return 'assets/splash-logo.png';
+  if (src.includes('/storage/v1/object/public/')) {
+    // Convert /storage/v1/object/public/ to /storage/v1/render/image/public/ and add width/quality parameters
+    return src.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/') + `?width=${width}&quality=${quality}`;
+  }
+  return src;
+}
+
 function matchCategory(prodCat, filterCat) {
   if (!prodCat) return false;
   const parts = prodCat.split('/').map(s => s.trim());
@@ -1100,27 +1109,6 @@ window.addEventListener('DOMContentLoaded', () => {
     loadProducts();
     initRotatingMessages();
     initPullToRefresh();
-
-    // progressive loading scroll listener - support window scroll if homePage scroll is not active
-    const homePage = document.getElementById('page-home');
-    if (homePage) {
-      homePage.addEventListener('scroll', () => {
-        if (homePage.scrollHeight - homePage.scrollTop - homePage.clientHeight < 200) {
-          loadMoreProducts();
-        }
-      });
-    }
-
-    // Also attach scroll listener to window to cover cases where page-home has overflow visible or window handles scroll
-    window.addEventListener('scroll', () => {
-      if (document.getElementById('page-home').classList.contains('active')) {
-        const d = document.documentElement;
-        const offset = d.scrollHeight - window.scrollY - window.innerHeight;
-        if (offset < 200) {
-          loadMoreProducts();
-        }
-      }
-    });
   }, 100);
 
   setTimeout(() => {
@@ -1129,10 +1117,30 @@ window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('splash').style.display = 'none';
       document.getElementById('app').style.display = 'flex';
       document.getElementById('floatBtns').style.display = 'flex';
+
+      // Enable PWA Service Worker
       registerServiceWorker();
-      // setTimeout(maybeShowNotifPrompt, 4000);
     }, 400);
   }, 1800);
+
+  // Setup infinite scroll listener for progressive loading
+  const handleScroll = () => {
+    const pageHome = document.getElementById('page-home');
+    if (!pageHome || !pageHome.classList.contains('active')) return;
+
+    // Check if near bottom of pageHome container or window
+    const nearBottomContainer = pageHome.scrollHeight - pageHome.scrollTop - pageHome.clientHeight < 300;
+    const nearBottomWindow = window.innerHeight + window.scrollY >= document.body.offsetHeight - 300;
+
+    if (nearBottomContainer || nearBottomWindow) {
+      loadMoreProducts();
+    }
+  };
+  const pageHomeEl = document.getElementById('page-home');
+  if (pageHomeEl) {
+    pageHomeEl.addEventListener('scroll', handleScroll);
+  }
+  window.addEventListener('scroll', handleScroll);
 });
 
 // ── Configuration ──
@@ -1240,10 +1248,11 @@ function renderProducts(products, append = false) {
 
   const html = nextBatch.map(p => {
     const displayCategory = p.category ? p.category.split('/').map(c => c.trim() === 'مستحضرات تجميل' ? 'تجميل' : c.trim()).join(' / ') : '';
+    const optimizedImgUrl = getOptimizedImageUrl(p.image, 300, 70);
     return `
     <div class="product-card" onclick="openModal(${p.id})">
       <div class="product-img-wrap">
-        <img src="${p.image}" alt="${p.name}" loading="lazy" decoding="async" onerror="this.src='assets/splash-logo.png'">
+        <img src="${optimizedImgUrl}" alt="${p.name}" loading="lazy" decoding="async" onerror="this.src='assets/splash-logo.png'">
         ${p.discount ? `<div class="product-discount-badge">-${p.discount}%</div>` : ''}
       </div>
       <div class="product-info">
@@ -1397,17 +1406,19 @@ function renderSimilarProducts(product) {
   }
 
   document.getElementById('similarProductsSection').style.display = 'block';
-  grid.innerHTML = similar.map(p => `
+  grid.innerHTML = similar.map(p => {
+    const optimizedSimilarUrl = getOptimizedImageUrl(p.image, 150, 70);
+    return `
     <a href="/${slugify(p.name)}" class="similar-product-card" onclick="openModal(${p.id}); return false;">
       <div class="similar-img-wrap">
-        <img src="${p.image}" alt="${p.name}" loading="lazy" decoding="async" onerror="this.src='assets/splash-logo.png'">
+        <img src="${optimizedSimilarUrl}" alt="${p.name}" loading="lazy" decoding="async" onerror="this.src='assets/splash-logo.png'">
       </div>
       <div class="similar-info">
         <div class="similar-name">${p.name}</div>
         <div class="similar-price">${p.price.toLocaleString()} SDG</div>
       </div>
     </a>
-  `).join('');
+  `;}).join('');
 }
 
 function openModal(id, fromPopState = false) {
@@ -1416,7 +1427,7 @@ function openModal(id, fromPopState = false) {
   currentModalProduct = p;
   modalQty = 1;
 
-  document.getElementById('modalImg').src = p.image;
+  document.getElementById('modalImg').src = getOptimizedImageUrl(p.image, 600, 80);
   document.getElementById('modalName').textContent = p.name;
   document.getElementById('modalPrice').textContent = p.price.toLocaleString() + ' SDG';
   document.getElementById('modalOld').textContent = (p.oldPrice || p.old_price) ? (p.oldPrice || p.old_price).toLocaleString() + ' SDG' : '';
@@ -1650,9 +1661,11 @@ function renderCart() {
 
   const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
 
-  const itemsHtml = cart.map((item, idx) => `
+  const itemsHtml = cart.map((item, idx) => {
+    const optimizedCartUrl = getOptimizedImageUrl(item.image, 150, 70);
+    return `
     <div class="cart-item">
-      <img src="${item.image || 'assets/splash-logo.png'}" class="cart-item-img" alt="${item.name}" loading="lazy" decoding="async" onerror="this.src='assets/splash-logo.png'">
+      <img src="${optimizedCartUrl}" class="cart-item-img" alt="${item.name}" loading="lazy" decoding="async" onerror="this.src='assets/splash-logo.png'">
       <div class="cart-item-info">
         <div class="cart-item-name">${item.name}</div>
         <div class="cart-item-price">${(item.price * item.quantity).toLocaleString()} SDG</div>
@@ -1665,7 +1678,8 @@ function renderCart() {
         </div>
       </div>
     </div>
-  `).join('');
+    `;
+  }).join('');
 
   container.innerHTML = `
     ${itemsHtml}
