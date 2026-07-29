@@ -884,7 +884,7 @@ html, body {
 <div class="modal-overlay" id="productModal" onclick="closeModal(event)">
   <div class="product-modal" id="modalContent">
     <button class="modal-close" onclick="closeModal(null)"><i class="fas fa-times"></i></button>
-    <img src="" alt="" class="modal-img" id="modalImg">
+    <img src="" alt="" class="modal-img" id="modalImg" loading="lazy" decoding="async" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried='true'; if(typeof currentModalProduct!=='undefined'&&currentModalProduct){this.src=currentModalProduct.image;}else{this.src='assets/splash-logo.png';}}else{this.src='assets/splash-logo.png';}">
     <div class="modal-name" id="modalName"></div>
     <div class="modal-price-wrap">
       <div class="modal-price" id="modalPrice"></div>
@@ -1044,11 +1044,11 @@ const categorySlugs = {
 
 function getOptimizedImageUrl(src, width = 300, quality = 70) {
   if (!src) return 'assets/splash-logo.png';
-  if (src.includes('/storage/v1/object/public/')) {
-    // Convert /storage/v1/object/public/ to /storage/v1/render/image/public/ and add width/quality parameters
-    return src.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/') + `?width=${width}&quality=${quality}`;
-  }
-  return src;
+  // Skip local files or already proxied files
+  if (src.startsWith('/') || src.startsWith('file://') || src.includes('wsrv.nl')) return src;
+
+  // Return wsrv.nl optimized webp url
+  return `https://wsrv.nl/?url=${encodeURIComponent(src)}&w=${width}&q=${quality}&output=webp`;
 }
 
 function matchCategory(prodCat, filterCat) {
@@ -1252,7 +1252,7 @@ function renderProducts(products, append = false) {
     return `
     <div class="product-card" onclick="openModal(${p.id})">
       <div class="product-img-wrap">
-        <img src="${optimizedImgUrl}" alt="${p.name}" loading="lazy" decoding="async" onerror="this.src='assets/splash-logo.png'">
+        <img src="${optimizedImgUrl}" alt="${p.name}" loading="lazy" decoding="async" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried=true; this.src='${p.image}';}else{this.src='assets/splash-logo.png';}">
         ${p.discount ? `<div class="product-discount-badge">-${p.discount}%</div>` : ''}
       </div>
       <div class="product-info">
@@ -1411,7 +1411,7 @@ function renderSimilarProducts(product) {
     return `
     <a href="/${slugify(p.name)}" class="similar-product-card" onclick="openModal(${p.id}); return false;">
       <div class="similar-img-wrap">
-        <img src="${optimizedSimilarUrl}" alt="${p.name}" loading="lazy" decoding="async" onerror="this.src='assets/splash-logo.png'">
+        <img src="${optimizedSimilarUrl}" alt="${p.name}" loading="lazy" decoding="async" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried=true; this.src='${p.image}';}else{this.src='assets/splash-logo.png';}">
       </div>
       <div class="similar-info">
         <div class="similar-name">${p.name}</div>
@@ -1427,7 +1427,9 @@ function openModal(id, fromPopState = false) {
   currentModalProduct = p;
   modalQty = 1;
 
-  document.getElementById('modalImg').src = getOptimizedImageUrl(p.image, 600, 80);
+  const mImg = document.getElementById('modalImg');
+  mImg.removeAttribute('data-fallback-tried');
+  mImg.src = getOptimizedImageUrl(p.image, 600, 80);
   document.getElementById('modalName').textContent = p.name;
   document.getElementById('modalPrice').textContent = p.price.toLocaleString() + ' SDG';
   document.getElementById('modalOld').textContent = (p.oldPrice || p.old_price) ? (p.oldPrice || p.old_price).toLocaleString() + ' SDG' : '';
@@ -1665,7 +1667,7 @@ function renderCart() {
     const optimizedCartUrl = getOptimizedImageUrl(item.image, 150, 70);
     return `
     <div class="cart-item">
-      <img src="${optimizedCartUrl}" class="cart-item-img" alt="${item.name}" loading="lazy" decoding="async" onerror="this.src='assets/splash-logo.png'">
+      <img src="${optimizedCartUrl}" class="cart-item-img" alt="${item.name}" loading="lazy" decoding="async" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried=true; this.src='${item.image || ''}';}else{this.src='assets/splash-logo.png';}">
       <div class="cart-item-info">
         <div class="cart-item-name">${item.name}</div>
         <div class="cart-item-price">${(item.price * item.quantity).toLocaleString()} SDG</div>
