@@ -54,37 +54,15 @@ self.addEventListener('activate', event => {
 // =================================================================
 // 5️⃣ Fetch (Offline Support) - Network-First Strategy
 // =================================================================
-let dailyCheckPromise = null;
-let isFirstSessionOpenOfToday = false;
+let isFirstOpenToday = false;
 
-async function checkDailyRevalidation() {
-  if (dailyCheckPromise) return dailyCheckPromise;
-
-  dailyCheckPromise = (async () => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const coreCache = await caches.open(CACHE_NAME);
-    const markerResponse = await coreCache.match('/last-image-cache-check-marker');
-
-    let isFirst = false;
-    if (markerResponse) {
-      const markerDate = await markerResponse.text();
-      if (markerDate !== todayStr) {
-        isFirst = true;
-      }
-    } else {
-      isFirst = true;
-    }
-
-    if (isFirst) {
-      await caches.delete(IMAGE_CACHE_NAME);
-      await coreCache.put('/last-image-cache-check-marker', new Response(todayStr));
-      isFirstSessionOpenOfToday = true;
-      console.log('SW: Daily revalidation triggered. Cleared image cache.');
-    }
-  })();
-
-  return dailyCheckPromise;
-}
+// Listen to client messages to receive cache strategy status
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SET_DAILY_STRATEGY') {
+    isFirstOpenToday = !!event.data.isFirstOpenToday;
+    console.log('SW: Received daily strategy message. isFirstOpenToday =', isFirstOpenToday);
+  }
+});
 
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
@@ -95,27 +73,28 @@ self.addEventListener('fetch', event => {
   // Intercept Supabase Storage Image requests
   if (url.href.includes('supabase.co/storage/v1/object/public/')) {
     event.respondWith(
-      Promise.resolve().then(async () => {
-        await checkDailyRevalidation();
-
-        if (isFirstSessionOpenOfToday) {
-          // Stale-While-Revalidate Strategy (first open of the day)
+      (async () => {
+        // If it's the first open of today, use Stale-While-Revalidate/Network-First
+        if (isFirstOpenToday) {
           const cachedResponse = await caches.match(event.request);
           const fetchPromise = fetch(event.request)
-            .then(networkResponse => {
-              // Standard or Opaque response (status 0) can be cached
+            .then(async (networkResponse) => {
               if (networkResponse && (networkResponse.ok || networkResponse.status === 0)) {
                 const responseClone = networkResponse.clone();
-                caches.open(IMAGE_CACHE_NAME).then(cache => cache.put(event.request, responseClone));
+                const cache = await caches.open(IMAGE_CACHE_NAME);
+                await cache.put(event.request, responseClone);
               }
               return networkResponse;
             })
             .catch(() => cachedResponse);
+
           return cachedResponse || fetchPromise;
         } else {
-          // Cache-First Strategy (subsequent opens)
+          // Cache-First Strategy (subsequent opens) - strictly from cache if exists
           const cachedResponse = await caches.match(event.request);
-          if (cachedResponse) return cachedResponse;
+          if (cachedResponse) {
+            return cachedResponse;
+          }
 
           try {
             const networkResponse = await fetch(event.request);
@@ -129,7 +108,7 @@ self.addEventListener('fetch', event => {
             return caches.match(event.request);
           }
         }
-      })
+      })()
     );
     return;
   }

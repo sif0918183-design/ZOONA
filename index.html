@@ -2140,13 +2140,68 @@ function getAffiliateId() {
 }
 
 // ── Service Worker ──
-function registerServiceWorker() {
+async function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const lastCheck = localStorage.getItem('last_image_cache_check');
+    let isFirstOpenToday = false;
+
+    if (lastCheck !== todayStr) {
+      isFirstOpenToday = true;
+      localStorage.setItem('last_image_cache_check', todayStr);
+      try {
+        if ('caches' in window) {
+          const IMAGE_CACHE_NAME = 'zoona-store-images-cache-v2.0.0';
+          await caches.delete(IMAGE_CACHE_NAME);
+          console.log('Client: First open of the day. Cleared image cache:', IMAGE_CACHE_NAME);
+        }
+      } catch (err) {
+        console.error('Client: Error clearing image cache:', err);
+      }
+    }
+
     navigator.serviceWorker.register('service-worker.js')
       .then(registration => {
         console.log('SW registered successfully');
+
+        const sendStrategy = () => {
+          const controller = navigator.serviceWorker.controller;
+          if (controller) {
+            controller.postMessage({
+              type: 'SET_DAILY_STRATEGY',
+              isFirstOpenToday: isFirstOpenToday
+            });
+            console.log('Client: Sent daily strategy to SW. isFirstOpenToday =', isFirstOpenToday);
+          }
+        };
+
+        if (registration.active) {
+          sendStrategy();
+        }
+
+        registration.addEventListener('updatefound', () => {
+          const installingWorker = registration.installing;
+          if (installingWorker) {
+            installingWorker.addEventListener('statechange', () => {
+              if (installingWorker.state === 'activated') {
+                sendStrategy();
+              }
+            });
+          }
+        });
       })
       .catch(e => console.error('SW error:', e));
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      const controller = navigator.serviceWorker.controller;
+      if (controller) {
+        controller.postMessage({
+          type: 'SET_DAILY_STRATEGY',
+          isFirstOpenToday: isFirstOpenToday
+        });
+        console.log('Client: Sent daily strategy to new SW on controllerchange. isFirstOpenToday =', isFirstOpenToday);
+      }
+    });
   }
 }
 
