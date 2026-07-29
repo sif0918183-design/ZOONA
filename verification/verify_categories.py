@@ -45,6 +45,7 @@ def verify_frontend():
               }
             ];
             document.getElementById('splash').style.display = 'none';
+            document.getElementById('app').style.display = 'flex';
             filterCategory('الكل', null);
         """)
         page.wait_for_timeout(1000)

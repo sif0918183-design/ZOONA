@@ -16,7 +16,7 @@ def verify_pwa():
         # Inject some mock products and hide the splash screen to display our layout
         page.evaluate("""
             window.history.pushState = function() {};
-            window.allProducts = [
+            allProducts = [
               {
                 id: 1,
                 name: "مضرب تنس احترافي",

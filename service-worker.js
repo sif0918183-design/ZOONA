@@ -54,6 +54,38 @@ self.addEventListener('activate', event => {
 // =================================================================
 // 5️⃣ Fetch (Offline Support) - Network-First Strategy
 // =================================================================
+let dailyCheckPromise = null;
+let isFirstSessionOpenOfToday = false;
+
+async function checkDailyRevalidation() {
+  if (dailyCheckPromise) return dailyCheckPromise;
+
+  dailyCheckPromise = (async () => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const coreCache = await caches.open(CACHE_NAME);
+    const markerResponse = await coreCache.match('/last-image-cache-check-marker');
+
+    let isFirst = false;
+    if (markerResponse) {
+      const markerDate = await markerResponse.text();
+      if (markerDate !== todayStr) {
+        isFirst = true;
+      }
+    } else {
+      isFirst = true;
+    }
+
+    if (isFirst) {
+      await caches.delete(IMAGE_CACHE_NAME);
+      await coreCache.put('/last-image-cache-check-marker', new Response(todayStr));
+      isFirstSessionOpenOfToday = true;
+      console.log('SW: Daily revalidation triggered. Cleared image cache.');
+    }
+  })();
+
+  return dailyCheckPromise;
+}
+
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   
@@ -64,30 +96,9 @@ self.addEventListener('fetch', event => {
   if (url.href.includes('supabase.co/storage/v1/object/public/')) {
     event.respondWith(
       Promise.resolve().then(async () => {
-        const todayStr = new Date().toISOString().split('T')[0];
-        let isFirstOpenToday = false;
+        await checkDailyRevalidation();
 
-        // Check last image cache check marker in CacheStorage
-        const coreCache = await caches.open(CACHE_NAME);
-        const markerResponse = await coreCache.match('/last-image-cache-check-marker');
-
-        if (markerResponse) {
-          const markerDate = await markerResponse.text();
-          if (markerDate !== todayStr) {
-            isFirstOpenToday = true;
-          }
-        } else {
-          isFirstOpenToday = true;
-        }
-
-        if (isFirstOpenToday) {
-          // First open of the day: Clear the old images cache and write today's marker
-          await caches.delete(IMAGE_CACHE_NAME);
-          await coreCache.put('/last-image-cache-check-marker', new Response(todayStr));
-          console.log('SW: First open today. Cleared old image cache and set today marker:', todayStr);
-        }
-
-        if (isFirstOpenToday) {
+        if (isFirstSessionOpenOfToday) {
           // Stale-While-Revalidate Strategy (first open of the day)
           const cachedResponse = await caches.match(event.request);
           const fetchPromise = fetch(event.request)
