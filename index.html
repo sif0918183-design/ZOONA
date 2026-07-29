@@ -884,7 +884,7 @@ html, body {
 <div class="modal-overlay" id="productModal" onclick="closeModal(event)">
   <div class="product-modal" id="modalContent">
     <button class="modal-close" onclick="closeModal(null)"><i class="fas fa-times"></i></button>
-    <img src="" alt="" class="modal-img" id="modalImg">
+    <img src="" alt="" class="modal-img" id="modalImg" loading="lazy" decoding="async" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried='true'; if(typeof currentModalProduct!=='undefined'&&currentModalProduct){this.src=currentModalProduct.image;}else{this.src='assets/splash-logo.png';}}else{this.src='assets/splash-logo.png';}">
     <div class="modal-name" id="modalName"></div>
     <div class="modal-price-wrap">
       <div class="modal-price" id="modalPrice"></div>
@@ -1042,6 +1042,15 @@ const categorySlugs = {
   'الرياضة واللياقة': 'sports-fitness'
 };
 
+function getOptimizedImageUrl(src, width = 300, quality = 70) {
+  if (!src) return 'assets/splash-logo.png';
+  // Skip local files or already proxied files
+  if (src.startsWith('/') || src.startsWith('file://') || src.includes('wsrv.nl')) return src;
+
+  // Return wsrv.nl optimized webp url
+  return `https://wsrv.nl/?url=${encodeURIComponent(src)}&w=${width}&q=${quality}&output=webp`;
+}
+
 function matchCategory(prodCat, filterCat) {
   if (!prodCat) return false;
   const parts = prodCat.split('/').map(s => s.trim());
@@ -1108,11 +1117,30 @@ window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('splash').style.display = 'none';
       document.getElementById('app').style.display = 'flex';
       document.getElementById('floatBtns').style.display = 'flex';
-      // Disabled for WebView apps
-      // registerServiceWorker();
-      // setTimeout(maybeShowNotifPrompt, 4000);
+
+      // Enable PWA Service Worker
+      registerServiceWorker();
     }, 400);
   }, 1800);
+
+  // Setup infinite scroll listener for progressive loading
+  const handleScroll = () => {
+    const pageHome = document.getElementById('page-home');
+    if (!pageHome || !pageHome.classList.contains('active')) return;
+
+    // Check if near bottom of pageHome container or window
+    const nearBottomContainer = pageHome.scrollHeight - pageHome.scrollTop - pageHome.clientHeight < 300;
+    const nearBottomWindow = window.innerHeight + window.scrollY >= document.body.offsetHeight - 300;
+
+    if (nearBottomContainer || nearBottomWindow) {
+      loadMoreProducts();
+    }
+  };
+  const pageHomeEl = document.getElementById('page-home');
+  if (pageHomeEl) {
+    pageHomeEl.addEventListener('scroll', handleScroll);
+  }
+  window.addEventListener('scroll', handleScroll);
 });
 
 // ── Configuration ──
@@ -1197,19 +1225,34 @@ function getProductDeliveryCities(productId) {
   return product.delivery_cities;
 }
 
-// ── Render Products ──
-function renderProducts(products) {
+// ── Render Products (Progressive Rendering / Infinite Scroll) ──
+let currentRenderedCount = 0;
+const BATCH_SIZE = 10;
+let currentProductsList = [];
+
+function renderProducts(products, append = false) {
   const grid = document.getElementById('productsGrid');
-  if (!products || products.length === 0) {
+  if (!append) {
+    currentProductsList = products || [];
+    currentRenderedCount = 0;
+    grid.innerHTML = '';
+  }
+
+  if (!currentProductsList || currentProductsList.length === 0) {
     grid.innerHTML = '<div style="padding:40px 20px; text-align:center; color:#aaa; grid-column:1/-1;"><i class="fas fa-box-open" style="font-size:50px; display:block; margin-bottom:12px;"></i>لا توجد منتجات في هذا القسم</div>';
     return;
   }
-  grid.innerHTML = products.map(p => {
+
+  const nextBatch = currentProductsList.slice(currentRenderedCount, currentRenderedCount + BATCH_SIZE);
+  if (nextBatch.length === 0) return;
+
+  const html = nextBatch.map(p => {
     const displayCategory = p.category ? p.category.split('/').map(c => c.trim() === 'مستحضرات تجميل' ? 'تجميل' : c.trim()).join(' / ') : '';
+    const optimizedImgUrl = getOptimizedImageUrl(p.image, 300, 70);
     return `
     <div class="product-card" onclick="openModal(${p.id})">
       <div class="product-img-wrap">
-        <img src="${p.image}" alt="${p.name}" loading="lazy" onerror="this.src='assets/splash-logo.png'">
+        <img src="${optimizedImgUrl}" alt="${p.name}" loading="lazy" decoding="async" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried=true; this.src='${p.image}';}else{this.src='assets/splash-logo.png';}">
         ${p.discount ? `<div class="product-discount-badge">-${p.discount}%</div>` : ''}
       </div>
       <div class="product-info">
@@ -1227,11 +1270,25 @@ function renderProducts(products) {
     </div>
   `; }).join('');
 
+  if (append) {
+    grid.insertAdjacentHTML('beforeend', html);
+  } else {
+    grid.innerHTML = html;
+  }
+
+  currentRenderedCount += nextBatch.length;
+
   // Restore button states
   cart.forEach(item => {
     const btn = document.getElementById(`cartBtn-${item.id}`);
     if (btn) { btn.classList.add('added'); btn.innerHTML = '<i class="fas fa-check"></i> تمت الإضافة'; }
   });
+}
+
+function loadMoreProducts() {
+  if (currentRenderedCount < currentProductsList.length) {
+    renderProducts(currentProductsList, true);
+  }
 }
 
 // ── Category Filter ──
@@ -1349,17 +1406,19 @@ function renderSimilarProducts(product) {
   }
 
   document.getElementById('similarProductsSection').style.display = 'block';
-  grid.innerHTML = similar.map(p => `
+  grid.innerHTML = similar.map(p => {
+    const optimizedSimilarUrl = getOptimizedImageUrl(p.image, 150, 70);
+    return `
     <a href="/${slugify(p.name)}" class="similar-product-card" onclick="openModal(${p.id}); return false;">
       <div class="similar-img-wrap">
-        <img src="${p.image}" alt="${p.name}" loading="lazy" onerror="this.src='assets/splash-logo.png'">
+        <img src="${optimizedSimilarUrl}" alt="${p.name}" loading="lazy" decoding="async" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried=true; this.src='${p.image}';}else{this.src='assets/splash-logo.png';}">
       </div>
       <div class="similar-info">
         <div class="similar-name">${p.name}</div>
         <div class="similar-price">${p.price.toLocaleString()} SDG</div>
       </div>
     </a>
-  `).join('');
+  `;}).join('');
 }
 
 function openModal(id, fromPopState = false) {
@@ -1368,7 +1427,9 @@ function openModal(id, fromPopState = false) {
   currentModalProduct = p;
   modalQty = 1;
 
-  document.getElementById('modalImg').src = p.image;
+  const mImg = document.getElementById('modalImg');
+  mImg.removeAttribute('data-fallback-tried');
+  mImg.src = getOptimizedImageUrl(p.image, 600, 80);
   document.getElementById('modalName').textContent = p.name;
   document.getElementById('modalPrice').textContent = p.price.toLocaleString() + ' SDG';
   document.getElementById('modalOld').textContent = (p.oldPrice || p.old_price) ? (p.oldPrice || p.old_price).toLocaleString() + ' SDG' : '';
@@ -1602,9 +1663,11 @@ function renderCart() {
 
   const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
 
-  const itemsHtml = cart.map((item, idx) => `
+  const itemsHtml = cart.map((item, idx) => {
+    const optimizedCartUrl = getOptimizedImageUrl(item.image, 150, 70);
+    return `
     <div class="cart-item">
-      <img src="${item.image || 'assets/splash-logo.png'}" class="cart-item-img" alt="${item.name}" onerror="this.src='assets/splash-logo.png'">
+      <img src="${optimizedCartUrl}" class="cart-item-img" alt="${item.name}" loading="lazy" decoding="async" onerror="if(!this.dataset.fallbackTried){this.dataset.fallbackTried=true; this.src='${item.image || ''}';}else{this.src='assets/splash-logo.png';}">
       <div class="cart-item-info">
         <div class="cart-item-name">${item.name}</div>
         <div class="cart-item-price">${(item.price * item.quantity).toLocaleString()} SDG</div>
@@ -1617,7 +1680,8 @@ function renderCart() {
         </div>
       </div>
     </div>
-  `).join('');
+    `;
+  }).join('');
 
   container.innerHTML = `
     ${itemsHtml}
@@ -2092,14 +2156,70 @@ function getAffiliateId() {
 }
 
 // ── Service Worker ──
-// Disabled for WebView apps - no need for custom SW
-// function registerServiceWorker() {
-//   if ('serviceWorker' in navigator) {
-//     navigator.serviceWorker.register('service-worker.js')
-//       .then(r => { console.log('SW registered'); initFirebaseMessaging(r); })
-//       .catch(e => console.error('SW error:', e));
-//   }
-// }
+async function registerServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const lastCheck = localStorage.getItem('last_image_cache_check');
+    let isFirstOpenToday = false;
+
+    if (lastCheck !== todayStr) {
+      isFirstOpenToday = true;
+      localStorage.setItem('last_image_cache_check', todayStr);
+      try {
+        if ('caches' in window) {
+          const IMAGE_CACHE_NAME = 'zoona-store-images-cache-v2.0.0';
+          await caches.delete(IMAGE_CACHE_NAME);
+          console.log('Client: First open of the day. Cleared image cache:', IMAGE_CACHE_NAME);
+        }
+      } catch (err) {
+        console.error('Client: Error clearing image cache:', err);
+      }
+    }
+
+    navigator.serviceWorker.register('service-worker.js')
+      .then(registration => {
+        console.log('SW registered successfully');
+
+        const sendStrategy = () => {
+          const controller = navigator.serviceWorker.controller;
+          if (controller) {
+            controller.postMessage({
+              type: 'SET_DAILY_STRATEGY',
+              isFirstOpenToday: isFirstOpenToday
+            });
+            console.log('Client: Sent daily strategy to SW. isFirstOpenToday =', isFirstOpenToday);
+          }
+        };
+
+        if (registration.active) {
+          sendStrategy();
+        }
+
+        registration.addEventListener('updatefound', () => {
+          const installingWorker = registration.installing;
+          if (installingWorker) {
+            installingWorker.addEventListener('statechange', () => {
+              if (installingWorker.state === 'activated') {
+                sendStrategy();
+              }
+            });
+          }
+        });
+      })
+      .catch(e => console.error('SW error:', e));
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      const controller = navigator.serviceWorker.controller;
+      if (controller) {
+        controller.postMessage({
+          type: 'SET_DAILY_STRATEGY',
+          isFirstOpenToday: isFirstOpenToday
+        });
+        console.log('Client: Sent daily strategy to new SW on controllerchange. isFirstOpenToday =', isFirstOpenToday);
+      }
+    });
+  }
+}
 
 // ── Firebase Notifications (Disabled for WebView apps) ──
 //.async function initFirebaseMessaging(registration) {

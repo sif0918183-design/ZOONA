@@ -54,11 +54,64 @@ self.addEventListener('activate', event => {
 // =================================================================
 // 5️⃣ Fetch (Offline Support) - Network-First Strategy
 // =================================================================
+let isFirstOpenToday = false;
+
+// Listen to client messages to receive cache strategy status
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SET_DAILY_STRATEGY') {
+    isFirstOpenToday = !!event.data.isFirstOpenToday;
+    console.log('SW: Received daily strategy message. isFirstOpenToday =', isFirstOpenToday);
+  }
+});
+
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   
   // تجاهل طلبات غير GET والطلبات الخارجية غير المقصودة
   if (event.request.method !== 'GET') return;
+
+  // Intercept image requests (Supabase Storage original/transformed, or wsrv.nl proxy)
+  if (url.href.includes('supabase.co/') || url.href.includes('wsrv.nl')) {
+    event.respondWith(
+      (async () => {
+        // If it's the first open of today, use Stale-While-Revalidate/Network-First
+        if (isFirstOpenToday) {
+          const cachedResponse = await caches.match(event.request);
+          const fetchPromise = fetch(event.request)
+            .then(async (networkResponse) => {
+              if (networkResponse && (networkResponse.ok || networkResponse.status === 0)) {
+                const responseClone = networkResponse.clone();
+                const cache = await caches.open(IMAGE_CACHE_NAME);
+                await cache.put(event.request, responseClone);
+              }
+              return networkResponse;
+            })
+            .catch(() => cachedResponse);
+
+          return cachedResponse || fetchPromise;
+        } else {
+          // Cache-First Strategy (subsequent opens) - strictly from cache if exists
+          const cachedResponse = await caches.match(event.request);
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+
+          try {
+            const networkResponse = await fetch(event.request);
+            if (networkResponse && (networkResponse.ok || networkResponse.status === 0)) {
+              const responseClone = networkResponse.clone();
+              const cache = await caches.open(IMAGE_CACHE_NAME);
+              await cache.put(event.request, responseClone);
+            }
+            return networkResponse;
+          } catch (e) {
+            return caches.match(event.request);
+          }
+        }
+      })()
+    );
+    return;
+  }
 
   // 1. API Requests: Network-First
   if (url.pathname.includes('/api/')) {
