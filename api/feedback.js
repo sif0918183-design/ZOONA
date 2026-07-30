@@ -7,6 +7,7 @@ export default async function handler(req, res) {
   // 1. التحقق من النطاق
   const origin = req.headers.origin || req.headers.referer || '';
   const allowedOrigins = [
+    'https://zoona-git-jules-5953511004896205445-8c60e538-sifians-projects.vercel.app',
     'https://zoona-git-feature-admin-bulk-updater-14-87744e-sifians-projects.vercel.app',
     'https://zoonasd.com',
     'https://www.zoonasd.com',
@@ -39,6 +40,7 @@ export default async function handler(req, res) {
 
   // 3. إعداد رؤوس CORS للنطاقات المسموحة فقط
   const allowedOriginsList = [
+    'https://zoona-git-jules-5953511004896205445-8c60e538-sifians-projects.vercel.app',
     'https://zoonasd.com',
     'https://www.zoonasd.com',
     'zoonasd.com',
