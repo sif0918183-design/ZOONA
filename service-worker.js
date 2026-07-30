@@ -93,7 +93,32 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 3. Navigation & Other Assets: Network-First with Offline Fallback
+  // 3. Image Requests: Cache-First
+  const isImageRequest =
+    event.request.destination === 'image' ||
+    url.pathname.match(/\.(png|jpg|jpeg|webp|svg|gif|avif|ico)$/i) ||
+    (url.host.includes('supabase.co') && url.pathname.includes('/storage/v1/')) ||
+    url.host.includes('pexels.com');
+
+  if (isImageRequest) {
+    event.respondWith(
+      caches.open(IMAGE_CACHE_NAME).then(async cache => {
+        const cachedResponse = await cache.match(event.request);
+        if (cachedResponse) return cachedResponse;
+        return fetch(event.request).then(networkResponse => {
+          if (networkResponse && networkResponse.ok) {
+            cache.put(event.request, networkResponse.clone());
+          }
+          return networkResponse;
+        }).catch(() => {
+          return caches.match('/assets/splash-logo.png') || new Response('', { status: 404 });
+        });
+      })
+    );
+    return;
+  }
+
+  // 4. Navigation & Other Assets: Network-First with Offline Fallback
   event.respondWith(
     fetch(event.request)
       .then(networkResponse => {

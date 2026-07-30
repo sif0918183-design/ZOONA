@@ -682,6 +682,31 @@ async function verifyAdminPassword(password) {
   }
 }
 
+function getTransformedImageUrl(url, width = 350, quality = 70) {
+  if (!url) return '../assets/splash-logo.png';
+
+  // Only transform if it's a Supabase URL
+  if (url.includes('.supabase.co/storage/v1/object/public/')) {
+    let transformed = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+    const separator = transformed.includes('?') ? '&' : '?';
+    return `${transformed}${separator}width=${width}&quality=${quality}&format=auto`;
+  }
+
+  // Optimize Pexels URLs
+  if (url.includes('pexels.com')) {
+    try {
+      const urlObj = new URL(url);
+      urlObj.searchParams.set('w', width);
+      urlObj.searchParams.set('quality', quality);
+      return urlObj.toString();
+    } catch (e) {
+      return url;
+    }
+  }
+
+  return url;
+}
+
 let allProducts = [];
 let filtered = [];
 let currentCat = 'الكل';
@@ -833,9 +858,10 @@ function renderProducts() {
   }
   grid.innerHTML = filtered.map(p => {
     const displayCategory = p.category ? p.category.split('/').map(c => c.trim() === 'مستحضرات تجميل' ? 'تجميل' : c.trim()).join(' / ') : '';
+    const optimizedImg = getTransformedImageUrl(p.image, 150, 70);
     return `
     <div class="prod-card" style="${p.is_out_of_stock ? 'opacity:0.8;' : ''}">
-      <img class="prod-img" src="${p.image || '../assets/splash-logo.png'}" alt="${p.name}" onerror="this.src='../assets/splash-logo.png'">
+      <img class="prod-img" src="${optimizedImg}" alt="${p.name}" loading="lazy" decoding="async" onerror="if (this.src !== '${p.image}') { this.src = '${p.image || '../assets/splash-logo.png'}'; } else { this.src = '../assets/splash-logo.png'; }">
       ${p.is_out_of_stock ? `<div class="prod-badge" style="background:#666; right:auto; left:8px;">نفذت الكمية</div>` : ''}
       ${p.discount ? `<div class="prod-badge">-${p.discount}%</div>` : ''}
       <div class="prod-body">
