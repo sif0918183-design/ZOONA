@@ -713,6 +713,7 @@ let currentCat = 'الكل';
 let deleteTargetId = null;
 let imgTabMode = 'upload';
 let uploadedImageUrl = '';
+let isUploadingImage = false;
 
 // Warehouse bulk update global variables
 let bulkTempPrices = {};
@@ -951,6 +952,7 @@ function resetForm() {
   document.getElementById('uploadStatus').textContent = '';
   document.getElementById('discountHint').style.display = 'none';
   uploadedImageUrl = '';
+  isUploadingImage = false;
   switchImgTab('upload');
   
   deliveryCitiesData = { cod: [], prepaid: [] };
@@ -992,7 +994,7 @@ function previewFile(input) {
     const preview = document.getElementById('imgPreview');
     preview.src = e.target.result;
     preview.style.display = 'block';
-    document.getElementById('uploadStatus').textContent = '⏳ جاري الرفع...';
+    document.getElementById('uploadStatus').textContent = '⏳ جاري رفع الصورة...';
   };
   reader.readAsDataURL(file);
   uploadImage(file);
@@ -1009,6 +1011,8 @@ function handleDrop(e) {
 }
 
 async function uploadImage(file) {
+  isUploadingImage = true;
+  document.getElementById('uploadStatus').textContent = '⏳ جاري رفع الصورة...';
   try {
     const formData = new FormData();
     formData.append('image', file);
@@ -1024,8 +1028,10 @@ async function uploadImage(file) {
       throw new Error(data.error || 'Upload failed');
     }
   } catch(e) {
-    document.getElementById('uploadStatus').textContent = '❌ فشل الرفع - ' + e.message;
-    showToast('❌ فشل رفع الصورة: ' + e.message, 'red');
+    document.getElementById('uploadStatus').textContent = '❌ تعذر رفع الصورة، يرجى المحاولة مرة أخرى.';
+    showToast('❌ تعذر رفع الصورة، يرجى المحاولة مرة أخرى.', 'red');
+  } finally {
+    isUploadingImage = false;
   }
 }
 
@@ -1044,6 +1050,11 @@ function previewUrl(url) {
 // ── Submit Form (Add/Edit) to Supabase ──
 async function submitForm(e) {
   e.preventDefault();
+  if (isUploadingImage) {
+    showToast('⏳ يرجى الانتظار حتى اكتمال رفع الصورة...', 'orange');
+    return;
+  }
+
   const btn = document.getElementById('formSubmitBtn');
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner"></div> جاري الحفظ...';

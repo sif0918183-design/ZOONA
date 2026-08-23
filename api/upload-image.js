@@ -1,10 +1,11 @@
 // Vercel API endpoint for image upload
-// Handles multipart form-data and uploads to Supabase Storage
+// Handles multipart form-data and uploads to ImageKit
 
 export default async function handler(req, res) {
-  // 1. التحقق من النطاق
+  // 1. التحقق من النطاق (Allowed Origins)
   const origin = req.headers.origin || req.headers.referer || '';
   const allowedOrigins = [
+    'https://zoona-git-jules-imagekit-upload-integra-013f82-sifians-projects.vercel.app',
     'https://zoona-git-jules-5953511004896205445-8c60e538-sifians-projects.vercel.app',
     'https://zoonasd.com',
     'https://www.zoonasd.com',
@@ -25,22 +26,8 @@ export default async function handler(req, res) {
   }
 
   // 2. Set CORS headers for allowed origins only
-  const allowedOriginsList = [
-    'https://zoona-git-jules-5953511004896205445-8c60e538-sifians-projects.vercel.app',
-    'https://zoonasd.com',
-    'https://www.zoonasd.com',
-    'zoonasd.com',
-    'https://zoona-git-secure-supabase-keys-77307646-147e2c-sifians-projects.vercel.app',
-    'https://zoona-git-indicate-out-of-stock-markete-081854-sifians-projects.vercel.app',
-    'https://zoona-git-fix-affiliate-registration-er-d6e282-sifians-projects.vercel.app',
-    'https://zoona-git-unique-affiliate-id-generatio-561ea2-sifians-projects.vercel.app',
-    'https://zoona-git-tier-commission-and-ui-improv-d14974-sifians-projects.vercel.app',
-    'https://zoona-git-feature-add-fitness-category-1f2a90-sifians-projects.vercel.app',
-    'https://zoona-git-feature-admin-bulk-updater-14-87744e-sifians-projects.vercel.app'
-  ];
   const currentOrigin = req.headers.origin;
-  
-  if (currentOrigin && allowedOriginsList.includes(currentOrigin)) {
+  if (currentOrigin && allowedOrigins.some(allowed => currentOrigin === allowed || currentOrigin.startsWith(allowed + "/"))) {
     res.setHeader('Access-Control-Allow-Origin', currentOrigin);
   } else if (!currentOrigin) {
     res.setHeader('Access-Control-Allow-Origin', 'https://zoonasd.com');
@@ -66,14 +53,14 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Content-Type must be multipart/form-data' });
   }
 
-  const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY;
+  const IMAGEKIT_PRIVATE_KEY = process.env.IMAGEKIT_PRIVATE_KEY;
+  const IMAGEKIT_URL_ENDPOINT = process.env.IMAGEKIT_URL_ENDPOINT;
 
   try {
     // Check environment variables
-    if (!SUPABASE_URL || !SUPABASE_KEY) {
-      console.error('Missing environment variables:', { SUPABASE_URL: !!SUPABASE_URL, SUPABASE_KEY: !!SUPABASE_KEY });
-      return res.status(500).json({ error: 'Server configuration error: Missing Supabase credentials' });
+    if (!IMAGEKIT_PRIVATE_KEY) {
+      console.error('Missing environment variables: IMAGEKIT_PRIVATE_KEY');
+      return res.status(500).json({ error: 'Server configuration error: Missing ImageKit credentials' });
     }
 
     // Get the boundary
@@ -116,6 +103,11 @@ export default async function handler(req, res) {
     const headers = part.slice(0, headerEnd).toString();
     const fileData = part.slice(headerEnd + 4);
 
+    // Check size limit (max 5MB)
+    if (fileData.length > 5 * 1024 * 1024) {
+      return res.status(400).json({ error: 'File size exceeds 5MB limit' });
+    }
+
     // Extract filename and extension
     const nameMatch = headers.match(/filename="([^"]+)"/);
     const origName = nameMatch ? nameMatch[1] : 'image.jpg';
@@ -128,38 +120,41 @@ export default async function handler(req, res) {
     }
 
     // Generate unique filename
-    const fileName = `product_${Date.now()}${ext}`;
-    const mimeType = ext.slice(1) === 'jpg' ? 'jpeg' : ext.slice(1);
+    const randomSuffix = Math.random().toString(36).substring(2, 8);
+    const fileName = `product_${Date.now()}_${randomSuffix}${ext}`;
 
-    // Upload to Supabase Storage
-    const uploadRes = await fetch(
-      `${SUPABASE_URL}/storage/v1/object/products/${fileName}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': `image/${mimeType}`,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'x-upsert': 'true'
-        },
-        body: fileData
-      }
-    );
+    // Upload to ImageKit API
+    const formData = new FormData();
+    formData.append('file', fileData.toString('base64'));
+    formData.append('fileName', fileName);
+    formData.append('folder', '/products');
+    formData.append('useUniqueFileName', 'false');
+
+    const authHeader = 'Basic ' + Buffer.from(IMAGEKIT_PRIVATE_KEY + ':').toString('base64');
+
+    const uploadRes = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization': authHeader
+      },
+      body: formData
+    });
 
     if (uploadRes.ok) {
-      const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/products/${fileName}`;
+      const ikData = await uploadRes.json();
+      let publicUrl = ikData.url;
+      if (!publicUrl && ikData.filePath && IMAGEKIT_URL_ENDPOINT) {
+        const endpoint = IMAGEKIT_URL_ENDPOINT.replace(/\/$/, '');
+        publicUrl = `${endpoint}${ikData.filePath}`;
+      }
+      if (!publicUrl) {
+        throw new Error('ImageKit response missing URL');
+      }
       return res.status(200).json({ url: publicUrl });
     } else {
       const errorText = await uploadRes.text();
-      console.error('Supabase upload failed:', uploadRes.status, errorText);
-      
-      // Fallback: encode as base64 data URL for small images
-      if (fileData.length < 500000) { // 500KB limit
-        const base64 = fileData.toString('base64');
-        const dataUrl = `data:image/${mimeType};base64,${base64}`;
-        return res.status(200).json({ url: dataUrl });
-      } else {
-        return res.status(413).json({ error: 'Image too large. Max 500KB for base64 fallback.' });
-      }
+      console.error('ImageKit upload failed:', uploadRes.status, errorText);
+      return res.status(uploadRes.status || 500).json({ error: 'ImageKit upload failed' });
     }
 
   } catch (e) {
