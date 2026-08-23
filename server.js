@@ -207,6 +207,44 @@ const server = http.createServer(async (req, res) => {
         return sendJSON(res, 400, { error: 'Invalid file type. Allowed: jpg, jpeg, png, gif, webp, svg' });
       }
       
+      // If ImageKit private key is set, upload to ImageKit
+      if (process.env.IMAGEKIT_PRIVATE_KEY) {
+        const randomSuffix = Math.random().toString(36).substring(2, 8);
+        const fileName = `product_${Date.now()}_${randomSuffix}${ext}`;
+
+        const formData = new FormData();
+        formData.append('file', fileData.toString('base64'));
+        formData.append('fileName', fileName);
+        formData.append('folder', '/products');
+        formData.append('useUniqueFileName', 'false');
+
+        const authHeader = 'Basic ' + Buffer.from(process.env.IMAGEKIT_PRIVATE_KEY + ':').toString('base64');
+
+        const uploadRes = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
+          method: 'POST',
+          headers: {
+            'Authorization': authHeader
+          },
+          body: formData
+        });
+
+        if (uploadRes.ok) {
+          const ikData = await uploadRes.json();
+          let publicUrl = ikData.url;
+          if (!publicUrl && ikData.filePath && process.env.IMAGEKIT_URL_ENDPOINT) {
+            const endpoint = process.env.IMAGEKIT_URL_ENDPOINT.replace(/\/$/, '');
+            publicUrl = `${endpoint}${ikData.filePath}`;
+          }
+          if (!publicUrl) throw new Error('ImageKit response missing URL');
+          return sendJSON(res, 200, { url: publicUrl });
+        } else {
+          const errorText = await uploadRes.text();
+          console.error('ImageKit upload failed:', uploadRes.status, errorText);
+          return sendJSON(res, uploadRes.status || 500, { error: 'ImageKit upload failed' });
+        }
+      }
+
+      // Local fallback if process.env.IMAGEKIT_PRIVATE_KEY is not set
       const fileName = `product_${Date.now()}${ext}`;
       const filePath = path.join(PRODUCTS_IMAGES_DIR, fileName);
 
