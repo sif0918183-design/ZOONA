@@ -89,7 +89,7 @@ export default async function handler(req, res) {
     const siteKey = process.env.TURNSTILE_SITE_KEY ||
                     process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ||
                     process.env.CLOUDFLARE_TURNSTILE_SITE_KEY ||
-                    '';
+                    '1x00000000000000000000AA';
     return res.status(200).json({ siteKey });
   }
 

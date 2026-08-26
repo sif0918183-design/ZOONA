@@ -15,7 +15,7 @@
     <title>لوحة المسوق - Zoona</title>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
     <style>
         :root {
             --primary-color: #ff6b35;
@@ -857,7 +857,7 @@
                 </div>
                 
                 <div class="form-group" style="display: flex; justify-content: center; margin-bottom: 20px;">
-                    <div id="turnstileContainer" class="cf-turnstile"></div>
+                    <div id="turnstileContainer" class="cf-turnstile" data-appearance="always"></div>
                 </div>
 
                 <button type="submit" class="btn btn-primary">
@@ -1360,14 +1360,19 @@ async function initTurnstile() {
         const response = await fetch(`${API_URL}?action=get_turnstile_config`);
         if (response.ok) {
             const data = await response.json();
-            if (data.siteKey) {
-                currentTurnstileSiteKey = data.siteKey;
-                renderTurnstileWidget();
+            if (data && typeof data.siteKey === 'string' && data.siteKey.trim() !== '') {
+                currentTurnstileSiteKey = data.siteKey.trim();
+            } else {
+                currentTurnstileSiteKey = '1x00000000000000000000AA';
             }
+        } else {
+            currentTurnstileSiteKey = '1x00000000000000000000AA';
         }
     } catch (e) {
         console.error('Error fetching Turnstile config:', e);
+        currentTurnstileSiteKey = '1x00000000000000000000AA';
     }
+    renderTurnstileWidget();
 }
 
 function renderTurnstileWidget() {
@@ -1375,13 +1380,19 @@ function renderTurnstileWidget() {
     if (!container || !currentTurnstileSiteKey) return;
 
     container.setAttribute('data-sitekey', currentTurnstileSiteKey);
+    container.setAttribute('data-appearance', 'always');
 
     if (window.turnstile && typeof window.turnstile.render === 'function') {
         try {
+            if (turnstileWidgetId !== null && typeof window.turnstile.remove === 'function') {
+                try { window.turnstile.remove(turnstileWidgetId); } catch(e) {}
+                turnstileWidgetId = null;
+            }
             container.innerHTML = '';
             turnstileWidgetId = window.turnstile.render('#turnstileContainer', {
                 sitekey: currentTurnstileSiteKey,
                 theme: 'light',
+                appearance: 'always',
                 'error-callback': function(errorCode) {
                     console.error('Turnstile error code:', errorCode);
                 }
