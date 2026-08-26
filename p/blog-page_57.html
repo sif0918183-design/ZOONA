@@ -15,7 +15,7 @@
     <title>لوحة المسوق - Zoona</title>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <style>
         :root {
             --primary-color: #ff6b35;
@@ -857,7 +857,7 @@
                 </div>
                 
                 <div class="form-group" style="display: flex; justify-content: center; margin-bottom: 20px;">
-                    <div id="turnstileContainer"></div>
+                    <div id="turnstileContainer" class="cf-turnstile"></div>
                 </div>
 
                 <button type="submit" class="btn btn-primary">
@@ -1373,12 +1373,21 @@ async function initTurnstile() {
 function renderTurnstileWidget() {
     const container = document.getElementById('turnstileContainer');
     if (!container || !currentTurnstileSiteKey) return;
+
+    container.setAttribute('data-sitekey', currentTurnstileSiteKey);
+
     if (window.turnstile && typeof window.turnstile.render === 'function') {
-        if (turnstileWidgetId === null) {
+        try {
+            container.innerHTML = '';
             turnstileWidgetId = window.turnstile.render('#turnstileContainer', {
                 sitekey: currentTurnstileSiteKey,
-                theme: 'light'
+                theme: 'light',
+                'error-callback': function(errorCode) {
+                    console.error('Turnstile error code:', errorCode);
+                }
             });
+        } catch (e) {
+            console.error('Turnstile render exception:', e);
         }
     } else {
         setTimeout(renderTurnstileWidget, 300);

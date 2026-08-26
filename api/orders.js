@@ -86,7 +86,11 @@ export default async function handler(req, res) {
 
   // Specialized Action: Get Cloudflare Turnstile Site Key Config
   if (action === 'get_turnstile_config') {
-    return res.status(200).json({ siteKey: process.env.TURNSTILE_SITE_KEY || '' });
+    const siteKey = process.env.TURNSTILE_SITE_KEY ||
+                    process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ||
+                    process.env.CLOUDFLARE_TURNSTILE_SITE_KEY ||
+                    '';
+    return res.status(200).json({ siteKey });
   }
 
   // Specialized Action: Register Affiliate with Turnstile Human Verification
@@ -102,7 +106,9 @@ export default async function handler(req, res) {
     }
 
     // 1. Cloudflare Turnstile Verification
-    const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
+    const turnstileSecret = process.env.TURNSTILE_SECRET_KEY ||
+                            process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY ||
+                            '';
     if (turnstileSecret) {
       if (!turnstileToken) {
         return res.status(400).json({ error: 'يرجى إكمال التحقق البشري' });

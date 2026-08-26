@@ -1,10 +1,11 @@
-127.0.0.1 - - [26/Aug/2026 13:56:10] "GET /p/blog-page_57.html HTTP/1.1" 200 -
-127.0.0.1 - - [26/Aug/2026 13:56:11] code 404, message File not found
-127.0.0.1 - - [26/Aug/2026 13:56:11] "GET /api/orders?action=get_turnstile_config HTTP/1.1" 404 -
-127.0.0.1 - - [26/Aug/2026 13:56:12] code 404, message File not found
-127.0.0.1 - - [26/Aug/2026 13:56:12] "GET /api/orders?action=get_turnstile_config HTTP/1.1" 404 -
-127.0.0.1 - - [26/Aug/2026 13:56:13] "GET /p/blog-page_57.html HTTP/1.1" 304 -
-127.0.0.1 - - [26/Aug/2026 13:56:13] code 404, message File not found
-127.0.0.1 - - [26/Aug/2026 13:56:13] "GET /api/orders?endpoint=admin_settings%3Fselect%3D* HTTP/1.1" 404 -
-127.0.0.1 - - [26/Aug/2026 13:56:13] code 404, message File not found
-127.0.0.1 - - [26/Aug/2026 13:56:13] "GET /api/orders?endpoint=affiliate_users%3Fselect%3D*%26affiliate_id%3Deq.testaffiliate123 HTTP/1.1" 404 -
+Server running at http://0.0.0.0:5000
+127.0.0.1 - - [26/Aug/2026 15:15:33] "GET /p/blog-page_57.html HTTP/1.1" 200 -
+127.0.0.1 - - [26/Aug/2026 15:15:33] code 404, message File not found
+127.0.0.1 - - [26/Aug/2026 15:15:33] "GET /api/orders?action=get_turnstile_config HTTP/1.1" 404 -
+127.0.0.1 - - [26/Aug/2026 15:15:36] code 404, message File not found
+127.0.0.1 - - [26/Aug/2026 15:15:36] "GET /api/orders?action=get_turnstile_config HTTP/1.1" 404 -
+127.0.0.1 - - [26/Aug/2026 15:15:37] "GET /p/blog-page_57.html HTTP/1.1" 304 -
+127.0.0.1 - - [26/Aug/2026 15:15:37] code 404, message File not found
+127.0.0.1 - - [26/Aug/2026 15:15:37] "GET /api/orders?endpoint=admin_settings%3Fselect%3D* HTTP/1.1" 404 -
+127.0.0.1 - - [26/Aug/2026 15:15:37] code 404, message File not found
+127.0.0.1 - - [26/Aug/2026 15:15:37] "GET /api/orders?endpoint=affiliate_users%3Fselect%3D*%26affiliate_id%3Deq.testuser123 HTTP/1.1" 404 -
