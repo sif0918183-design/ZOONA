@@ -17,7 +17,8 @@ export default async function handler(req, res) {
     'https://zoona-git-tier-commission-and-ui-improv-d14974-sifians-projects.vercel.app',
     'https://zoona-git-feature-add-fitness-category-1f2a90-sifians-projects.vercel.app',
     'https://zoona-git-feature-admin-bulk-updater-14-87744e-sifians-projects.vercel.app',
-    'https://zoona-git-feat-add-perfumes-category-11-43fd62-sifians-projects.vercel.app'
+    'https://zoona-git-feat-add-perfumes-category-11-43fd62-sifians-projects.vercel.app',
+    'https://zoona-git-feat-turnstile-and-whatsapp-g-bd6ebc-sifians-projects.vercel.app'
   ];
   const isAllowed = allowedOrigins.some(allowed => origin === allowed || origin.startsWith(allowed + "/"));
   
