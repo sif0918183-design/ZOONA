@@ -23,7 +23,8 @@ export default async function handler(req, res) {
     'https://zoona-git-fix-admin-login-and-rls-v3-203597-sifians-projects.vercel.app',
     'https://zoona-git-add-marketer-guide-modal-3611-3e20ab-sifians-projects.vercel.app',
     'https://zoona-git-feature-add-fitness-category-1f2a90-sifians-projects.vercel.app',
-    'https://zoona-git-feat-add-perfumes-category-11-43fd62-sifians-projects.vercel.app'
+    'https://zoona-git-feat-add-perfumes-category-11-43fd62-sifians-projects.vercel.app',
+    'https://zoona-git-feat-turnstile-and-whatsapp-g-bd6ebc-sifians-projects.vercel.app'
   ];
 
   // Check if origin starts with any allowed origin
@@ -81,6 +82,158 @@ export default async function handler(req, res) {
     const user = data[0];
     delete user.password; // Privacy: Remove password before returning
     return res.status(200).json({ success: true, affiliate: user });
+  }
+
+  // Specialized Action: Get Cloudflare Turnstile Site Key Config
+  if (action === 'get_turnstile_config') {
+    const siteKey = process.env.TURNSTILE_SITE_KEY ||
+                    process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ||
+                    process.env.CLOUDFLARE_TURNSTILE_SITE_KEY ||
+                    '1x00000000000000000000AA';
+    return res.status(200).json({ siteKey });
+  }
+
+  // Specialized Action: Register Affiliate with Turnstile Human Verification
+  if (action === 'register_affiliate') {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    const { name, email, phone, password, turnstileToken } = req.body || {};
+
+    if (!name || !email || !phone || !password) {
+      return res.status(400).json({ error: 'جميع الحقول مطلوبة' });
+    }
+
+    // 1. Cloudflare Turnstile Verification
+    const turnstileSecret = process.env.TURNSTILE_SECRET_KEY ||
+                            process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY ||
+                            '';
+    if (turnstileSecret) {
+      if (!turnstileToken) {
+        return res.status(400).json({ error: 'يرجى إكمال التحقق البشري' });
+      }
+
+      try {
+        const formData = new URLSearchParams();
+        formData.append('secret', turnstileSecret);
+        formData.append('response', turnstileToken);
+        const remoteIp = req.headers['x-forwarded-for'] || req.socket?.remoteAddress;
+        if (remoteIp) {
+          formData.append('remoteip', remoteIp.split(',')[0].trim());
+        }
+
+        const turnstileRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+          method: 'POST',
+          body: formData
+        });
+
+        const turnstileData = await turnstileRes.json();
+        if (!turnstileData.success) {
+          console.error('[Orders-Proxy] Turnstile verification failed:', turnstileData['error-codes']);
+          return res.status(400).json({ error: 'فشل التحقق البشري، يرجى إعادة المحاولة' });
+        }
+      } catch (err) {
+        console.error('[Orders-Proxy] Turnstile fetch error:', err);
+        return res.status(500).json({ error: 'خطأ في التحقق من التحدي البشري' });
+      }
+    } else {
+      console.warn('[Orders-Proxy] TURNSTILE_SECRET_KEY is not set in environment.');
+    }
+
+    const key = SERVICE_KEY || SUPABASE_KEY;
+    if (!SUPABASE_URL || !key) {
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
+
+    // 2. Check duplicate email or phone
+    const checkUrl = `${SUPABASE_URL}/rest/v1/affiliate_users?select=email,phone&or=(email.eq.${encodeURIComponent(email)},phone.eq.${encodeURIComponent(phone)})`;
+    const checkRes = await fetch(checkUrl, {
+      headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
+    });
+
+    if (!checkRes.ok) {
+      const errText = await checkRes.text();
+      console.error('[Orders-Proxy] Register check failed:', checkRes.status, errText);
+      return res.status(500).json({ error: 'خطأ في فحص بيانات المسوق' });
+    }
+
+    const existingUsers = await checkRes.json();
+    if (existingUsers && existingUsers.length > 0) {
+      const existing = existingUsers[0];
+      if (existing.email === email) {
+        return res.status(400).json({ error: 'البريد الإلكتروني مسجل بالفعل' });
+      }
+      if (existing.phone === phone) {
+        return res.status(400).json({ error: 'رقم الهاتف مسجل بالفعل' });
+      }
+    }
+
+    // 3. Generate unique affiliate_id (sanitized first name + random 4-digit number)
+    const firstName = name.trim().split(' ')[0];
+    const sanitizedName = firstName.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    let affiliateId = '';
+    let isUnique = false;
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    while (!isUnique && attempts < maxAttempts) {
+      const randomNum = Math.floor(1000 + Math.random() * 9000);
+      affiliateId = sanitizedName + randomNum;
+
+      const idCheckUrl = `${SUPABASE_URL}/rest/v1/affiliate_users?select=affiliate_id&affiliate_id=eq.${encodeURIComponent(affiliateId)}`;
+      const idCheckRes = await fetch(idCheckUrl, {
+        headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
+      });
+      if (idCheckRes.ok) {
+        const idData = await idCheckRes.json();
+        if (!idData || idData.length === 0) {
+          isUnique = true;
+        }
+      }
+      attempts++;
+    }
+
+    if (!isUnique) {
+      return res.status(400).json({ error: 'فشل في إنشاء معرف فريد، يرجى المحاولة مرة أخرى' });
+    }
+
+    // 4. Insert new marketer record
+    const newAffiliate = {
+      affiliate_id: affiliateId,
+      name: name,
+      email: email,
+      phone: phone,
+      password: password,
+      created_at: new Date().toISOString(),
+      total_clicks: 0,
+      total_orders: 0
+    };
+
+    const insertUrl = `${SUPABASE_URL}/rest/v1/affiliate_users`;
+    const insertRes = await fetch(insertUrl, {
+      method: 'POST',
+      headers: {
+        'apikey': key,
+        'Authorization': `Bearer ${key}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify(newAffiliate)
+    });
+
+    if (!insertRes.ok) {
+      const errText = await insertRes.text();
+      console.error('[Orders-Proxy] Register insert failed:', insertRes.status, errText);
+      return res.status(500).json({ error: 'فشل إكمال عملية التسجيل' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'تم التسجيل بنجاح',
+      affiliate: newAffiliate
+    });
   }
 
   if (!endpoint) {

@@ -15,6 +15,7 @@
     <title>لوحة المسوق - Zoona</title>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
     <style>
         :root {
             --primary-color: #ff6b35;
@@ -608,6 +609,32 @@
             background: #fffafa;
         }
 
+        .whatsapp-group-btn {
+            background: #25D366;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-family: 'Tajawal', sans-serif;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            margin-top: 15px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            transition: var(--transition);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .whatsapp-group-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+            background: #20ba5a;
+            color: white;
+        }
+
         .guide-modal {
             display: none;
             position: fixed;
@@ -829,6 +856,10 @@
                     <input type="password" id="regPassword" required placeholder="6 أحرف على الأقل" minlength="6">
                 </div>
                 
+                <div class="form-group" style="display: flex; justify-content: center; margin-bottom: 20px;">
+                    <div id="turnstileContainer" class="cf-turnstile" data-appearance="always"></div>
+                </div>
+
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-user-plus"></i> إنشاء حساب مسوق
                 </button>
@@ -850,9 +881,14 @@
             <p>مرحباً <span id="userName">...</span></p>
             <div class="affiliate-id">معرف المسوق: <span id="affiliateIdDisplay">...</span></div>
             <br>
-            <button class="guide-open-btn" onclick="openGuide()">
-                <i class="fas fa-book-open"></i> الدليل الشامل للمسوقين
-            </button>
+            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 15px;">
+                <button class="guide-open-btn" style="margin-top: 0;" onclick="openGuide()">
+                    <i class="fas fa-book-open"></i> الدليل الشامل للمسوقين
+                </button>
+                <a href="https://chat.whatsapp.com/BKxjimFZcs2IJ3wQl6UYNL?s=cl&p=a&ilr=4" target="_blank" rel="noopener noreferrer" class="whatsapp-group-btn" style="margin-top: 0;">
+                    <i class="fab fa-whatsapp" style="font-size: 1.1rem;"></i> الانضمام لقروب مسوقين زونا
+                </a>
+            </div>
         </div>
 
         <div class="stats-grid">
@@ -1316,66 +1352,79 @@ function generateAffiliateId(fullName) {
     return sanitizedName + randomNum;
 }
 
+let turnstileWidgetId = null;
+let currentTurnstileSiteKey = '';
+
+async function initTurnstile() {
+    try {
+        const response = await fetch(`${API_URL}?action=get_turnstile_config`);
+        if (response.ok) {
+            const data = await response.json();
+            if (data && typeof data.siteKey === 'string' && data.siteKey.trim() !== '') {
+                currentTurnstileSiteKey = data.siteKey.trim();
+            } else {
+                currentTurnstileSiteKey = '1x00000000000000000000AA';
+            }
+        } else {
+            currentTurnstileSiteKey = '1x00000000000000000000AA';
+        }
+    } catch (e) {
+        console.error('Error fetching Turnstile config:', e);
+        currentTurnstileSiteKey = '1x00000000000000000000AA';
+    }
+    renderTurnstileWidget();
+}
+
+function renderTurnstileWidget() {
+    const container = document.getElementById('turnstileContainer');
+    if (!container || !currentTurnstileSiteKey) return;
+
+    container.setAttribute('data-sitekey', currentTurnstileSiteKey);
+    container.setAttribute('data-appearance', 'always');
+
+    if (window.turnstile && typeof window.turnstile.render === 'function') {
+        try {
+            if (turnstileWidgetId !== null && typeof window.turnstile.remove === 'function') {
+                try { window.turnstile.remove(turnstileWidgetId); } catch(e) {}
+                turnstileWidgetId = null;
+            }
+            container.innerHTML = '';
+            turnstileWidgetId = window.turnstile.render('#turnstileContainer', {
+                sitekey: currentTurnstileSiteKey,
+                theme: 'light',
+                appearance: 'always',
+                'error-callback': function(errorCode) {
+                    console.error('Turnstile error code:', errorCode);
+                }
+            });
+        } catch (e) {
+            console.error('Turnstile render exception:', e);
+        }
+    } else {
+        setTimeout(renderTurnstileWidget, 300);
+    }
+}
+
 async function registerAffiliate(affiliateData) {
     try {
         console.log('بدء عملية التسجيل:', affiliateData);
 
-        // التحقق من عدم وجود بريد إلكتروني أو هاتف مكرر
-        const existingCheck = await supabaseRequest('affiliate_users?select=email,phone&or=(email.eq.' + encodeURIComponent(affiliateData.email) + ',phone.eq.' + encodeURIComponent(affiliateData.phone) + ')');
-        
-        if (existingCheck && existingCheck.length > 0) {
-            const existing = existingCheck[0];
-            if (existing.email === affiliateData.email) {
-                throw new Error('البريد الإلكتروني مسجل بالفعل');
-            }
-            if (existing.phone === affiliateData.phone) {
-                throw new Error('رقم الهاتف مسجل بالفعل');
-            }
-        }
-
-        // إنشاء معرف المسوق مع التأكد من عدم تكراره
-        let affiliateId = '';
-        let isUnique = false;
-        let attempts = 0;
-        const maxAttempts = 10;
-
-        while (!isUnique && attempts < maxAttempts) {
-            affiliateId = generateAffiliateId(affiliateData.name);
-            const idCheck = await supabaseRequest('affiliate_users?select=affiliate_id&affiliate_id=eq.' + encodeURIComponent(affiliateId));
-
-            if (!idCheck || idCheck.length === 0) {
-                isUnique = true;
-            }
-            attempts++;
-        }
-
-        if (!isUnique) {
-            throw new Error('فشل في إنشاء معرف فريد، يرجى المحاولة مرة أخرى');
-        }
-        
-        // إدخال المسوق الجديد
-        const newAffiliate = {
-            affiliate_id: affiliateId,
-            name: affiliateData.name,
-            email: affiliateData.email,
-            phone: affiliateData.phone,
-            password: affiliateData.password, // في التطبيق الحقيقي يجب تشفير كلمة المرور
-            created_at: new Date().toISOString(),
-            total_clicks: 0,
-            total_orders: 0
-        };
-
-        const result = await supabaseRequest('affiliate_users', {
+        const response = await fetch(`${API_URL}?action=register_affiliate`, {
             method: 'POST',
-            body: JSON.stringify(newAffiliate)
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(affiliateData)
         });
 
-        console.log('نتيجة التسجيل:', result);
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || 'فشل التسجيل');
+        }
 
         return {
             success: true,
-            message: 'تم التسجيل بنجاح',
-            affiliate: newAffiliate
+            message: result.message || 'تم التسجيل بنجاح',
+            affiliate: result.affiliate
         };
 
     } catch (error) {
@@ -1601,6 +1650,10 @@ function showAuthTab(tabName) {
     
     document.getElementById(tabName + 'Tab').classList.add('active');
     event.target.classList.add('active');
+
+    if (tabName === 'register') {
+        initTurnstile();
+    }
 }
 
 // ========== تحميل البيانات وعرضها ==========
@@ -2046,23 +2099,33 @@ document.getElementById('registerForm').addEventListener('submit', async functio
     const phone = document.getElementById('regPhone').value;
     const password = document.getElementById('regPassword').value;
     const messageDiv = document.getElementById('registerMessage');
+
+    const turnstileToken = (window.turnstile && turnstileWidgetId !== null) ? window.turnstile.getResponse(turnstileWidgetId) : '';
+
+    if (!turnstileToken) {
+        messageDiv.innerHTML = '<div class="message error">يرجى إكمال التحقق البشري</div>';
+        return;
+    }
     
     // إظهار رسالة تحميل
     messageDiv.innerHTML = '<div class="message" style="background: #e2f0ff; color: #004085;">جاري إنشاء الحساب...</div>';
     
     if (password.length < 6) {
         messageDiv.innerHTML = '<div class="message error">كلمة المرور يجب أن تكون 6 أحرف على الأقل</div>';
+        if (window.turnstile && turnstileWidgetId !== null) window.turnstile.reset(turnstileWidgetId);
         return;
     }
     
     if (phone.length !== 10) {
         messageDiv.innerHTML = '<div class="message error">رقم الهاتف يجب أن يكون 10 أرقام</div>';
+        if (window.turnstile && turnstileWidgetId !== null) window.turnstile.reset(turnstileWidgetId);
         return;
     }
     
     // التحقق من أن الاسم باللغة الإنجليزية
     if (!isEnglishText(name)) {
         messageDiv.innerHTML = '<div class="message error">يرجى إدخال الاسم باللغة الإنجليزية فقط</div>';
+        if (window.turnstile && turnstileWidgetId !== null) window.turnstile.reset(turnstileWidgetId);
         return;
     }
     
@@ -2070,7 +2133,8 @@ document.getElementById('registerForm').addEventListener('submit', async functio
         name: name,
         email: email,
         phone: phone,
-        password: password
+        password: password,
+        turnstileToken: turnstileToken
     };
     
     const result = await registerAffiliate(affiliateData);
@@ -2086,8 +2150,14 @@ document.getElementById('registerForm').addEventListener('submit', async functio
         
         // مسح النموذج بعد التسجيل الناجح
         document.getElementById('registerForm').reset();
+        if (window.turnstile && turnstileWidgetId !== null) {
+            window.turnstile.reset(turnstileWidgetId);
+        }
     } else {
         messageDiv.innerHTML = `<div class="message error">${result.message}</div>`;
+        if (window.turnstile && turnstileWidgetId !== null) {
+            window.turnstile.reset(turnstileWidgetId);
+        }
     }
 });
 
@@ -2118,6 +2188,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showDashboard();
     } else {
         showAuth();
+        initTurnstile();
     }
 });
 
