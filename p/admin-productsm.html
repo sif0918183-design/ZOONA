@@ -1378,68 +1378,21 @@ function renderBulkProductsMiniList() {
 }
 
 function findBestProductMatch(parsedName, products) {
-  if (!parsedName || products.length === 0) return null;
+  if (!parsedName || !products || products.length === 0) return null;
 
-  // Normalization function (lowercases, removes spaces, punctuation, special symbols)
+  // Normalization function (lowercases, removes spaces and zero-width spaces)
   function normalize(str) {
-    return str.toLowerCase()
-      .replace(/[\s\-_()\[\]{}|\\\/,.:;!?+*&^%$#@~`"']/g, '')
-      .replace(/[^\w\u0600-\u06FF]/g, ''); // keep only English & Arabic alphanumeric
-  }
-
-  // Tokenization function
-  function tokenize(str) {
-    return str.toLowerCase()
-      .split(/[\s\-_()\[\]{}|\\\/,.:;!?+*&^%$#@~`"']+/)
-      .filter(t => t.length > 0)
-      .map(t => t.replace(/[^\w\u0600-\u06FF]/g, ''))
-      .filter(t => t.length > 0);
+    return str.toLowerCase().replace(/[\s\u200B-\u200D\uFEFF]/g, '');
   }
 
   const normParsed = normalize(parsedName);
-  const tokensParsed = tokenize(parsedName);
-
-  if (normParsed.length === 0) return null;
-
-  let bestMatch = null;
-  let bestScore = 0;
+  if (!normParsed) return null;
 
   for (const p of products) {
-    const normP = normalize(p.name);
-    const tokensP = tokenize(p.name);
-
-    // 1. Direct exact normalized match
+    const normP = normalize(p.name || '');
     if (normParsed === normP) {
       return { product: p, score: 1.0, type: 'exact' };
     }
-
-    // 2. Substring match
-    if (normP.includes(normParsed) || normParsed.includes(normP)) {
-      const score = Math.min(normParsed.length, normP.length) / Math.max(normParsed.length, normP.length);
-      const finalScore = 0.8 + (score * 0.15); // ranges 0.8 to 0.95
-      if (finalScore > bestScore) {
-        bestScore = finalScore;
-        bestMatch = { product: p, score: finalScore, type: 'substring' };
-      }
-    }
-
-    // 3. Token overlap match
-    if (tokensParsed.length > 0 && tokensP.length > 0) {
-      let matchCount = 0;
-      tokensParsed.forEach(t => {
-        if (tokensP.includes(t)) matchCount++;
-      });
-      const tokenScore = matchCount / Math.max(tokensParsed.length, tokensP.length);
-      if (tokenScore > bestScore) {
-        bestScore = tokenScore;
-        bestMatch = { product: p, score: tokenScore, type: 'token' };
-      }
-    }
-  }
-
-  // Accept if score is above the safety threshold (0.5)
-  if (bestMatch && bestScore >= 0.5) {
-    return bestMatch;
   }
 
   return null;
@@ -1493,17 +1446,10 @@ function activateBulkPrices() {
     }
 
     const priceStr = priceMatch[0];
-    const newPrice = parseInt(priceStr);
+    const newPrice = parseInt(priceStr, 10);
 
-    // To preserve qualifiers like "WiFi" or "Sim" that might be after the price,
-    // we construct the full search text by taking leftPart and combining it with
-    // any remaining text in rightPart (with the price string removed)
-    const priceIndex = cleanedRight.indexOf(priceStr);
-    const remainingRight = cleanedRight.substring(0, priceIndex) + cleanedRight.substring(priceIndex + priceStr.length);
-    const fullSearchText = (leftPart + " " + remainingRight).trim();
-
-    // Smart match the product
-    const matchResult = findBestProductMatch(fullSearchText, whProds);
+    // Match the product using the title before 👉
+    const matchResult = findBestProductMatch(leftPart, whProds);
     if (matchResult) {
       bulkTempPrices[matchResult.product.id] = newPrice;
       matchedCount++;
