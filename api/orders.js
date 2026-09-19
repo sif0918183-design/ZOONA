@@ -25,7 +25,8 @@ export default async function handler(req, res) {
     'https://zoona-git-feature-add-fitness-category-1f2a90-sifians-projects.vercel.app',
     'https://zoona-git-feat-add-perfumes-category-11-43fd62-sifians-projects.vercel.app',
     'https://zoona-git-feat-turnstile-and-whatsapp-g-bd6ebc-sifians-projects.vercel.app',
-    'https://zoona-git-update-bulk-price-matching-17-2d9de5-sifians-projects.vercel.app'
+    'https://zoona-git-update-bulk-price-matching-17-2d9de5-sifians-projects.vercel.app',
+    'https://zoona-git-add-product-page-ads-69289764-ca8cf5-sifians-projects.vercel.app'
   ];
 
   // Check if origin starts with any allowed origin
