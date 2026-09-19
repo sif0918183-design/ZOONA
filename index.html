@@ -1256,7 +1256,7 @@ function renderProducts(products) {
     grid.innerHTML = '<div style="padding:40px 20px; text-align:center; color:#aaa; grid-column:1/-1;"><i class="fas fa-box-open" style="font-size:50px; display:block; margin-bottom:12px;"></i>لا توجد منتجات في هذا القسم</div>';
     return;
   }
-  const adUnitSnippet = '<div id="frame" style="width: 100%; max-width: 300px; margin: 0 auto; position: relative; z-index: 1; text-align: center;"><ins style="width: 300px;height:250px" data-width="300" data-height="250" class="ocf3ca92c83" data-domain="//data527.click" data-affquery="/3e23231aa7d5801854d9/cf3ca92c83/?placementName=default"><script src="//data527.click/js/responsive.js" async></script></ins></div>';
+  const adUnitSnippet = '<div id="frame" style="width: 100%; max-width: 300px; margin: 0 auto; position: relative; z-index: 1; text-align: center;"><ins style="width: 300px;height:250px" data-width="300" data-height="250" class="ocf3ca92c83" data-domain="//data527.click" data-affquery="/3e23231aa7d5801854d9/cf3ca92c83/?placementName=default"><script src="//data527.click/js/responsive.js" async><' + '/script></ins></div>';
 
   grid.innerHTML = products.map((p, idx) => {
     const displayCategory = p.category ? p.category.split('/').map(c => c.trim() === 'مستحضرات تجميل' ? 'تجميل' : c.trim()).join(' / ') : '';
