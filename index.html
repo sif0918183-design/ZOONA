@@ -1319,6 +1319,10 @@ function renderProducts(products) {
 
   grid.innerHTML = productsHtml + bottomAdHtml;
 
+  if (typeof window.affilistStart === 'function') {
+    window.affilistStart();
+  }
+
   // Restore button states
   cart.forEach(item => {
     const btn = document.getElementById(`cartBtn-${item.id}`);
