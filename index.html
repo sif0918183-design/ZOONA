@@ -520,6 +520,7 @@ html, body {
 .grid-ad-container { grid-column: 1 / -1; width: 100%; margin: 12px 0; text-align: center; }
 .grid-ad-row { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%; }
 .grid-ad-slot { flex: 1; min-width: 280px; max-width: 320px; margin: 0 auto; }
+.lazy-ad-slot { min-height: 250px; display: flex; align-items: center; justify-content: center; }
 
 /* Responsive */
 @media (min-width:480px) {
@@ -664,7 +665,8 @@ html, body {
         </div>
       </div>
 <div id="frame" style="width: 100%; max-width: 300px; margin: 16px auto 12px; position: relative; z-index: 1; text-align: center;">
-<ins style="width: 300px;height:250px" data-width="300" data-height="250" class="ob86065aa35" data-domain="//data527.click" data-affquery="/9c3c646e173b7aa24518/b86065aa35/?placementName=ZOONA"><script src="//data527.click/js/responsive.js" async></script></ins>
+<script async="async" data-cfasync="false" src="https://pl30110398.profitableratecpmnetwork.com/6e850548d5cf621f497ce503e02b75f2/invoke.js"></script>
+<div id="container-6e850548d5cf621f497ce503e02b75f2"></div>
 </div>
     </div>
   </div><!-- /page-cats -->
@@ -920,12 +922,8 @@ html, body {
       <i class="fas fa-cart-plus"></i> إضافة إلى السلة
     </button>
 
-<div id="frame" style="width: 100%; max-width: 300px; margin: 16px auto 12px; position: relative; z-index: 1; text-align: center;">
-<ins style="width: 300px;height:250px" data-width="300" data-height="250" class="ob86065aa35" data-domain="//data527.click" data-affquery="/9c3c646e173b7aa24518/b86065aa35/?placementName=ZOONA"><script src="//data527.click/js/responsive.js" async></script></ins>
-</div>
-<div id="frame" style="width: 100%; max-width: 300px; margin: 16px auto 12px; position: relative; z-index: 1; text-align: center;">
-<ins style="width: 300px;height:250px" data-width="300" data-height="250" class="ob86065aa35" data-domain="//data527.click" data-affquery="/9c3c646e173b7aa24518/b86065aa35/?placementName=ZOONA"><script src="//data527.click/js/responsive.js" async></script></ins>
-</div>
+    <div class="lazy-ad-slot" style="margin: 16px auto 12px; min-height: 50px;"></div>
+    <div class="lazy-ad-slot" style="margin: 16px auto 12px; min-height: 50px;"></div>
 
     <!-- Similar Products Section -->
     <div id="similarProductsSection" class="similar-products-section">
@@ -937,12 +935,8 @@ html, body {
       </div>
     </div>
 
-<div id="frame" style="width: 100%;margin: auto;position: relative; z-index: 99998; text-align: center;">
-<ins style="width: 300px;height:250px" data-width="300" data-height="250" class="ob86065aa35" data-domain="//data527.click" data-affquery="/9c3c646e173b7aa24518/b86065aa35/?placementName=ZOONA"><script src="//data527.click/js/responsive.js" async></script></ins>
-</div>
-<div id="frame" style="width: 100%;margin: auto;position: relative; z-index: 99998; text-align: center;">
-<ins style="width: 300px;height:250px" data-width="300" data-height="250" class="ob86065aa35" data-domain="//data527.click" data-affquery="/9c3c646e173b7aa24518/b86065aa35/?placementName=ZOONA"><script src="//data527.click/js/responsive.js" async></script></ins>
-</div>
+    <div class="lazy-ad-slot" style="margin: 16px auto 12px; min-height: 50px;"></div>
+    <div class="lazy-ad-slot" style="margin: 16px auto 12px; min-height: 50px;"></div>
 
     <!-- Modal Footer -->
     <div class="modal-footer">
@@ -1052,6 +1046,18 @@ html, body {
 ══════════════════════════════════════════ */
 
 // ── Helpers ──
+
+function executeScriptsInContainer(container) {
+  if (!container) return;
+  const scripts = container.querySelectorAll("script");
+  scripts.forEach(oldScript => {
+    const newScript = document.createElement("script");
+    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+    oldScript.parentNode.replaceChild(newScript, oldScript);
+  });
+}
+
 const categorySlugs = {
   'الكل': 'all',
   'موبايلات': 'mobiles',
@@ -1249,6 +1255,67 @@ function getProductDeliveryCities(productId) {
   return product.delivery_cities;
 }
 
+// ── Sequential Ad Units ──
+const adUnitsPool = [
+  '<div id="frame" style="width: 100%; margin: 0 auto; position: relative; z-index: 1; text-align: center;"><script async="async" data-cfasync="false" src="https://pl30110398.profitableratecpmnetwork.com/6e850548d5cf621f497ce503e02b75f2/invoke.js"><' + '/script><div id="container-6e850548d5cf621f497ce503e02b75f2"></div></div>',
+  '<div id="frame" style="width: 100%; margin: 0 auto; position: relative; z-index: 1; text-align: center;"><script async="async" data-cfasync="false" src="https://pl31431724.profitableratecpmnetwork.com/e7d087abefd02a5a6f16b31e5bfd7be7/invoke.js"><' + '/script><div id="container-e7d087abefd02a5a6f16b31e5bfd7be7"></div></div>',
+  '<div id="frame" style="width: 100%; margin: 0 auto; position: relative; z-index: 1; text-align: center;"><script async="async" data-cfasync="false" src="https://pl27652589.profitableratecpmnetwork.com/a274290ba33f3925ca01ec043af18c3b/invoke.js"><' + '/script><div id="container-a274290ba33f3925ca01ec043af18c3b"></div></div>',
+  '<div id="frame" style="width: 100%; margin: 0 auto; position: relative; z-index: 1; text-align: center;"><script async="async" data-cfasync="false" src="https://pl29421746.profitableratecpmnetwork.com/17b6b0643dfbdfa818ed3b6b64955569/invoke.js"><' + '/script><div id="container-17b6b0643dfbdfa818ed3b6b64955569"></div></div>',
+  '<div id="frame" style="width: 100%; margin: 0 auto; position: relative; z-index: 1; text-align: center;"><script async="async" data-cfasync="false" src="https://pl31432566.profitableratecpmnetwork.com/d8714348a6df3f73599e92377174a017/invoke.js"><' + '/script><div id="container-d8714348a6df3f73599e92377174a017"></div></div>',
+  '<div id="frame" style="width: 100%; margin: 0 auto; position: relative; z-index: 1; text-align: center;"><script async="async" data-cfasync="false" src="https://pl31432838.profitableratecpmnetwork.com/838e1e76c3f7ff0764960ef4dde3f1fa/invoke.js"><' + '/script><div id="container-838e1e76c3f7ff0764960ef4dde3f1fa"></div></div>',
+  '<div id="frame" style="width: 100%; margin: 0 auto; position: relative; z-index: 1; text-align: center;"><script async="async" data-cfasync="false" src="https://pl31432976.profitableratecpmnetwork.com/6228a2da0e11c68095dcd295e6e07aae/invoke.js"><' + '/script><div id="container-6228a2da0e11c68095dcd295e6e07aae"></div></div>',
+  '<div id="frame" style="width: 100%; margin: 0 auto; position: relative; z-index: 1; text-align: center;"><script async="async" data-cfasync="false" src="https://pl31434334.profitableratecpmnetwork.com/530f28fb7d6de19c1e57d12445895ef5/invoke.js"><' + '/script><div id="container-530f28fb7d6de19c1e57d12445895ef5"></div></div>',
+  '<div id="frame" style="width: 100%; margin: 0 auto; position: relative; z-index: 1; text-align: center;"><script async="async" data-cfasync="false" src="https://pl31434351.profitableratecpmnetwork.com/e932f48f75ddb79754777632c48724ef/invoke.js"><' + '/script><div id="container-e932f48f75ddb79754777632c48724ef"></div></div>'
+];
+let currentAdIndex = 0;
+function getNextAdSnippet() {
+  const snippet = adUnitsPool[currentAdIndex % adUnitsPool.length];
+  currentAdIndex++;
+  return snippet;
+}
+
+let lazyAdObserver = null;
+function initLazyAdObserver() {
+  if ('IntersectionObserver' in window) {
+    lazyAdObserver = new IntersectionObserver((entries, observer) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const slot = entry.target;
+          if (!slot.dataset.adLoaded) {
+            slot.dataset.adLoaded = 'true';
+            slot.innerHTML = getNextAdSnippet();
+            executeScriptsInContainer(slot);
+            if (typeof window.affilistStart === 'function') {
+              window.affilistStart();
+            }
+          }
+          observer.unobserve(slot);
+        }
+      });
+    }, { rootMargin: '1200px 0px' });
+  }
+}
+
+function observeLazyAdSlots(container) {
+  if (!lazyAdObserver) {
+    initLazyAdObserver();
+  }
+  const root = container || document;
+  const slots = root.querySelectorAll('.lazy-ad-slot');
+  slots.forEach(slot => {
+    if (lazyAdObserver) {
+      lazyAdObserver.observe(slot);
+    } else {
+      // Fallback if IntersectionObserver is not supported
+      if (!slot.dataset.adLoaded) {
+        slot.dataset.adLoaded = 'true';
+        slot.innerHTML = getNextAdSnippet();
+        executeScriptsInContainer(slot);
+      }
+    }
+  });
+}
+
 // ── Render Products ──
 function renderProducts(products) {
   const grid = document.getElementById('productsGrid');
@@ -1256,7 +1323,6 @@ function renderProducts(products) {
     grid.innerHTML = '<div style="padding:40px 20px; text-align:center; color:#aaa; grid-column:1/-1;"><i class="fas fa-box-open" style="font-size:50px; display:block; margin-bottom:12px;"></i>لا توجد منتجات في هذا القسم</div>';
     return;
   }
-  const adUnitSnippet = '<div id="frame" style="width: 100%; max-width: 300px; margin: 0 auto; position: relative; z-index: 1; text-align: center;"><ins style="width: 300px;height:250px" data-width="300" data-height="250" class="ob86065aa35" data-domain="//data527.click" data-affquery="/9c3c646e173b7aa24518/b86065aa35/?placementName=ZOONA"><script src="//data527.click/js/responsive.js" async><' + '/script></ins></div>';
 
   const isDesktop = window.innerWidth >= 768;
 
@@ -1289,16 +1355,16 @@ function renderProducts(products) {
       adInsertion = `
       <div class="grid-ad-container">
         <div class="grid-ad-row">
-          <div class="grid-ad-slot">${adUnitSnippet}</div>
-          <div class="grid-ad-slot">${adUnitSnippet}</div>
-          <div class="grid-ad-slot">${adUnitSnippet}</div>
+          <div class="grid-ad-slot lazy-ad-slot"></div>
+          <div class="grid-ad-slot lazy-ad-slot"></div>
+          <div class="grid-ad-slot lazy-ad-slot"></div>
         </div>
       </div>`;
     } else if (!isDesktop && (idx + 1) % 8 === 0) {
       adInsertion = `
       <div class="grid-ad-container">
         <div class="grid-ad-row">
-          <div class="grid-ad-slot">${adUnitSnippet}</div>
+          <div class="grid-ad-slot lazy-ad-slot"></div>
         </div>
       </div>`;
     }
@@ -1310,18 +1376,15 @@ function renderProducts(products) {
   const bottomAdHtml = `
     <div class="grid-ad-container" style="margin-top:20px;">
       <div class="grid-ad-row">
-        <div class="grid-ad-slot">${adUnitSnippet}</div>
-        <div class="grid-ad-slot">${adUnitSnippet}</div>
-        <div class="grid-ad-slot">${adUnitSnippet}</div>
+        <div class="grid-ad-slot lazy-ad-slot"></div>
+        <div class="grid-ad-slot lazy-ad-slot"></div>
+        <div class="grid-ad-slot lazy-ad-slot"></div>
       </div>
     </div>
   `;
 
   grid.innerHTML = productsHtml + bottomAdHtml;
-
-  if (typeof window.affilistStart === 'function') {
-    window.affilistStart();
-  }
+  observeLazyAdSlots(grid);
 
   // Restore button states
   cart.forEach(item => {
@@ -1514,6 +1577,7 @@ function openModal(id, fromPopState = false) {
     document.title = p.name + ' | ZOONA';
   }
 
+  observeLazyAdSlots(document.getElementById('modalContent'));
   document.getElementById('productModal').classList.add('show');
   document.body.style.overflow = 'hidden';
 }
