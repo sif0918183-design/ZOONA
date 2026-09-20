@@ -520,6 +520,7 @@ html, body {
 .grid-ad-container { grid-column: 1 / -1; width: 100%; margin: 12px 0; text-align: center; }
 .grid-ad-row { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%; }
 .grid-ad-slot { flex: 1; min-width: 280px; max-width: 320px; margin: 0 auto; }
+.lazy-ad-slot { min-height: 250px; display: flex; align-items: center; justify-content: center; }
 
 /* Responsive */
 @media (min-width:480px) {
@@ -1291,7 +1292,7 @@ function initLazyAdObserver() {
           observer.unobserve(slot);
         }
       });
-    }, { rootMargin: '300px 0px' });
+    }, { rootMargin: '1200px 0px' });
   }
 }
 
