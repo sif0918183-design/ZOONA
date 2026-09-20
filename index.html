@@ -516,6 +516,11 @@ html, body {
 .pull-indicator { position:fixed; top:-70px; left:0; right:0; height:70px; background:var(--red-gradient); display:flex; align-items:center; justify-content:center; gap:8px; color:#fff; font-weight:700; font-size:15px; z-index:99; transition:top .3s ease; }
 .pull-indicator.show { top:0; }
 
+/* Grid Ad Slot Styles */
+.grid-ad-container { grid-column: 1 / -1; width: 100%; margin: 12px 0; text-align: center; }
+.grid-ad-row { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%; }
+.grid-ad-slot { flex: 1; min-width: 280px; max-width: 320px; margin: 0 auto; }
+
 /* Responsive */
 @media (min-width:480px) {
   .products-grid { grid-template-columns:repeat(3,1fr); }
@@ -580,10 +585,6 @@ html, body {
 
   <!-- ══════════════════ HOME PAGE ══════════════════ -->
   <div class="page active" id="page-home">
-
-    <div id="frame" style="width: 100%; max-width: 300px; margin: 16px auto 12px; position: relative; z-index: 1; text-align: center;">
-<ins style="width: 300px;height:250px" data-width="300" data-height="250" class="ocf3ca92c83" data-domain="//data527.click" data-affquery="/3e23231aa7d5801854d9/cf3ca92c83/?placementName=default"><script src="//data527.click/js/responsive.js" async></script></ins>
-    </div>
 
     <!-- Banner -->
     <div class="zona-banner" style="margin-top:10px;">
@@ -902,9 +903,6 @@ html, body {
       <div class="modal-old" id="modalOld"></div>
     </div>
     <div class="modal-desc" id="modalDesc"></div>
-<div id="frame" style="width: 100%; max-width: 300px; margin: 16px auto 12px; position: relative; z-index: 1; text-align: center;">
-<ins style="width: 300px;height:250px" data-width="300" data-height="250" class="ocf3ca92c83" data-domain="//data527.click" data-affquery="/3e23231aa7d5801854d9/cf3ca92c83/?placementName=default"><script src="//data527.click/js/responsive.js" async></script></ins>
-</div>
     <div class="modal-delivery-section" id="modalDeliverySection" style="display:none">
       <div class="modal-delivery-title"><i class="fas fa-shipping-fast"></i> مدن التوصيل المتاحة</div>
       <div class="modal-delivery-type">دفع عند الاستلام:</div>
@@ -922,6 +920,13 @@ html, body {
       <i class="fas fa-cart-plus"></i> إضافة إلى السلة
     </button>
 
+<div id="frame" style="width: 100%; max-width: 300px; margin: 16px auto 12px; position: relative; z-index: 1; text-align: center;">
+<ins style="width: 300px;height:250px" data-width="300" data-height="250" class="ocf3ca92c83" data-domain="//data527.click" data-affquery="/3e23231aa7d5801854d9/cf3ca92c83/?placementName=default"><script src="//data527.click/js/responsive.js" async></script></ins>
+</div>
+<div id="frame" style="width: 100%; max-width: 300px; margin: 16px auto 12px; position: relative; z-index: 1; text-align: center;">
+<ins style="width: 300px;height:250px" data-width="300" data-height="250" class="ocf3ca92c83" data-domain="//data527.click" data-affquery="/3e23231aa7d5801854d9/cf3ca92c83/?placementName=default"><script src="//data527.click/js/responsive.js" async></script></ins>
+</div>
+
     <!-- Similar Products Section -->
     <div id="similarProductsSection" class="similar-products-section">
       <h3 class="similar-products-title">
@@ -932,6 +937,9 @@ html, body {
       </div>
     </div>
 
+<div id="frame" style="width: 100%;margin: auto;position: relative; z-index: 99998; text-align: center;">
+<ins style="width: 300px;height:250px" data-width="300" data-height="250" class="ocf3ca92c83" data-domain="//data527.click" data-affquery="/3e23231aa7d5801854d9/cf3ca92c83/?placementName=default"><script src="//data527.click/js/responsive.js" async></script></ins>
+</div>
 <div id="frame" style="width: 100%;margin: auto;position: relative; z-index: 99998; text-align: center;">
 <ins style="width: 300px;height:250px" data-width="300" data-height="250" class="ocf3ca92c83" data-domain="//data527.click" data-affquery="/3e23231aa7d5801854d9/cf3ca92c83/?placementName=default"><script src="//data527.click/js/responsive.js" async></script></ins>
 </div>
@@ -1248,10 +1256,14 @@ function renderProducts(products) {
     grid.innerHTML = '<div style="padding:40px 20px; text-align:center; color:#aaa; grid-column:1/-1;"><i class="fas fa-box-open" style="font-size:50px; display:block; margin-bottom:12px;"></i>لا توجد منتجات في هذا القسم</div>';
     return;
   }
-  grid.innerHTML = products.map(p => {
+  const adUnitSnippet = '<div id="frame" style="width: 100%; max-width: 300px; margin: 0 auto; position: relative; z-index: 1; text-align: center;"><ins style="width: 300px;height:250px" data-width="300" data-height="250" class="ocf3ca92c83" data-domain="//data527.click" data-affquery="/3e23231aa7d5801854d9/cf3ca92c83/?placementName=default"><script src="//data527.click/js/responsive.js" async><' + '/script></ins></div>';
+
+  const isDesktop = window.innerWidth >= 768;
+
+  let productsHtml = products.map((p, idx) => {
     const displayCategory = p.category ? p.category.split('/').map(c => c.trim() === 'مستحضرات تجميل' ? 'تجميل' : c.trim()).join(' / ') : '';
     const optimizedImg = getTransformedImageUrl(p.image, 350, 70);
-    return `
+    const productCardHtml = `
     <div class="product-card" onclick="openModal(${p.id})">
       <div class="product-img-wrap">
         <img src="${optimizedImg}" alt="${p.name}" loading="lazy" decoding="async" onerror="if (this.src !== '${p.image}') { this.src = '${p.image}'; } else { this.src = 'assets/splash-logo.png'; }">
@@ -1270,7 +1282,42 @@ function renderProducts(products) {
         </button>
       </div>
     </div>
-  `; }).join('');
+  `;
+
+    let adInsertion = '';
+    if (isDesktop && (idx + 1) % 9 === 0) {
+      adInsertion = `
+      <div class="grid-ad-container">
+        <div class="grid-ad-row">
+          <div class="grid-ad-slot">${adUnitSnippet}</div>
+          <div class="grid-ad-slot">${adUnitSnippet}</div>
+          <div class="grid-ad-slot">${adUnitSnippet}</div>
+        </div>
+      </div>`;
+    } else if (!isDesktop && (idx + 1) % 8 === 0) {
+      adInsertion = `
+      <div class="grid-ad-container">
+        <div class="grid-ad-row">
+          <div class="grid-ad-slot">${adUnitSnippet}</div>
+        </div>
+      </div>`;
+    }
+
+    return productCardHtml + adInsertion;
+  }).join('');
+
+  // 3 Ads at the bottom after all products
+  const bottomAdHtml = `
+    <div class="grid-ad-container" style="margin-top:20px;">
+      <div class="grid-ad-row">
+        <div class="grid-ad-slot">${adUnitSnippet}</div>
+        <div class="grid-ad-slot">${adUnitSnippet}</div>
+        <div class="grid-ad-slot">${adUnitSnippet}</div>
+      </div>
+    </div>
+  `;
+
+  grid.innerHTML = productsHtml + bottomAdHtml;
 
   // Restore button states
   cart.forEach(item => {
