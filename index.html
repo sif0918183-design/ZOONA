@@ -1258,7 +1258,9 @@ function renderProducts(products) {
   }
   const adUnitSnippet = '<div id="frame" style="width: 100%; max-width: 300px; margin: 0 auto; position: relative; z-index: 1; text-align: center;"><ins style="width: 300px;height:250px" data-width="300" data-height="250" class="ocf3ca92c83" data-domain="//data527.click" data-affquery="/3e23231aa7d5801854d9/cf3ca92c83/?placementName=default"><script src="//data527.click/js/responsive.js" async><' + '/script></ins></div>';
 
-  grid.innerHTML = products.map((p, idx) => {
+  const isDesktop = window.innerWidth >= 768;
+
+  let productsHtml = products.map((p, idx) => {
     const displayCategory = p.category ? p.category.split('/').map(c => c.trim() === 'مستحضرات تجميل' ? 'تجميل' : c.trim()).join(' / ') : '';
     const optimizedImg = getTransformedImageUrl(p.image, 350, 70);
     const productCardHtml = `
@@ -1283,28 +1285,39 @@ function renderProducts(products) {
   `;
 
     let adInsertion = '';
-    if ((idx + 1) % 9 === 0) {
-      if (window.innerWidth >= 768) {
-        adInsertion = `
-        <div class="grid-ad-container">
-          <div class="grid-ad-row">
-            <div class="grid-ad-slot">${adUnitSnippet}</div>
-            <div class="grid-ad-slot">${adUnitSnippet}</div>
-            <div class="grid-ad-slot">${adUnitSnippet}</div>
-          </div>
-        </div>`;
-      } else {
-        adInsertion = `
-        <div class="grid-ad-container">
-          <div class="grid-ad-row">
-            <div class="grid-ad-slot">${adUnitSnippet}</div>
-          </div>
-        </div>`;
-      }
+    if (isDesktop && (idx + 1) % 9 === 0) {
+      adInsertion = `
+      <div class="grid-ad-container">
+        <div class="grid-ad-row">
+          <div class="grid-ad-slot">${adUnitSnippet}</div>
+          <div class="grid-ad-slot">${adUnitSnippet}</div>
+          <div class="grid-ad-slot">${adUnitSnippet}</div>
+        </div>
+      </div>`;
+    } else if (!isDesktop && (idx + 1) % 8 === 0) {
+      adInsertion = `
+      <div class="grid-ad-container">
+        <div class="grid-ad-row">
+          <div class="grid-ad-slot">${adUnitSnippet}</div>
+        </div>
+      </div>`;
     }
 
     return productCardHtml + adInsertion;
   }).join('');
+
+  // 3 Ads at the bottom after all products
+  const bottomAdHtml = `
+    <div class="grid-ad-container" style="margin-top:20px;">
+      <div class="grid-ad-row">
+        <div class="grid-ad-slot">${adUnitSnippet}</div>
+        <div class="grid-ad-slot">${adUnitSnippet}</div>
+        <div class="grid-ad-slot">${adUnitSnippet}</div>
+      </div>
+    </div>
+  `;
+
+  grid.innerHTML = productsHtml + bottomAdHtml;
 
   // Restore button states
   cart.forEach(item => {
