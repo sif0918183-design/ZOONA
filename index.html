@@ -920,9 +920,7 @@ html, body {
       <i class="fas fa-cart-plus"></i> إضافة إلى السلة
     </button>
 
-<div style="width: 100%; max-width: 300px; margin: 16px auto 12px; text-align: center;">
-  <iframe srcdoc="<!DOCTYPE html><html><head><style>body{margin:0;padding:0;display:flex;justify-content:center;align-items:center;background:transparent;}</style></head><body><script async='async' data-cfasync='false' src='https://pl30110398.profitableratecpmnetwork.com/6e850548d5cf621f497ce503e02b75f2/invoke.js'></script><div id='container-6e850548d5cf621f497ce503e02b75f2'></div></body></html>" style="width:100%;max-width:300px;height:520px;border:none;overflow:hidden;display:block;margin:0 auto;" loading="lazy"></iframe>
-</div>
+    <div id="modalAdContainer" style="width: 100%; max-width: 300px; margin: 16px auto 12px; text-align: center; min-height: 250px;"></div>
 
     <!-- Similar Products Section -->
     <div id="similarProductsSection" class="similar-products-section">
@@ -1510,6 +1508,17 @@ function openModal(id, fromPopState = false) {
 
   document.getElementById('productModal').classList.add('show');
   document.body.style.overflow = 'hidden';
+
+  const adContainer = document.getElementById('modalAdContainer');
+  if (adContainer) {
+    adContainer.innerHTML = '';
+    const s = document.createElement('script');
+    s.settings = {};
+    s.src = "//fond-appointment.com/bgX.V-stdsGWlB0/YNWOcY/Iexmy9/u/ZtUgl/kWPsTrc_0TN/DuYU0RO/DmEptJN/zFQQ0RN/j/Qu4HNqQY";
+    s.async = true;
+    s.referrerPolicy = 'no-referrer-when-downgrade';
+    adContainer.appendChild(s);
+  }
 }
 
 function closeModal(e, fromPopState = false) {
