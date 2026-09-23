@@ -1,4 +1,4 @@
-import { generateTopSignature, getTopTimestamp, generateSlug } from '../aliexpress-helpers.js';
+import { generateTopSignature, getTopTimestamp, parseAliExpressInput, generateSlug } from '../lib/aliexpress-helpers.js';
 
 export default async function handler(req, res) {
   // CORS & Origin Check
@@ -65,7 +65,82 @@ export default async function handler(req, res) {
   const APP_SECRET = process.env.ALIEXPRESS_APP_SECRET;
   const TRACKING_ID = process.env.ALIEXPRESS_TRACKING_ID;
 
-  // 1. GET: Fetch all imported products for Admin management
+  const action = req.query.action || reqBody.action;
+
+  // 1. ACTION: SEARCH via AliExpress API
+  if (action === 'search' || (req.method === 'GET' && req.query.q)) {
+    if (!APP_KEY || !APP_SECRET || !TRACKING_ID) {
+      return res.status(500).json({ error: 'AliExpress API credentials not configured in environment variables' });
+    }
+
+    const queryInput = req.query.q || reqBody.q || '';
+    if (!queryInput) {
+      return res.status(400).json({ error: 'Query parameter q is required' });
+    }
+
+    const parsed = parseAliExpressInput(queryInput);
+
+    try {
+      const timestamp = getTopTimestamp();
+      let apiParams = {
+        app_key: APP_KEY,
+        method: 'aliexpress.affiliate.product.query',
+        timestamp: timestamp,
+        format: 'json',
+        v: '2.0',
+        sign_method: 'md5',
+        tracking_id: TRACKING_ID,
+        target_currency: 'USD',
+        target_language: 'AR'
+      };
+
+      if (parsed.type === 'product_id') {
+        apiParams.product_ids = parsed.value;
+      } else {
+        apiParams.keywords = parsed.value;
+        apiParams.page_no = '1';
+        apiParams.page_size = '20';
+      }
+
+      const sign = generateTopSignature(apiParams, APP_SECRET);
+      apiParams.sign = sign;
+
+      const urlParams = new URLSearchParams(apiParams);
+      const aliRes = await fetch(`https://api-sg.aliexpress.com/sync?${urlParams.toString()}`);
+
+      if (!aliRes.ok) {
+        const errText = await aliRes.text();
+        return res.status(502).json({ error: 'Failed to communicate with AliExpress API', details: errText });
+      }
+
+      const aliData = await aliRes.json();
+      let products = [];
+      const responseObj = aliData.aliexpress_affiliate_product_query_response;
+      if (responseObj && responseObj.resp_result && responseObj.resp_result.result) {
+        const resultObj = responseObj.resp_result.result;
+        if (resultObj.products && resultObj.products.product) {
+          const rawProducts = Array.isArray(resultObj.products.product) ? resultObj.products.product : [resultObj.products.product];
+          products = rawProducts.map(item => ({
+            source_product_id: item.product_id ? item.product_id.toString() : '',
+            name_ar: item.product_title || '',
+            image_url: item.product_main_image_url || '',
+            price: item.target_sale_price || item.target_original_price || item.app_sale_price || 0,
+            currency: item.target_sale_price_currency || 'USD',
+            product_detail_url: item.product_detail_url || '',
+            promotion_link: item.promotion_link || ''
+          }));
+        }
+      }
+
+      return res.status(200).json({ success: true, count: products.length, products });
+
+    } catch (err) {
+      console.error('Error querying AliExpress:', err);
+      return res.status(500).json({ error: 'Internal Server Error', message: err.message });
+    }
+  }
+
+  // 2. GET: Fetch all imported products for Admin management
   if (req.method === 'GET') {
     try {
       const fetchUrl = `${SUPABASE_URL}/rest/v1/aliexpress_products?select=*&order=created_at.desc`;
@@ -88,7 +163,7 @@ export default async function handler(req, res) {
   // Helper: Generate Affiliate Link via AliExpress API
   async function generateAffiliateLink(sourceUrl) {
     if (!APP_KEY || !APP_SECRET || !TRACKING_ID) {
-      return sourceUrl; // Fallback if credentials missing
+      return sourceUrl;
     }
 
     try {
@@ -127,7 +202,7 @@ export default async function handler(req, res) {
     return sourceUrl;
   }
 
-  // 2. POST: Add a new product to store
+  // 3. POST: Add a new product to store
   if (req.method === 'POST') {
     try {
       const { source_product_id, name_ar, description_ar, image_url, price, currency, product_detail_url, promotion_link } = reqBody;
@@ -203,11 +278,10 @@ export default async function handler(req, res) {
     }
   }
 
-  // 3. PATCH: Edit product (name_ar, description_ar, is_active, refresh price)
+  // 4. PATCH: Edit product or update price
   if (req.method === 'PATCH') {
     try {
       const id = req.query.id || reqBody.id;
-      const action = req.query.action || reqBody.action;
 
       if (!id) {
         return res.status(400).json({ error: 'Product ID is required' });
@@ -226,7 +300,6 @@ export default async function handler(req, res) {
 
         const sourceProductId = getData[0].source_product_id;
 
-        // Fetch current price from AliExpress API
         let newPrice = null;
         if (APP_KEY && APP_SECRET) {
           const timestamp = getTopTimestamp();
@@ -312,7 +385,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // 4. DELETE: Remove product from database
+  // 5. DELETE: Remove product from database
   if (req.method === 'DELETE') {
     try {
       const id = req.query.id || reqBody.id;

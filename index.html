@@ -1368,7 +1368,7 @@ async function loadInternationalProducts() {
   grid.innerHTML = '<div style="padding:40px 20px; text-align:center; color:#888; grid-column:1/-1;"><i class="fas fa-spinner fa-spin" style="font-size:24px;"></i><br><br>جاري تحميل المنتجات العالمية...</div>';
 
   try {
-    const res = await fetch('/api/international-products');
+    const res = await fetch('/api/international?format=json');
     if (!res.ok) throw new Error('Failed to load international products');
     internationalProducts = await res.json();
     renderInternationalProducts(internationalProducts);

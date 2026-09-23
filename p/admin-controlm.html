@@ -1891,7 +1891,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
 
                 try {
                     const pass = getAdminPassword();
-                    const res = await fetch(`/api/admin/aliexpress-search?q=${encodeURIComponent(query)}&adminPassword=${encodeURIComponent(pass)}`);
+                    const res = await fetch(`/api/admin-aliexpress?action=search&q=${encodeURIComponent(query)}&adminPassword=${encodeURIComponent(pass)}`);
                     const data = await res.json();
 
                     if (!res.ok) {
@@ -1925,7 +1925,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             async function addAliExpressProduct(product) {
                 try {
                     const pass = getAdminPassword();
-                    const res = await fetch(`/api/admin/aliexpress-products?adminPassword=${encodeURIComponent(pass)}`, {
+                    const res = await fetch(`/api/admin-aliexpress?adminPassword=${encodeURIComponent(pass)}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -1970,7 +1970,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
 
                 try {
                     const pass = getAdminPassword();
-                    const res = await fetch(`/api/admin/aliexpress-products?adminPassword=${encodeURIComponent(pass)}`);
+                    const res = await fetch(`/api/admin-aliexpress?adminPassword=${encodeURIComponent(pass)}`);
                     const data = await res.json();
 
                     if (res.ok) {
@@ -2041,7 +2041,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
 
                 try {
                     const pass = getAdminPassword();
-                    const res = await fetch(`/api/admin/aliexpress-products?id=${id}&adminPassword=${encodeURIComponent(pass)}`, {
+                    const res = await fetch(`/api/admin-aliexpress?id=${id}&adminPassword=${encodeURIComponent(pass)}`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ adminPassword: pass, name_ar, description_ar, is_active })
@@ -2063,7 +2063,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             async function toggleAliExpressStatus(id, currentActive) {
                 try {
                     const pass = getAdminPassword();
-                    const res = await fetch(`/api/admin/aliexpress-products?id=${id}&adminPassword=${encodeURIComponent(pass)}`, {
+                    const res = await fetch(`/api/admin-aliexpress?id=${id}&adminPassword=${encodeURIComponent(pass)}`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ adminPassword: pass, is_active: !currentActive })
@@ -2082,7 +2082,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             async function refreshAliExpressPrice(id) {
                 try {
                     const pass = getAdminPassword();
-                    const res = await fetch(`/api/admin/aliexpress-products?id=${id}&action=update_price&adminPassword=${encodeURIComponent(pass)}`, {
+                    const res = await fetch(`/api/admin-aliexpress?id=${id}&action=update_price&adminPassword=${encodeURIComponent(pass)}`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ adminPassword: pass })
@@ -2106,7 +2106,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
 
                 try {
                     const pass = getAdminPassword();
-                    const res = await fetch(`/api/admin/aliexpress-products?id=${id}&adminPassword=${encodeURIComponent(pass)}`, {
+                    const res = await fetch(`/api/admin-aliexpress?id=${id}&adminPassword=${encodeURIComponent(pass)}`, {
                         method: 'DELETE',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ adminPassword: pass })
