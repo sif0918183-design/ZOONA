@@ -505,19 +505,43 @@ textarea.form-control{resize:vertical;min-height:80px}
           <option value="الخرطوم">الخرطوم</option>
           <option value="الخرطوم 2">الخرطوم 2</option>
           <option value="الخرطوم 3">الخرطوم 3</option>
+          <option value="الخرطوم 4">الخرطوم 4</option>
+          <option value="الخرطوم 5">الخرطوم 5</option>
           <option value="بورتسودان">بورتسودان</option>
           <option value="بورتسودان 2">بورتسودان 2</option>
           <option value="بورتسودان 3">بورتسودان 3</option>
+          <option value="بورتسودان 4">بورتسودان 4</option>
+          <option value="بورتسودان 5">بورتسودان 5</option>
           <option value="عطبرة">عطبرة</option>
           <option value="عطبرة 2">عطبرة 2</option>
           <option value="عطبرة 3">عطبرة 3</option>
+          <option value="عطبرة 4">عطبرة 4</option>
+          <option value="عطبرة 5">عطبرة 5</option>
           <option value="مدني">مدني</option>
+          <option value="مدني 2">مدني 2</option>
+          <option value="مدني 3">مدني 3</option>
+          <option value="مدني 4">مدني 4</option>
+          <option value="مدني 5">مدني 5</option>
           <option value="كسلا">كسلا</option>
           <option value="كسلا 2">كسلا 2</option>
           <option value="كسلا 3">كسلا 3</option>
+          <option value="كسلا 4">كسلا 4</option>
+          <option value="كسلا 5">كسلا 5</option>
           <option value="القضارف">القضارف</option>
+          <option value="القضارف 2">القضارف 2</option>
+          <option value="القضارف 3">القضارف 3</option>
+          <option value="القضارف 4">القضارف 4</option>
+          <option value="القضارف 5">القضارف 5</option>
           <option value="الأبيض">الأبيض</option>
+          <option value="الأبيض 2">الأبيض 2</option>
+          <option value="الأبيض 3">الأبيض 3</option>
+          <option value="الأبيض 4">الأبيض 4</option>
+          <option value="الأبيض 5">الأبيض 5</option>
           <option value="كوستي">كوستي</option>
+          <option value="كوستي 2">كوستي 2</option>
+          <option value="كوستي 3">كوستي 3</option>
+          <option value="كوستي 4">كوستي 4</option>
+          <option value="كوستي 5">كوستي 5</option>
         </select>
       </div>
 
@@ -1257,11 +1281,14 @@ function populateBulkWarehouses() {
 
   // Add standard warehouses if not already present
   const defaultWarehouses = [
-    "الخرطوم", "الخرطوم 2", "الخرطوم 3",
-    "بورتسودان", "بورتسودان 2", "بورتسودان 3",
-    "عطبرة", "عطبرة 2", "عطبرة 3",
-    "مدني", "كسلا", "كسلا 2", "كسلا 3",
-    "القضارف", "الأبيض", "كوستي"
+    "الخرطوم", "الخرطوم 2", "الخرطوم 3", "الخرطوم 4", "الخرطوم 5",
+    "بورتسودان", "بورتسودان 2", "بورتسودان 3", "بورتسودان 4", "بورتسودان 5",
+    "عطبرة", "عطبرة 2", "عطبرة 3", "عطبرة 4", "عطبرة 5",
+    "مدني", "مدني 2", "مدني 3", "مدني 4", "مدني 5",
+    "كسلا", "كسلا 2", "كسلا 3", "كسلا 4", "كسلا 5",
+    "القضارف", "القضارف 2", "القضارف 3", "القضارف 4", "القضارف 5",
+    "الأبيض", "الأبيض 2", "الأبيض 3", "الأبيض 4", "الأبيض 5",
+    "كوستي", "كوستي 2", "كوستي 3", "كوستي 4", "كوستي 5"
   ];
   defaultWarehouses.forEach(w => warehouses.add(w));
 
