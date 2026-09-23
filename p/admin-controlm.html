@@ -377,6 +377,47 @@
             width: 100%;
         }
 
+        /* AliExpress Search Cards */
+        .ali-results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .ali-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .ali-card img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        .ali-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            line-height: 1.3;
+            color: #2d3748;
+            height: 40px;
+            overflow: hidden;
+        }
+        .ali-price {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--danger-color);
+        }
+        .ali-id {
+            font-size: 0.75rem;
+            color: #718096;
+        }
+
         @media (max-width: 768px) {
             .admin-container {
                 margin: 10px;
@@ -452,6 +493,9 @@
                 </div>
                 <div class="nav-tab" onclick="showTab('products')">
                     <i class="fas fa-box"></i> إدارة المنتجات
+                </div>
+                <div class="nav-tab" onclick="showTab('aliexpress')">
+                    <i class="fas fa-globe"></i> منتجات عالمية
                 </div>
                 <div class="nav-tab" onclick="showTab('settings')">
                     <i class="fas fa-cogs"></i> إعدادات العمولة
@@ -620,6 +664,53 @@
             </div>
         </div>
 
+        <!-- تبويب منتجات عالمية (AliExpress Affiliate) -->
+        <div class="tab-content" id="aliexpress-tab">
+            <div class="affiliate-details">
+                <h4 style="color: var(--primary-color); margin-bottom: 15px;">
+                    <i class="fas fa-search"></i> البحث عن منتجات AliExpress واستيرادها
+                </h4>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="aliSearchInput" placeholder="أدخل كلمة مفتاحية أو رابط منتج من AliExpress..." style="flex: 1; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-family: 'Tajawal';">
+                    <button class="btn btn-primary" onclick="searchAliExpress()">
+                        <i class="fas fa-search"></i> بحث
+                    </button>
+                </div>
+            </div>
+
+            <div id="aliSearchResults" style="display: none; margin-bottom: 30px;">
+                <h4 style="color: var(--primary-color); margin-bottom: 10px;">نتائج البحث:</h4>
+                <div id="aliResultsGrid" class="ali-results-grid"></div>
+            </div>
+
+            <hr style="margin: 25px 0; border: none; border-top: 1px solid #e2e8f0;">
+
+            <div class="search-box">
+                <input id="searchAliProducts" placeholder="ابحث في المنتجات العالمية المستوردة..." type="text" oninput="displayAliExpressProducts(allAliProducts)" />
+            </div>
+
+            <div class="loading" id="aliProductsLoading" style="display: none;">
+                <i class="fas fa-spinner fa-spin"></i>
+                <div>جاري تحميل المنتجات العالمية...</div>
+            </div>
+
+            <div class="table-container">
+                <table id="aliProductsTable">
+                    <thead>
+                        <tr>
+                            <th>الصورة</th>
+                            <th>الاسم بالعربية</th>
+                            <th>السعر</th>
+                            <th>الحالة</th>
+                            <th>رابط التفاصيل</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="aliProductsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- تبويب إدارة المنتجات -->
         <div class="tab-content" id="products-tab">
             <div class="search-box">
@@ -686,6 +777,35 @@
         </div>
     </div>
 
+    <!-- Modal تعديل منتج عالمي -->
+    <div id="aliModal" style="align-items: center; background: rgba(0,0,0,0.5); display: none; height: 100%; justify-content: center; left: 0; position: fixed; top: 0; width: 100%; z-index: 1000;">
+        <div style="background: white; border-radius: 10px; max-width: 500px; padding: 30px; width: 90%;">
+            <h3 style="margin-bottom: 20px;">تعديل منتج عالمي</h3>
+            <form onsubmit="saveAliExpressEdit(event)">
+                <input id="aliEditId" type="hidden" />
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 500; margin-bottom: 5px;">اسم المنتج بالعربية</label>
+                    <input id="aliEditName" required style="border-radius: 5px; border: 1px solid #e2e8f0; padding: 10px; width: 100%;" type="text" />
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 500; margin-bottom: 5px;">الوصف العربي (اختياري تحسين SEO)</label>
+                    <textarea id="aliEditDesc" rows="4" style="border-radius: 5px; border: 1px solid #e2e8f0; padding: 10px; width: 100%; font-family: 'Tajawal';"></textarea>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-weight: 500; margin-bottom: 5px;">الحالة</label>
+                    <select id="aliEditActive" style="border-radius: 5px; border: 1px solid #e2e8f0; padding: 10px; width: 100%;">
+                        <option value="true">ظاهر (نشط)</option>
+                        <option value="false">مخفي (غير نشط)</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button class="btn" onclick="document.getElementById('aliModal').style.display='none'" style="background: #718096; color: white;" type="button">إلغاء</button>
+                    <button class="btn btn-primary" type="submit">حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         (function() {
             // ========== تهيئة API (Proxy) ==========
@@ -697,7 +817,6 @@
                 for (let attempt = 1; attempt <= maxRetries; attempt++) {
                     try {
                         const response = await fetch(url, fetchOptions);
-                        // في حال حدوث تضارب (409) أو أخطاء مؤقتة، نكرر المحاولة مع تأخير تدرجي
                         if (response.status === 409 && attempt < maxRetries) {
                             console.warn(`⚠️ تضارب (409) تم رصده في المحاولة ${attempt}. جاري إعادة المحاولة خلال ${delay * attempt}ms...`);
                             await new Promise(resolve => setTimeout(resolve, delay * attempt));
@@ -718,17 +837,15 @@
 
                 if (isGet) {
                     const cached = requestCache.get(cacheKey);
-                    if (cached && (Date.now() - cached.timestamp < 3000)) { // ذاكرة تخزين مؤقت لمدة 3 ثوانٍ لمنع التكرار المتزامن
+                    if (cached && (Date.now() - cached.timestamp < 3000)) {
                         return cached.data;
                     }
                 } else {
-                    // مسح الكاش عند حدوث أي عملية كتابة لضمان تحديث البيانات
                     requestCache.clear();
                 }
 
                 let url = `${API_URL}?endpoint=${encodeURIComponent(endpoint)}`;
 
-                // إضافة كلمة المرور للعمليات التي تتطلب صلاحيات
                 const password = getAdminPassword();
                 if (password) {
                     url += `&adminPassword=${encodeURIComponent(password)}`;
@@ -765,6 +882,7 @@
             let allAffiliates = [];
             let allProducts = [];
             let allAffiliateOrders = [];
+            let allAliProducts = [];
             let isLoggedIn = false;
 
             // ========== تعريف الدوال في النطاق العام ==========
@@ -785,6 +903,17 @@
             window.copyOrderSummary = copyOrderSummary;
             window.markCommissionPaid = markCommissionPaid;
             window.saveCommissionSettings = saveCommissionSettings;
+
+            // AliExpress Functions
+            window.searchAliExpress = searchAliExpress;
+            window.addAliExpressProduct = addAliExpressProduct;
+            window.loadAliExpressProducts = loadAliExpressProducts;
+            window.displayAliExpressProducts = displayAliExpressProducts;
+            window.openAliExpressEditModal = openAliExpressEditModal;
+            window.saveAliExpressEdit = saveAliExpressEdit;
+            window.toggleAliExpressStatus = toggleAliExpressStatus;
+            window.deleteAliExpressProduct = deleteAliExpressProduct;
+            window.refreshAliExpressPrice = refreshAliExpressPrice;
 
             // ========== متغيرات الإعدادات ==========
             let commissionSettings = {
@@ -906,14 +1035,15 @@
                 
                 document.getElementById(tabName + '-tab').classList.add('active');
                 
-                // تحديث التاب النشط
                 const navTabs = document.querySelectorAll('.nav-tab');
                 const tabMap = {
                     'orders': 0,
                     'affiliates': 1,
-                    'products': 2
+                    'products': 2,
+                    'aliexpress': 3,
+                    'settings': 4
                 };
-                if (tabMap[tabName] !== undefined) {
+                if (tabMap[tabName] !== undefined && navTabs[tabMap[tabName]]) {
                     navTabs[tabMap[tabName]].classList.add('active');
                 }
                 
@@ -923,6 +1053,8 @@
                     loadAffiliates();
                 } else if (tabName === 'products') {
                     loadProducts();
+                } else if (tabName === 'aliexpress') {
+                    loadAliExpressProducts();
                 } else if (tabName === 'settings') {
                     loadCommissionSettings();
                 }
@@ -980,7 +1112,6 @@
                     ];
 
                     for (const setting of settingsToSave) {
-                        // محاولة تحديث إذا وجد أو إدخال جديد
                         const existing = await callSupabase(`admin_settings?select=id&key=eq.${setting.key}`);
 
                         if (existing && existing.length > 0) {
@@ -1004,7 +1135,7 @@
 
                 } catch (error) {
                     console.error('خطأ في حفظ الإعدادات:', error);
-                    alert('❌ حدث خطأ أثناء حفظ الإعدادات. قد تحتاج لإضافة الصلاحيات اللازمة لقاعدة البيانات.');
+                    alert('❌ حدث خطأ أثناء حفظ الإعدادات.');
                 }
             }
 
@@ -1019,10 +1150,8 @@
                 tableElement.style.display = 'none';
                 
                 try {
-                    // جلب الطلبات مع المنتجات المرتبطة
                     const orders = await callSupabase('orders?select=*,order_products(*)&order=created_at.desc');
                     
-                    // جلب بيانات المسوقين
                     let affiliates = [];
                     try {
                         affiliates = await callSupabase('affiliate_users?select=affiliate_id,name');
@@ -1030,7 +1159,6 @@
                         console.error('خطأ في جلب المسوقين:', e);
                     }
                     
-                    // جلب المنتجات لحساب العمولة
                     let products = [];
                     try {
                         products = await callSupabase('products?select=*');
@@ -1038,7 +1166,6 @@
                         console.error('خطأ في جلب المنتجات:', e);
                     }
                     
-                    // جلب تفاصيل عمولات المسوقين
                     let affOrders = [];
                     try {
                         affOrders = await callSupabase('affiliate_orders?select=*');
@@ -1055,12 +1182,6 @@
                         document.getElementById('debugContent').innerHTML = `
                             <div>عدد الطلبات: ${allOrders.length}</div>
                             <div>عدد المنتجات: ${allProducts.length}</div>
-                            <div>أمثلة من الطلبات: ${JSON.stringify(allOrders.slice(0, 2).map(o => ({ 
-                                order_id: o.order_id,
-                                products: o.order_products,
-                                total_amount: o.total_amount,
-                                shipping_cost: o.shipping_cost
-                            })))}</div>
                         `;
                     }
                     
@@ -1110,21 +1231,16 @@
                     
                     const product = products.find(p => {
                         if (!p.name) return false;
-                        
                         const cleanProductName = cleanText(p.name);
-                        
                         const orderWords = cleanOrderProduct.split(' ');
                         const productWords = cleanProductName.split(' ');
-                        
                         const commonWords = orderWords.filter(word => 
                             productWords.some(pWord => pWord.includes(word) || word.includes(pWord))
                         );
-                        
                         return commonWords.length >= 2;
                     });
                     
                     if (product && product.price) {
-                        // استخدام نظام النسبة المئوية المتدرج بصرامة فقط بناءً على إعدادات العمولة
                         const rate = product.price < commissionSettings.threshold ? commissionSettings.lowRate : commissionSettings.highRate;
                         totalCommission += Math.round((product.price * (rate / 100))) * (orderProduct.quantity || 1);
                     }
@@ -1241,7 +1357,6 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     const affiliate = affiliates.find(aff => aff.affiliate_id === order.affiliate_id);
                     const affiliateOrder = allAffiliateOrders.find(ao => ao.order_id === order.order_id);
 
-                    // استخدام العمولة المخزنة في قاعدة البيانات إذا وجدت، وإلا حسابها
                     let commission = 0;
                     if (affiliateOrder && affiliateOrder.commission !== undefined) {
                         commission = affiliateOrder.commission;
@@ -1357,7 +1472,6 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                 try {
                     const affiliates = await callSupabase('affiliate_users?select=*&order=registration_date.desc');
                     
-                    // جلب الطلبات
                     let orders = [];
                     try {
                         orders = await callSupabase('orders?select=*');
@@ -1384,11 +1498,8 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             function updateAffiliatesStats(affiliates) {
                 const totalAffiliates = affiliates.length;
                 const activeAffiliates = affiliates.filter(aff => aff.status === 'active').length;
-                
-                // حساب إجمالي النقرات من عمود total_clicks لجميع المسوقين
                 const totalClicks = affiliates.reduce((sum, aff) => sum + (aff.total_clicks || 0), 0);
                 
-                // حساب إجمالي العمولة (معلقة ومدفوعة)
                 let pendingCommission = 0;
                 let paidCommission = 0;
 
@@ -1432,7 +1543,6 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
 
                         totalCommission += affOrder.commission || 0;
                     } else {
-                        // Fallback if not in affiliate_orders table
                         if (includePaid) return;
                         totalCommission += getProductCommission(order.order_products, allProducts);
                     }
@@ -1572,16 +1682,6 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                             <span class="detail-label"> العمولة المدفوعة:</span>
                             <span class="detail-value" style="color:var(--success-color); text-decoration:line-through;">${paidCommission.toLocaleString()} ج.س</span>
                         </div>
-                        ${affiliateOrders.length > 0 ? `
-                        <div class="detail-item">
-                            <span class="detail-label"> آخر الطلبات:</span>
-                            <span class="detail-value">
-                                ${affiliateOrders.slice(0, 3).map(order => 
-                                    `طلب ${order.order_id} (${getStatusText(order.status)})`
-                                ).join('<br>')}
-                            </span>
-                        </div>
-                        ` : ''}
                     `;
                     
                     detailsSection.style.display = 'block';
@@ -1619,7 +1719,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                 }
             }
 
-            // ========== دوال إدارة المنتجات ==========
+            // ========== دوال إدارة المنتجات المحلية ==========
             async function loadProducts() {
                 if (!isLoggedIn) return;
                 
@@ -1700,10 +1800,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             async function editProduct(productId) {
                 try {
                     const product = allProducts.find(p => p.id == productId);
-                    
-                    if (!product) {
-                        throw new Error('المنتج غير موجود');
-                    }
+                    if (!product) throw new Error('المنتج غير موجود');
 
                     document.getElementById('modalTitle').textContent = 'تعديل المنتج';
                     document.getElementById('productName').value = product.name || '';
@@ -1714,7 +1811,6 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     currentEditingProductId = product.id;
                     
                     document.getElementById('productModal').style.display = 'flex';
-                    
                 } catch (error) {
                     console.error('خطأ في تحميل بيانات المنتج:', error);
                     alert('حدث خطأ في تحميل بيانات المنتج');
@@ -1722,18 +1818,11 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             }
 
             async function deleteProduct(productId) {
-                if (!confirm('هل أنت متأكد من حذف هذا المنتج؟\n\n⚠️ سيؤثر هذا على حساب العمولة للطلبات المرتبطة به.')) {
-                    return;
-                }
-                
+                if (!confirm('هل أنت متأكد من حذف هذا المنتج؟')) return;
                 try {
-                    await callSupabase(`products?id=eq.${productId}`, {
-                        method: 'DELETE'
-                    });
-                    
+                    await callSupabase(`products?id=eq.${productId}`, { method: 'DELETE' });
                     loadProducts();
                     alert('تم حذف المنتج بنجاح');
-                    
                 } catch (error) {
                     console.error('خطأ في حذف المنتج:', error);
                     alert('حدث خطأ في حذف المنتج');
@@ -1742,11 +1831,8 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
 
             async function saveProduct(productData) {
                 try {
-                    let result;
-                    
                     if (productData.id) {
-                        // تحديث منتج موجود
-                        result = await callSupabase(`products?id=eq.${productData.id}`, {
+                        await callSupabase(`products?id=eq.${productData.id}`, {
                             method: 'PATCH',
                             body: JSON.stringify({
                                 name: productData.name,
@@ -1757,8 +1843,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                             })
                         });
                     } else {
-                        // إضافة منتج جديد
-                        result = await callSupabase('products', {
+                        await callSupabase('products', {
                             method: 'POST',
                             body: JSON.stringify([{
                                 name: productData.name,
@@ -1769,12 +1854,9 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                             }])
                         });
                     }
-                    
                     loadProducts();
                     closeProductModal();
-                    
                     alert(productData.id ? 'تم تحديث المنتج بنجاح' : 'تم إضافة المنتج بنجاح');
-                    
                 } catch (error) {
                     console.error('خطأ في حفظ المنتج:', error);
                     alert('حدث خطأ في حفظ المنتج');
@@ -1783,20 +1865,264 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
 
             document.getElementById('productForm').addEventListener('submit', function(e) {
                 e.preventDefault();
-                
                 const productData = {
                     name: document.getElementById('productName').value,
                     url: document.getElementById('productUrl').value,
                     commission: parseInt(document.getElementById('productCommission').value),
                     status: document.getElementById('productStatus').value
                 };
-                
-                if (currentEditingProductId) {
-                    productData.id = currentEditingProductId;
-                }
-                
+                if (currentEditingProductId) productData.id = currentEditingProductId;
                 saveProduct(productData);
             });
+
+            // ========== دوال إدارة المنتجات العالمية (AliExpress Affiliate) ==========
+            async function searchAliExpress() {
+                const query = document.getElementById('aliSearchInput').value.trim();
+                if (!query) {
+                    alert('يرجى إدخال كلمة مفتاحية أو رابط منتج');
+                    return;
+                }
+
+                const resultsGrid = document.getElementById('aliResultsGrid');
+                const resultsContainer = document.getElementById('aliSearchResults');
+
+                resultsContainer.style.display = 'block';
+                resultsGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> جاري البحث في AliExpress...</div>';
+
+                try {
+                    const pass = getAdminPassword();
+                    const res = await fetch(`/api/admin/aliexpress-search?q=${encodeURIComponent(query)}&adminPassword=${encodeURIComponent(pass)}`);
+                    const data = await res.json();
+
+                    if (!res.ok) {
+                        resultsGrid.innerHTML = `<div style="grid-column: 1/-1; color: var(--danger-color); text-align: center;">${data.error || 'فشل البحث في AliExpress'}</div>`;
+                        return;
+                    }
+
+                    if (!data.products || data.products.length === 0) {
+                        resultsGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #718096;">لم يتم العثور على منتجات مطابقة.</div>';
+                        return;
+                    }
+
+                    resultsGrid.innerHTML = data.products.map(p => `
+                        <div class="ali-card">
+                            <img src="${p.image_url}" alt="${p.name_ar}">
+                            <div class="ali-title">${p.name_ar}</div>
+                            <div class="ali-price">${p.price} ${p.currency}</div>
+                            <div class="ali-id">ID: ${p.source_product_id}</div>
+                            <button class="btn btn-primary btn-sm" onclick="addAliExpressProduct(${JSON.stringify(p).replace(/"/g, '&quot;')})">
+                                <i class="fas fa-plus"></i> إضافة للمتجر
+                            </button>
+                        </div>
+                    `).join('');
+
+                } catch (err) {
+                    console.error('AliExpress Search Error:', err);
+                    resultsGrid.innerHTML = '<div style="grid-column: 1/-1; color: var(--danger-color); text-align: center;">حدث خطأ أثناء الاتصال بالخادم</div>';
+                }
+            }
+
+            async function addAliExpressProduct(product) {
+                try {
+                    const pass = getAdminPassword();
+                    const res = await fetch(`/api/admin/aliexpress-products?adminPassword=${encodeURIComponent(pass)}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            adminPassword: pass,
+                            source_product_id: product.source_product_id,
+                            name_ar: product.name_ar,
+                            description_ar: '',
+                            image_url: product.image_url,
+                            price: product.price,
+                            currency: product.currency,
+                            product_detail_url: product.product_detail_url,
+                            promotion_link: product.promotion_link
+                        })
+                    });
+
+                    const data = await res.json();
+
+                    if (res.status === 409) {
+                        alert('⚠️ هذا المنتج موجود بالفعل في المتجر.');
+                        return;
+                    }
+
+                    if (!res.ok) {
+                        alert(`❌ فشل إضافة المنتج: ${data.error || 'خطأ غير معروف'}`);
+                        return;
+                    }
+
+                    alert('✅ تم إضافة المنتج بنجاح إلى المتجر!');
+                    loadAliExpressProducts();
+
+                } catch (err) {
+                    console.error('Add AliExpress Product Error:', err);
+                    alert('❌ حدث خطأ أثناء إضافة المنتج.');
+                }
+            }
+
+            async function loadAliExpressProducts() {
+                if (!isLoggedIn) return;
+
+                const loading = document.getElementById('aliProductsLoading');
+                loading.style.display = 'block';
+
+                try {
+                    const pass = getAdminPassword();
+                    const res = await fetch(`/api/admin/aliexpress-products?adminPassword=${encodeURIComponent(pass)}`);
+                    const data = await res.json();
+
+                    if (res.ok) {
+                        allAliProducts = data || [];
+                        displayAliExpressProducts(allAliProducts);
+                    } else {
+                        console.error('Failed to load aliexpress products');
+                    }
+                } catch (err) {
+                    console.error('Error loading aliexpress products:', err);
+                } finally {
+                    loading.style.display = 'none';
+                }
+            }
+
+            function displayAliExpressProducts(products) {
+                const tbody = document.getElementById('aliProductsBody');
+                const search = document.getElementById('searchAliProducts').value.toLowerCase();
+
+                let filtered = products.filter(p => !search || p.name_ar.toLowerCase().includes(search) || p.slug.includes(search));
+
+                if (filtered.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #718096;">لا توجد منتجات عالمية مستوردة.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = filtered.map(p => `
+                    <tr>
+                        <td><img src="${p.image_url}" style="width:50px; height:50px; object-fit:cover; border-radius:6px;"></td>
+                        <td><strong>${p.name_ar}</strong><br><small style="color:#888;">/${p.slug}</small></td>
+                        <td><strong style="color:var(--danger-color);">${p.price} ${p.currency || 'USD'}</strong></td>
+                        <td><span class="status-badge status-${p.is_active ? 'active' : 'inactive'}">${p.is_active ? 'ظاهر' : 'مخفي'}</span></td>
+                        <td><a href="/international/${p.slug}" target="_blank" style="color:var(--secondary-color); font-weight:600;">صفحة المنتج</a></td>
+                        <td>
+                            <div style="display:flex; gap:5px; flex-wrap:wrap;">
+                                <button class="btn btn-primary btn-sm" onclick="openAliExpressEditModal(${JSON.stringify(p).replace(/"/g, '&quot;')})" title="تعديل">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn ${p.is_active ? 'btn-warning' : 'btn-success'} btn-sm" onclick="toggleAliExpressStatus(${p.id}, ${p.is_active})" title="${p.is_active ? 'إخفاء' : 'إظهار'}">
+                                    <i class="fas ${p.is_active ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                                </button>
+                                <button class="btn btn-primary btn-sm" style="background:#2b6cb0;" onclick="refreshAliExpressPrice(${p.id})" title="تحديث السعر الآن">
+                                    <i class="fas fa-sync-alt"></i> تحديث السعر الآن
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteAliExpressProduct(${p.id})" title="حذف">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            function openAliExpressEditModal(p) {
+                document.getElementById('aliEditId').value = p.id;
+                document.getElementById('aliEditName').value = p.name_ar || '';
+                document.getElementById('aliEditDesc').value = p.description_ar || '';
+                document.getElementById('aliEditActive').value = p.is_active ? 'true' : 'false';
+                document.getElementById('aliModal').style.display = 'flex';
+            }
+
+            async function saveAliExpressEdit(e) {
+                e.preventDefault();
+                const id = document.getElementById('aliEditId').value;
+                const name_ar = document.getElementById('aliEditName').value;
+                const description_ar = document.getElementById('aliEditDesc').value;
+                const is_active = document.getElementById('aliEditActive').value === 'true';
+
+                try {
+                    const pass = getAdminPassword();
+                    const res = await fetch(`/api/admin/aliexpress-products?id=${id}&adminPassword=${encodeURIComponent(pass)}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ adminPassword: pass, name_ar, description_ar, is_active })
+                    });
+
+                    if (res.ok) {
+                        document.getElementById('aliModal').style.display = 'none';
+                        alert('✅ تم تحديث بيانات المنتج بنجاح');
+                        loadAliExpressProducts();
+                    } else {
+                        alert('❌ فشل تعديل المنتج');
+                    }
+                } catch (err) {
+                    console.error('Edit error:', err);
+                    alert('❌ حدث خطأ أثناء التعديل');
+                }
+            }
+
+            async function toggleAliExpressStatus(id, currentActive) {
+                try {
+                    const pass = getAdminPassword();
+                    const res = await fetch(`/api/admin/aliexpress-products?id=${id}&adminPassword=${encodeURIComponent(pass)}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ adminPassword: pass, is_active: !currentActive })
+                    });
+
+                    if (res.ok) {
+                        loadAliExpressProducts();
+                    } else {
+                        alert('❌ فشل تغيير حالة المنتج');
+                    }
+                } catch (err) {
+                    console.error('Toggle status error:', err);
+                }
+            }
+
+            async function refreshAliExpressPrice(id) {
+                try {
+                    const pass = getAdminPassword();
+                    const res = await fetch(`/api/admin/aliexpress-products?id=${id}&action=update_price&adminPassword=${encodeURIComponent(pass)}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ adminPassword: pass })
+                    });
+
+                    const data = await res.json();
+                    if (res.ok && data.updated_price !== undefined) {
+                        alert(`✅ تم تحديث السعر بنجاح: ${data.updated_price} USD`);
+                        loadAliExpressProducts();
+                    } else {
+                        alert(`❌ فشل تحديث السعر: ${data.error || 'خطأ غير معروف'}`);
+                    }
+                } catch (err) {
+                    console.error('Refresh price error:', err);
+                    alert('❌ حدث خطأ أثناء تحديث السعر');
+                }
+            }
+
+            async function deleteAliExpressProduct(id) {
+                if (!confirm('هل أنت متأكد من حذف هذا المنتج النهائي من المتجر؟')) return;
+
+                try {
+                    const pass = getAdminPassword();
+                    const res = await fetch(`/api/admin/aliexpress-products?id=${id}&adminPassword=${encodeURIComponent(pass)}`, {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ adminPassword: pass })
+                    });
+
+                    if (res.ok) {
+                        alert('✅ تم حذف المنتج بنجاح');
+                        loadAliExpressProducts();
+                    } else {
+                        alert('❌ فشل حذف المنتج');
+                    }
+                } catch (err) {
+                    console.error('Delete product error:', err);
+                    alert('❌ حدث خطأ أثناء حذف المنتج');
+                }
+            }
 
             // ========== تحميل البيانات عند فتح الصفحة ==========
             document.addEventListener('DOMContentLoaded', function() {

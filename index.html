@@ -576,6 +576,16 @@ html, body {
       <i class="fas fa-search"></i>
       <input type="text" id="searchInput" placeholder="ابحث عن منتج..." oninput="handleSearch(this.value)">
     </div>
+
+    <!-- Store Section Tabs -->
+    <div style="display:flex; gap:8px; margin-top:8px;">
+      <button id="storeTabLocal" class="cat-btn active" onclick="switchStoreTab('local')" style="flex:1; border-radius:12px; padding:7px 0; font-size:13px; font-weight:800; background:#fff; color:var(--red); border:none;">
+        <i class="fas fa-store"></i> المتجر المحلي
+      </button>
+      <button id="storeTabInternational" class="cat-btn" onclick="switchStoreTab('international')" style="flex:1; border-radius:12px; padding:7px 0; font-size:13px; font-weight:800; background:rgba(255,255,255,0.2); color:#fff; border:1px solid rgba(255,255,255,0.6);">
+        <i class="fas fa-globe"></i> منتجات عالمية
+      </button>
+    </div>
   </header>
 
   <!-- ══════════════════ HOME PAGE ══════════════════ -->
@@ -1090,6 +1100,8 @@ function slugify(text) {
 // ── State ──
 let allProducts = [];
 let filteredProducts = [];
+let internationalProducts = [];
+let currentStoreTab = 'local'; // 'local' or 'international'
 let cart = JSON.parse(localStorage.getItem('cartItems')) || [];
 let orders = JSON.parse(localStorage.getItem('zoonaOrders')) || [];
 let currentModalProduct = null;
@@ -1308,8 +1320,104 @@ function filterCategory(cat, btn, fromPopState = false) {
   }
 }
 
+// ── Store Section Switcher ──
+function switchStoreTab(tab) {
+  currentStoreTab = tab;
+  const btnLocal = document.getElementById('storeTabLocal');
+  const btnInternational = document.getElementById('storeTabInternational');
+  const banner = document.querySelector('.zona-banner');
+  const catFilter = document.getElementById('catFilter');
+  const sectionTitle = document.getElementById('sectionTitle');
+
+  if (tab === 'local') {
+    if (btnLocal) {
+      btnLocal.style.background = '#fff';
+      btnLocal.style.color = 'var(--red)';
+      btnLocal.style.border = 'none';
+    }
+    if (btnInternational) {
+      btnInternational.style.background = 'rgba(255,255,255,0.2)';
+      btnInternational.style.color = '#fff';
+      btnInternational.style.border = '1px solid rgba(255,255,255,0.6)';
+    }
+    if (banner) banner.style.display = 'block';
+    if (catFilter) catFilter.style.display = 'flex';
+    if (sectionTitle) sectionTitle.textContent = currentCategory === 'الكل' ? '🔥 المنتجات المميزة' : `📦 ${currentCategory}`;
+    renderProducts(filteredProducts);
+  } else {
+    if (btnInternational) {
+      btnInternational.style.background = '#fff';
+      btnInternational.style.color = 'var(--red)';
+      btnInternational.style.border = 'none';
+    }
+    if (btnLocal) {
+      btnLocal.style.background = 'rgba(255,255,255,0.2)';
+      btnLocal.style.color = '#fff';
+      btnLocal.style.border = '1px solid rgba(255,255,255,0.6)';
+    }
+    if (banner) banner.style.display = 'none';
+    if (catFilter) catFilter.style.display = 'none';
+    if (sectionTitle) sectionTitle.textContent = '🌐 منتجات عالمية (AliExpress)';
+    loadInternationalProducts();
+  }
+}
+
+// ── International Products Loader ──
+async function loadInternationalProducts() {
+  const grid = document.getElementById('productsGrid');
+  grid.innerHTML = '<div style="padding:40px 20px; text-align:center; color:#888; grid-column:1/-1;"><i class="fas fa-spinner fa-spin" style="font-size:24px;"></i><br><br>جاري تحميل المنتجات العالمية...</div>';
+
+  try {
+    const res = await fetch('/api/international-products');
+    if (!res.ok) throw new Error('Failed to load international products');
+    internationalProducts = await res.json();
+    renderInternationalProducts(internationalProducts);
+  } catch (err) {
+    console.error('Error loading international products:', err);
+    grid.innerHTML = '<div style="padding:30px; text-align:center; color:#999; grid-column:1/-1;">تعذّر تحميل المنتجات العالمية</div>';
+  }
+}
+
+function renderInternationalProducts(products) {
+  const grid = document.getElementById('productsGrid');
+  if (!products || products.length === 0) {
+    grid.innerHTML = '<div style="padding:40px 20px; text-align:center; color:#aaa; grid-column:1/-1;"><i class="fas fa-globe" style="font-size:50px; display:block; margin-bottom:12px;"></i>لا توجد منتجات عالمية متاحة حالياً</div>';
+    return;
+  }
+
+  const searchVal = document.getElementById('searchInput').value.trim().toLowerCase();
+  let list = products;
+  if (searchVal) {
+    list = products.filter(p => p.name_ar.toLowerCase().includes(searchVal) || (p.description_ar && p.description_ar.toLowerCase().includes(searchVal)));
+  }
+
+  grid.innerHTML = list.map(p => `
+    <div class="product-card" onclick="window.location.href='/international/${p.slug}'">
+      <div class="product-img-wrap">
+        <img src="${p.image_url}" alt="${p.name_ar}" loading="lazy" decoding="async">
+        <div class="product-discount-badge" style="background:#2b6cb0;">عالمي</div>
+      </div>
+      <div class="product-info">
+        <div class="product-label" style="background:#ebf8ff; color:#2b6cb0;">AliExpress</div>
+        <div class="product-name">${p.name_ar}</div>
+        <div class="product-prices">
+          <span class="product-price">${p.price} ${p.currency || 'USD'}</span>
+        </div>
+        <a href="/international/${p.slug}" class="add-to-cart-btn" style="text-decoration:none; background:linear-gradient(135deg,#ff4747,#d32f2f);" onclick="event.stopPropagation();">
+          <i class="fas fa-external-link-alt"></i> عرض التفاصيل
+        </a>
+      </div>
+    </div>
+  `).join('');
+}
+
 // ── Search ──
 function handleSearch(val) {
+  if (currentStoreTab === 'international') {
+    renderInternationalProducts(internationalProducts);
+    return;
+  }
+
   const q = val.trim().toLowerCase();
   let base = currentCategory === 'الكل' ? allProducts : allProducts.filter(p => matchCategory(p.category, currentCategory));
   if (q) {

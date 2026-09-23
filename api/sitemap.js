@@ -44,8 +44,6 @@ function slugify(text) {
 export default async function handler(req, res) {
   const baseUrl = 'https://zoonasd.com';
 
-  // 1. Static Routes (including blog-page_99.html as in original sitemap)
-  // Use '/' instead of '' to produce trailing slash (https://zoonasd.com/)
   const staticRoutes = [
     '/',
     '/p/afraa-market.html',
@@ -57,9 +55,10 @@ export default async function handler(req, res) {
 
   let dynamicCategoryRoutes = [];
   let dynamicProductRoutes = [];
+  let internationalProductRoutes = [];
 
   try {
-    // Fetch products to dynamically construct product links and extract categories
+    // 1. Fetch local products
     const fetchUrl = `${SUPABASE_URL}/rest/v1/products?select=name,category&order=id.desc`;
     const response = await fetch(fetchUrl, {
       headers: {
@@ -71,28 +70,20 @@ export default async function handler(req, res) {
     if (response.ok) {
       const products = await response.json();
 
-      // Build dynamic product routes
       dynamicProductRoutes = products
         .map(p => p.name ? `/${slugify(p.name)}` : '')
         .filter(route => route !== '');
 
-      // Build dynamic category routes
       const uniqueCategories = new Set();
-
-      // Seed with standard categories from categorySlugs mapping (excluding 'الكل')
       Object.keys(categorySlugs).forEach(cat => {
-        if (cat !== 'الكل') {
-          uniqueCategories.add(cat);
-        }
+        if (cat !== 'الكل') uniqueCategories.add(cat);
       });
 
-      // Extract and split categories from fetched products
       products.forEach(p => {
         if (p.category) {
           const parts = p.category.split('/').map(s => s.trim());
           parts.forEach(part => {
             if (part && part !== 'الكل') {
-              // Normalize category name
               const normalized = part === 'مستحضرات تجميل' ? 'تجميل' : part;
               uniqueCategories.add(normalized);
             }
@@ -100,34 +91,48 @@ export default async function handler(req, res) {
         }
       });
 
-      // Convert unique category names into slugs
       const uniqueSlugs = new Set();
       uniqueCategories.forEach(catName => {
         const slug = slugify(catName);
-        if (slug && slug !== 'all') {
-          uniqueSlugs.add(slug);
-        }
+        if (slug && slug !== 'all') uniqueSlugs.add(slug);
       });
 
       dynamicCategoryRoutes = Array.from(uniqueSlugs).map(slug => `/c/${slug}`);
-    } else {
-      console.error(`Supabase returned status ${response.status} when fetching products for sitemap`);
+    }
+
+    // 2. Fetch active AliExpress international products
+    const aliFetchUrl = `${SUPABASE_URL}/rest/v1/aliexpress_products?is_active=eq.true&select=slug&order=id.desc`;
+    const aliResponse = await fetch(aliFetchUrl, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      }
+    });
+
+    if (aliResponse.ok) {
+      const aliProducts = await aliResponse.json();
+      internationalProductRoutes = aliProducts
+        .map(p => p.slug ? `/international/${p.slug}` : '')
+        .filter(r => r !== '');
     }
   } catch (e) {
-    console.error('Error fetching products/categories for sitemap:', e);
+    console.error('Error fetching routes for sitemap:', e);
   }
 
-  // Fallback category routes if fetch fails or is empty
   if (dynamicCategoryRoutes.length === 0) {
     const defaultSlugs = Object.values(categorySlugs).filter(s => s !== 'all');
     dynamicCategoryRoutes = Array.from(new Set(defaultSlugs)).map(slug => `/c/${slug}`);
   }
 
-  // Combine and deduplicate all routes
-  const allUniqueRoutes = Array.from(new Set([...staticRoutes, ...dynamicCategoryRoutes, ...dynamicProductRoutes]));
+  const allUniqueRoutes = Array.from(new Set([
+    ...staticRoutes,
+    ...dynamicCategoryRoutes,
+    ...dynamicProductRoutes,
+    ...internationalProductRoutes
+  ]));
+
   const lastMod = new Date().toISOString().split('T')[0];
 
-  // Generate Google-friendly XML Sitemap
   const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -143,14 +148,14 @@ ${allUniqueRoutes.map(route => {
   } else if (route.startsWith('/c/')) {
     priority = '0.8';
     changefreq = 'daily';
+  } else if (route.startsWith('/international/')) {
+    priority = '0.8';
+    changefreq = 'weekly';
   } else if (route.startsWith('/p/')) {
     priority = '0.7';
     changefreq = 'weekly';
   }
 
-  // To prevent double slashes (e.g., https://zoonasd.com//p/...) if baseUrl ends in / or route starts with /
-  // Since baseUrl is 'https://zoonasd.com' and route starts with '/', we can safely join them as baseUrl + route.
-  // But if route is '/', baseUrl + route is 'https://zoonasd.com/' which is perfect!
   const fullUrl = `${baseUrl}${route}`;
 
   return `  <url>
@@ -163,7 +168,6 @@ ${allUniqueRoutes.map(route => {
 </urlset>`;
 
   res.setHeader('Content-Type', 'text/xml');
-  // Use a sensible cache duration: CDN cache 1 hour, stale-while-revalidate 1 day
   res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
   res.status(200).send(sitemapXml);
 }
