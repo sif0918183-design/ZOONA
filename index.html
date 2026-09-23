@@ -598,6 +598,26 @@ html, body {
       <a href="#" onclick="switchTab('cats'); return false;">تسوق الآن من زونا 🛒</a>
     </div>
 
+    <!-- International Banner -->
+    <div id="internationalBanner" style="display:none; margin-top:10px; background:linear-gradient(135deg, #1a202c, #2d3748); color:#fff; border-radius:16px; padding:16px 18px; box-shadow:0 6px 16px rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.1); position:relative; overflow:hidden;">
+      <div style="position:absolute; top:-20px; left:-20px; width:90px; height:90px; background:rgba(66,153,225,0.15); border-radius:50%; pointer-events:none;"></div>
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+        <span style="background:#3182ce; color:#fff; font-size:11px; font-weight:800; padding:3px 10px; border-radius:20px; text-transform:uppercase;">شحن دولي مباشر</span>
+        <span style="color:#e2e8f0; font-size:12px;"><i class="fas fa-truck-fast" style="color:#63b3ed;"></i> تغطية شاملة للدول العربية والخليج</span>
+      </div>
+      <h2 style="font-size:16px; font-weight:800; margin:0 0 6px 0; color:#fff; line-height:1.4;">
+        ✈️ منتجات عالمية بأسعار المصنع المباشرة
+      </h2>
+      <p style="font-size:12px; color:#cbd5e0; margin:0 0 10px 0; line-height:1.6;">
+        تسوق أفضل المنتجات العالمية بعروض حصرية، ضمان حماية المشتري الكاملة، وشحن سريع وموثوق يصلك مباشرة حتى باب منزلك!
+      </p>
+      <div style="display:flex; gap:12px; flex-wrap:wrap; font-size:11px; color:#a0aec0; border-top:1px solid rgba(255,255,255,0.1); padding-top:8px;">
+        <span><i class="fas fa-check-circle" style="color:#48bb78;"></i> أسعار مخفضة حصرياً</span>
+        <span><i class="fas fa-shield-alt" style="color:#4299e1;"></i> حماية المشتري 100%</span>
+        <span><i class="fas fa-box-open" style="color:#ed8936;"></i> تتبع مباشر للشحنات</span>
+      </div>
+    </div>
+
     <!-- Category Filter -->
     <div class="cat-filter" id="catFilter">
       <button class="cat-btn active" onclick="filterCategory('الكل', this)">الكل</button>
@@ -1101,7 +1121,9 @@ function slugify(text) {
 let allProducts = [];
 let filteredProducts = [];
 let internationalProducts = [];
-let currentStoreTab = 'local'; // 'local' or 'international'
+let currentStoreTab = localStorage.getItem('selectedStoreTab') || 'local'; // 'local' or 'international'
+const INT_PRODUCTS_CACHE_KEY = 'zoona_international_products_cache';
+const INT_CACHE_DURATION = 10 * 60 * 1000; // 10 minutes cache
 let cart = JSON.parse(localStorage.getItem('cartItems')) || [];
 let orders = JSON.parse(localStorage.getItem('zoonaOrders')) || [];
 let currentModalProduct = null;
@@ -1140,6 +1162,9 @@ window.addEventListener('DOMContentLoaded', () => {
   // Show splash then load app
   setTimeout(() => {
     loadProducts();
+    if (currentStoreTab === 'international') {
+      switchStoreTab('international');
+    }
     initRotatingMessages();
     initPullToRefresh();
   }, 100);
@@ -1323,9 +1348,12 @@ function filterCategory(cat, btn, fromPopState = false) {
 // ── Store Section Switcher ──
 function switchStoreTab(tab) {
   currentStoreTab = tab;
+  localStorage.setItem('selectedStoreTab', tab);
+
   const btnLocal = document.getElementById('storeTabLocal');
   const btnInternational = document.getElementById('storeTabInternational');
   const banner = document.querySelector('.zona-banner');
+  const intBanner = document.getElementById('internationalBanner');
   const catFilter = document.getElementById('catFilter');
   const sectionTitle = document.getElementById('sectionTitle');
 
@@ -1341,6 +1369,7 @@ function switchStoreTab(tab) {
       btnInternational.style.border = '1px solid rgba(255,255,255,0.6)';
     }
     if (banner) banner.style.display = 'block';
+    if (intBanner) intBanner.style.display = 'none';
     if (catFilter) catFilter.style.display = 'flex';
     if (sectionTitle) sectionTitle.textContent = currentCategory === 'الكل' ? '🔥 المنتجات المميزة' : `📦 ${currentCategory}`;
     renderProducts(filteredProducts);
@@ -1356,25 +1385,59 @@ function switchStoreTab(tab) {
       btnLocal.style.border = '1px solid rgba(255,255,255,0.6)';
     }
     if (banner) banner.style.display = 'none';
+    if (intBanner) intBanner.style.display = 'block';
     if (catFilter) catFilter.style.display = 'none';
-    if (sectionTitle) sectionTitle.textContent = '🌐 منتجات عالمية';
+    if (sectionTitle) sectionTitle.textContent = '🌐 منتجات عالمية مختارة';
     loadInternationalProducts();
   }
 }
 
-// ── International Products Loader ──
-async function loadInternationalProducts() {
+// ── International Products Loader with LocalStorage Cache ──
+async function loadInternationalProducts(forceRefresh = false) {
   const grid = document.getElementById('productsGrid');
-  grid.innerHTML = '<div style="padding:40px 20px; text-align:center; color:#888; grid-column:1/-1;"><i class="fas fa-spinner fa-spin" style="font-size:24px;"></i><br><br>جاري تحميل المنتجات العالمية...</div>';
+
+  if (!forceRefresh) {
+    const cached = localStorage.getItem(INT_PRODUCTS_CACHE_KEY);
+    if (cached) {
+      try {
+        const cacheData = JSON.parse(cached);
+        if (Date.now() - cacheData.timestamp < INT_CACHE_DURATION) {
+          internationalProducts = cacheData.products;
+          renderInternationalProducts(internationalProducts);
+          return;
+        }
+      } catch (e) {}
+    }
+  }
+
+  if (grid) {
+    grid.innerHTML = '<div style="padding:40px 20px; text-align:center; color:#888; grid-column:1/-1;"><i class="fas fa-spinner fa-spin" style="font-size:24px;"></i><br><br>جاري تحميل المنتجات العالمية...</div>';
+  }
 
   try {
-    const res = await fetch('/api/international?format=json');
+    const fetchUrl = forceRefresh ? `/api/international?format=json&_=${Date.now()}` : '/api/international?format=json';
+    const res = await fetch(fetchUrl);
     if (!res.ok) throw new Error('Failed to load international products');
     internationalProducts = await res.json();
+
+    localStorage.setItem(INT_PRODUCTS_CACHE_KEY, JSON.stringify({
+      products: internationalProducts,
+      timestamp: Date.now()
+    }));
+
     renderInternationalProducts(internationalProducts);
   } catch (err) {
     console.error('Error loading international products:', err);
-    grid.innerHTML = '<div style="padding:30px; text-align:center; color:#999; grid-column:1/-1;">تعذّر تحميل المنتجات العالمية</div>';
+    const cached = localStorage.getItem(INT_PRODUCTS_CACHE_KEY);
+    if (cached) {
+      try {
+        const cacheData = JSON.parse(cached);
+        internationalProducts = cacheData.products;
+        renderInternationalProducts(internationalProducts);
+        return;
+      } catch (e) {}
+    }
+    if (grid) grid.innerHTML = '<div style="padding:30px; text-align:center; color:#999; grid-column:1/-1;">تعذّر تحميل المنتجات العالمية</div>';
   }
 }
 
@@ -1412,9 +1475,13 @@ function renderInternationalProducts(products) {
 }
 
 // ── Search ──
-function handleSearch(val) {
+async function handleSearch(val) {
   if (currentStoreTab === 'international') {
-    renderInternationalProducts(internationalProducts);
+    if (!internationalProducts || internationalProducts.length === 0) {
+      await loadInternationalProducts();
+    } else {
+      renderInternationalProducts(internationalProducts);
+    }
     return;
   }
 
