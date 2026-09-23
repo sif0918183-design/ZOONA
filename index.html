@@ -19,7 +19,6 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="ce596123e4bfb80cfa4439f4ea4441946b0cb18d" content="ce596123e4bfb80cfa4439f4ea4441946b0cb18d" />
-  <meta name='admaven-placement' content="BpdU9qjU7">
   <meta name="mitgo-verification" content="95b6da12-ae23-4588-97b8-648585e5fc4f" />
   <meta name="description" content="متجر ZOONA الإلكتروني - أفضل العروض والمنتجات الأصلية في السودان. توصيل سريع لجميع الولايات ودفع عند الاستلام.">
   <link rel="canonical" href="https://zoonasd.com/">
@@ -517,11 +516,6 @@ html, body {
 .pull-indicator { position:fixed; top:-70px; left:0; right:0; height:70px; background:var(--red-gradient); display:flex; align-items:center; justify-content:center; gap:8px; color:#fff; font-weight:700; font-size:15px; z-index:99; transition:top .3s ease; }
 .pull-indicator.show { top:0; }
 
-/* Grid Ad Slot Styles */
-.grid-ad-container { grid-column: 1 / -1; width: 100%; margin: 12px 0; text-align: center; }
-.grid-ad-row { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%; }
-.grid-ad-slot { flex: 1; min-width: 280px; max-width: 320px; margin: 0 auto; }
-
 /* Responsive */
 @media (min-width:480px) {
   .products-grid { grid-template-columns:repeat(3,1fr); }
@@ -664,9 +658,6 @@ html, body {
           <p>معدات وأدوات رياضية متميزة</p>
         </div>
       </div>
-<div style="width: 100%; max-width: 300px; margin: 16px auto 12px; text-align: center;">
-  <iframe srcdoc="<!DOCTYPE html><html><head><style>body{margin:0;padding:0;display:flex;justify-content:center;align-items:center;background:transparent;}</style></head><body><script async='async' data-cfasync='false' src='https://pl30110398.profitableratecpmnetwork.com/6e850548d5cf621f497ce503e02b75f2/invoke.js'></script><div id='container-6e850548d5cf621f497ce503e02b75f2'></div></body></html>" style="width:100%;max-width:300px;height:520px;border:none;overflow:hidden;display:block;margin:0 auto;" loading="lazy"></iframe>
-</div>
     </div>
   </div><!-- /page-cats -->
 
@@ -921,10 +912,6 @@ html, body {
       <i class="fas fa-cart-plus"></i> إضافة إلى السلة
     </button>
 
-<div style="width: 100%; max-width: 300px; margin: 16px auto 12px; text-align: center;">
-  <iframe srcdoc="<!DOCTYPE html><html><head><style>body{margin:0;padding:0;display:flex;justify-content:center;align-items:center;background:transparent;}</style></head><body><script async='async' data-cfasync='false' src='https://pl30110398.profitableratecpmnetwork.com/6e850548d5cf621f497ce503e02b75f2/invoke.js'></script><div id='container-6e850548d5cf621f497ce503e02b75f2'></div></body></html>" style="width:100%;max-width:300px;height:520px;border:none;overflow:hidden;display:block;margin:0 auto;" loading="lazy"></iframe>
-</div>
-
     <!-- Similar Products Section -->
     <div id="similarProductsSection" class="similar-products-section">
       <h3 class="similar-products-title">
@@ -934,10 +921,6 @@ html, body {
         <!-- Rendered by JS -->
       </div>
     </div>
-
-<div style="width: 100%; max-width: 300px; margin: 16px auto 12px; text-align: center;">
-  <iframe srcdoc="<!DOCTYPE html><html><head><style>body{margin:0;padding:0;display:flex;justify-content:center;align-items:center;background:transparent;}</style></head><body><script async='async' data-cfasync='false' src='https://pl30110398.profitableratecpmnetwork.com/6e850548d5cf621f497ce503e02b75f2/invoke.js'></script><div id='container-6e850548d5cf621f497ce503e02b75f2'></div></body></html>" style="width:100%;max-width:300px;height:520px;border:none;overflow:hidden;display:block;margin:0 auto;" loading="lazy"></iframe>
-</div>
 
     <!-- Modal Footer -->
     <div class="modal-footer">
@@ -1251,14 +1234,11 @@ function renderProducts(products) {
     grid.innerHTML = '<div style="padding:40px 20px; text-align:center; color:#aaa; grid-column:1/-1;"><i class="fas fa-box-open" style="font-size:50px; display:block; margin-bottom:12px;"></i>لا توجد منتجات في هذا القسم</div>';
     return;
   }
-  const adUnitSnippet = '<div style="width: 100%; max-width: 300px; margin: 0 auto; text-align: center;"><iframe srcdoc="<!DOCTYPE html><html><head><style>body{margin:0;padding:0;display:flex;justify-content:center;align-items:center;background:transparent;}</style></head><body><script async=\'async\' data-cfasync=\'false\' src=\'https://pl30110398.profitableratecpmnetwork.com/6e850548d5cf621f497ce503e02b75f2/invoke.js\'><' + '/script><div id=\'container-6e850548d5cf621f497ce503e02b75f2\'></div></body></html>" style="width:100%;max-width:300px;height:520px;border:none;overflow:hidden;display:block;margin:0 auto;" loading="lazy"></iframe></div>';
 
-  const isDesktop = window.innerWidth >= 768;
-
-  let productsHtml = products.map((p, idx) => {
+  let productsHtml = products.map((p) => {
     const displayCategory = p.category ? p.category.split('/').map(c => c.trim() === 'مستحضرات تجميل' ? 'تجميل' : c.trim()).join(' / ') : '';
     const optimizedImg = getTransformedImageUrl(p.image, 350, 70);
-    const productCardHtml = `
+    return `
     <div class="product-card" onclick="openModal(${p.id})">
       <div class="product-img-wrap">
         <img src="${optimizedImg}" alt="${p.name}" loading="lazy" decoding="async" onerror="if (this.src !== '${p.image}') { this.src = '${p.image}'; } else { this.src = 'assets/splash-logo.png'; }">
@@ -1278,41 +1258,9 @@ function renderProducts(products) {
       </div>
     </div>
   `;
-
-    let adInsertion = '';
-    if (isDesktop && (idx + 1) % 9 === 0) {
-      adInsertion = `
-      <div class="grid-ad-container">
-        <div class="grid-ad-row">
-          <div class="grid-ad-slot">${adUnitSnippet}</div>
-          <div class="grid-ad-slot">${adUnitSnippet}</div>
-          <div class="grid-ad-slot">${adUnitSnippet}</div>
-        </div>
-      </div>`;
-    } else if (!isDesktop && (idx + 1) % 8 === 0) {
-      adInsertion = `
-      <div class="grid-ad-container">
-        <div class="grid-ad-row">
-          <div class="grid-ad-slot">${adUnitSnippet}</div>
-        </div>
-      </div>`;
-    }
-
-    return productCardHtml + adInsertion;
   }).join('');
 
-  // 3 Ads at the bottom after all products
-  const bottomAdHtml = `
-    <div class="grid-ad-container" style="margin-top:20px;">
-      <div class="grid-ad-row">
-        <div class="grid-ad-slot">${adUnitSnippet}</div>
-        <div class="grid-ad-slot">${adUnitSnippet}</div>
-        <div class="grid-ad-slot">${adUnitSnippet}</div>
-      </div>
-    </div>
-  `;
-
-  grid.innerHTML = productsHtml + bottomAdHtml;
+  grid.innerHTML = productsHtml;
 
   if (typeof window.affilistStart === 'function') {
     window.affilistStart();
