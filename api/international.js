@@ -12,7 +12,8 @@ export default async function handler(req, res) {
   // 1. JSON List mode for storefront tab
   if (reqFormat === 'json') {
     const origin = req.headers.origin || req.headers.referer || '';
-    const allowedOrigins = ['https://zoonasd.com', 'https://www.zoonasd.com', 'zoonasd.com'];
+    const allowedOrigins = [
+    "https://zoona-git-jules-7250375803931180038-595003bf-sifians-projects.vercel.app",'https://zoonasd.com', 'https://www.zoonasd.com', 'zoonasd.com'];
 
     const currentOrigin = req.headers.origin;
     if (currentOrigin && allowedOrigins.some(allowed => currentOrigin === allowed || currentOrigin.startsWith(allowed + "/"))) {
