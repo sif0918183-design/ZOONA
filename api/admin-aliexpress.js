@@ -99,11 +99,13 @@ export default async function handler(req, res) {
         target_language: 'AR'
       };
 
+      const pageNo = req.query.page || reqBody.page || '1';
+
       if (parsed.type === 'product_id') {
         apiParams.product_ids = parsed.value;
       } else {
         apiParams.keywords = parsed.value;
-        apiParams.page_no = '1';
+        apiParams.page_no = pageNo.toString();
         apiParams.page_size = '20';
       }
 
@@ -210,7 +212,7 @@ export default async function handler(req, res) {
   // 3. POST: Add a new product to store
   if (req.method === 'POST') {
     try {
-      const { source_product_id, name_ar, description_ar, image_url, price, currency, product_detail_url, promotion_link } = reqBody;
+      const { source_product_id, name_ar, description_ar, category, image_url, price, currency, product_detail_url, promotion_link } = reqBody;
 
       if (!source_product_id || !name_ar || !image_url) {
         return res.status(400).json({ error: 'Missing required product fields' });
@@ -248,6 +250,7 @@ export default async function handler(req, res) {
         slug,
         name_ar,
         description_ar: description_ar || '',
+        category: category || 'عام',
         image_url,
         price: parseFloat(price) || 0,
         currency: currency || 'USD',
@@ -361,10 +364,11 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, updated_price: parseFloat(newPrice) });
       }
 
-      // Normal edit (name_ar, description_ar, is_active)
+      // Normal edit (name_ar, description_ar, category, is_active)
       const updateFields = {};
       if (reqBody.name_ar !== undefined) updateFields.name_ar = reqBody.name_ar;
       if (reqBody.description_ar !== undefined) updateFields.description_ar = reqBody.description_ar;
+      if (reqBody.category !== undefined) updateFields.category = reqBody.category;
       if (reqBody.is_active !== undefined) updateFields.is_active = Boolean(reqBody.is_active);
       updateFields.updated_at = new Date().toISOString();
 

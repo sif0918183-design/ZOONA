@@ -681,6 +681,11 @@
             <div id="aliSearchResults" style="display: none; margin-bottom: 30px;">
                 <h4 style="color: var(--primary-color); margin-bottom: 10px;">نتائج البحث:</h4>
                 <div id="aliResultsGrid" class="ali-results-grid"></div>
+                <div id="aliLoadMoreWrap" style="display:none; text-align:center; margin-top:15px;">
+                    <button id="aliLoadMoreBtn" class="btn btn-primary" onclick="loadMoreAliExpressResults()" style="padding:10px 24px;">
+                        <i class="fas fa-plus-circle"></i> عرض المزيد من النتائج
+                    </button>
+                </div>
             </div>
 
             <hr style="margin: 25px 0; border: none; border-top: 1px solid #e2e8f0;">
@@ -777,6 +782,34 @@
         </div>
     </div>
 
+    <!-- Modal تحديد قسم المنتج العالمي -->
+    <div id="aliCategoryModal" style="align-items: center; background: rgba(0,0,0,0.5); display: none; height: 100%; justify-content: center; left: 0; position: fixed; top: 0; width: 100%; z-index: 1000;">
+        <div style="background: white; border-radius: 12px; max-width: 450px; padding: 25px; width: 90%; font-family: 'Tajawal'; direction: rtl;">
+            <h3 style="margin-bottom: 15px; color: var(--primary-color);"><i class="fas fa-tags"></i> اختر قسم المنتج</h3>
+            <p style="font-size:13px; color:#666; margin-bottom:15px;">حدد قسم المتجر المناسب لعرض هذا المنتج تحته في الواجهة:</p>
+            <form onsubmit="confirmAddAliExpressProduct(event)">
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-weight: 700; margin-bottom: 8px;">القسم</label>
+                    <select id="aliSelectCategory" style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 12px; width: 100%; font-family: 'Tajawal'; font-size:14px;">
+                        <option value="عام">عام (بدون قسم محدّد)</option>
+                        <option value="موبايلات">موبايلات</option>
+                        <option value="أجهزة إلكترونية">أجهزة إلكترونية</option>
+                        <option value="إكسسوارات موبايلات">إكسسوارات موبايلات</option>
+                        <option value="أجهزة كهربائية">أجهزة كهربائية</option>
+                        <option value="ألعاب أطفال">ألعاب أطفال</option>
+                        <option value="تجميل">تجميل</option>
+                        <option value="عطور">عطور</option>
+                        <option value="اللياقة والرياضة">اللياقة والرياضة</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button class="btn" onclick="document.getElementById('aliCategoryModal').style.display='none'" style="background: #718096; color: white;" type="button">إلغاء</button>
+                    <button class="btn btn-primary" type="submit"><i class="fas fa-plus"></i> إكمال الإضافة</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modal تعديل منتج عالمي -->
     <div id="aliModal" style="align-items: center; background: rgba(0,0,0,0.5); display: none; height: 100%; justify-content: center; left: 0; position: fixed; top: 0; width: 100%; z-index: 1000;">
         <div style="background: white; border-radius: 10px; max-width: 500px; padding: 30px; width: 90%;">
@@ -786,6 +819,20 @@
                 <div style="margin-bottom: 15px;">
                     <label style="display: block; font-weight: 500; margin-bottom: 5px;">اسم المنتج بالعربية</label>
                     <input id="aliEditName" required style="border-radius: 5px; border: 1px solid #e2e8f0; padding: 10px; width: 100%;" type="text" />
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 500; margin-bottom: 5px;">القسم</label>
+                    <select id="aliEditCategory" style="border-radius: 5px; border: 1px solid #e2e8f0; padding: 10px; width: 100%; font-family:'Tajawal';">
+                        <option value="عام">عام</option>
+                        <option value="موبايلات">موبايلات</option>
+                        <option value="أجهزة إلكترونية">أجهزة إلكترونية</option>
+                        <option value="إكسسوارات موبايلات">إكسسوارات موبايلات</option>
+                        <option value="أجهزة كهربائية">أجهزة كهربائية</option>
+                        <option value="ألعاب أطفال">ألعاب أطفال</option>
+                        <option value="تجميل">تجميل</option>
+                        <option value="عطور">عطور</option>
+                        <option value="اللياقة والرياضة">اللياقة والرياضة</option>
+                    </select>
                 </div>
                 <div style="margin-bottom: 15px;">
                     <label style="display: block; font-weight: 500; margin-bottom: 5px;">الوصف العربي (اختياري تحسين SEO)</label>
@@ -1876,6 +1923,10 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             });
 
             // ========== دوال إدارة المنتجات العالمية (AliExpress Affiliate) ==========
+            let currentAliSearchQuery = '';
+            let currentAliSearchPage = 1;
+            let pendingProductToAdd = null;
+
             async function searchAliExpress() {
                 const query = document.getElementById('aliSearchInput').value.trim();
                 if (!query) {
@@ -1883,15 +1934,20 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     return;
                 }
 
+                currentAliSearchQuery = query;
+                currentAliSearchPage = 1;
+
                 const resultsGrid = document.getElementById('aliResultsGrid');
                 const resultsContainer = document.getElementById('aliSearchResults');
+                const loadMoreWrap = document.getElementById('aliLoadMoreWrap');
 
                 resultsContainer.style.display = 'block';
+                if (loadMoreWrap) loadMoreWrap.style.display = 'none';
                 resultsGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> جاري البحث في AliExpress...</div>';
 
                 try {
                     const pass = getAdminPassword();
-                    const res = await fetch(`/api/admin-aliexpress?action=search&q=${encodeURIComponent(query)}&adminPassword=${encodeURIComponent(pass)}`);
+                    const res = await fetch(`/api/admin-aliexpress?action=search&q=${encodeURIComponent(query)}&page=1&adminPassword=${encodeURIComponent(pass)}`);
                     const data = await res.json();
 
                     if (!res.ok) {
@@ -1904,17 +1960,11 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                         return;
                     }
 
-                    resultsGrid.innerHTML = data.products.map(p => `
-                        <div class="ali-card">
-                            <img src="${p.image_url}" alt="${p.name_ar}">
-                            <div class="ali-title">${p.name_ar}</div>
-                            <div class="ali-price">${p.price} ${p.currency}</div>
-                            <div class="ali-id">ID: ${p.source_product_id}</div>
-                            <button class="btn btn-primary btn-sm" onclick="addAliExpressProduct(${JSON.stringify(p).replace(/"/g, '&quot;')})">
-                                <i class="fas fa-plus"></i> إضافة للمتجر
-                            </button>
-                        </div>
-                    `).join('');
+                    renderAliSearchResults(data.products, false);
+
+                    if (loadMoreWrap && data.products.length >= 20) {
+                        loadMoreWrap.style.display = 'block';
+                    }
 
                 } catch (err) {
                     console.error('AliExpress Search Error:', err);
@@ -1922,7 +1972,76 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                 }
             }
 
-            async function addAliExpressProduct(product) {
+            async function loadMoreAliExpressResults() {
+                if (!currentAliSearchQuery) return;
+                currentAliSearchPage++;
+
+                const btn = document.getElementById('aliLoadMoreBtn');
+                const originalText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحميل...';
+
+                try {
+                    const pass = getAdminPassword();
+                    const res = await fetch(`/api/admin-aliexpress?action=search&q=${encodeURIComponent(currentAliSearchQuery)}&page=${currentAliSearchPage}&adminPassword=${encodeURIComponent(pass)}`);
+                    const data = await res.json();
+
+                    if (res.ok && data.products && data.products.length > 0) {
+                        renderAliSearchResults(data.products, true);
+                        if (data.products.length < 20) {
+                            document.getElementById('aliLoadMoreWrap').style.display = 'none';
+                        }
+                    } else {
+                        document.getElementById('aliLoadMoreWrap').style.display = 'none';
+                    }
+                } catch (err) {
+                    console.error('Load more error:', err);
+                    alert('حدث خطأ أثناء جلب المزيد من النتائج');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            }
+
+            function renderAliSearchResults(products, append = false) {
+                const resultsGrid = document.getElementById('aliResultsGrid');
+                const html = products.map(p => `
+                    <div class="ali-card">
+                        <img src="${p.image_url}" alt="${p.name_ar}">
+                        <div class="ali-title">${p.name_ar}</div>
+                        <div class="ali-price">${p.price} ${p.currency}</div>
+                        <div class="ali-id">ID: ${p.source_product_id}</div>
+                        <button class="btn btn-primary btn-sm" onclick="openAliCategoryModal(${JSON.stringify(p).replace(/"/g, '&quot;')})">
+                            <i class="fas fa-plus"></i> إضافة للمتجر
+                        </button>
+                    </div>
+                `).join('');
+
+                if (append) {
+                    resultsGrid.insertAdjacentHTML('beforeend', html);
+                } else {
+                    resultsGrid.innerHTML = html;
+                }
+            }
+
+            function openAliCategoryModal(product) {
+                pendingProductToAdd = product;
+                document.getElementById('aliSelectCategory').value = 'عام';
+                document.getElementById('aliCategoryModal').style.display = 'flex';
+            }
+
+            async function confirmAddAliExpressProduct(e) {
+                e.preventDefault();
+                if (!pendingProductToAdd) return;
+
+                const category = document.getElementById('aliSelectCategory').value || 'عام';
+                document.getElementById('aliCategoryModal').style.display = 'none';
+
+                await addAliExpressProduct(pendingProductToAdd, category);
+                pendingProductToAdd = null;
+            }
+
+            async function addAliExpressProduct(product, category = 'عام') {
                 try {
                     const pass = getAdminPassword();
                     const res = await fetch(`/api/admin-aliexpress?adminPassword=${encodeURIComponent(pass)}`, {
@@ -1933,6 +2052,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                             source_product_id: product.source_product_id,
                             name_ar: product.name_ar,
                             description_ar: '',
+                            category: category,
                             image_url: product.image_url,
                             price: product.price,
                             currency: product.currency,
@@ -2027,6 +2147,9 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             function openAliExpressEditModal(p) {
                 document.getElementById('aliEditId').value = p.id;
                 document.getElementById('aliEditName').value = p.name_ar || '';
+                if (document.getElementById('aliEditCategory')) {
+                    document.getElementById('aliEditCategory').value = p.category || 'عام';
+                }
                 document.getElementById('aliEditDesc').value = p.description_ar || '';
                 document.getElementById('aliEditActive').value = p.is_active ? 'true' : 'false';
                 document.getElementById('aliModal').style.display = 'flex';
@@ -2036,6 +2159,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                 e.preventDefault();
                 const id = document.getElementById('aliEditId').value;
                 const name_ar = document.getElementById('aliEditName').value;
+                const category = document.getElementById('aliEditCategory') ? document.getElementById('aliEditCategory').value : 'عام';
                 const description_ar = document.getElementById('aliEditDesc').value;
                 const is_active = document.getElementById('aliEditActive').value === 'true';
 
@@ -2044,7 +2168,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     const res = await fetch(`/api/admin-aliexpress?id=${id}&adminPassword=${encodeURIComponent(pass)}`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ adminPassword: pass, name_ar, description_ar, is_active })
+                        body: JSON.stringify({ adminPassword: pass, name_ar, category, description_ar, is_active })
                     });
 
                     if (res.ok) {

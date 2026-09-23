@@ -1314,12 +1314,21 @@ function renderProducts(products) {
 function filterCategory(cat, btn, fromPopState = false) {
   currentCategory = cat;
 
-  // Update buttons
-  document.querySelectorAll('.cat-btn').forEach(b => {
+  // Update buttons in category bar
+  document.querySelectorAll('#catFilter .cat-btn').forEach(b => {
     b.classList.remove('active');
     if (b.textContent.trim() === cat) b.classList.add('active');
   });
   if (btn) btn.classList.add('active');
+
+  if (currentStoreTab === 'international') {
+    document.getElementById('sectionTitle').textContent = cat === 'الكل' ? '🌐 منتجات عالمية مختارة' : `🌐 منتجات عالمية - ${cat}`;
+    renderInternationalProducts(internationalProducts);
+    if (document.getElementById('page-home').classList.contains('active')) {
+      document.getElementById('page-home').scrollTop = 0;
+    }
+    return;
+  }
 
   if (cat === 'الكل') {
     filteredProducts = [...allProducts];
@@ -1357,6 +1366,15 @@ function switchStoreTab(tab) {
   const catFilter = document.getElementById('catFilter');
   const sectionTitle = document.getElementById('sectionTitle');
 
+  // Nav items to toggle
+  const navCart = document.getElementById('nav-cart');
+  const navOrders = document.getElementById('nav-orders');
+
+  // More page items to toggle
+  const workWithUs = document.querySelector('a[href*="afraa-market.html"]');
+  const marketerDash = document.querySelector('a[href*="blog-page_57.html"]');
+  const merchantJoin = document.querySelector('div[onclick*="openMerchantModal"]');
+
   if (tab === 'local') {
     if (btnLocal) {
       btnLocal.style.background = '#fff';
@@ -1372,6 +1390,14 @@ function switchStoreTab(tab) {
     if (intBanner) intBanner.style.display = 'none';
     if (catFilter) catFilter.style.display = 'flex';
     if (sectionTitle) sectionTitle.textContent = currentCategory === 'الكل' ? '🔥 المنتجات المميزة' : `📦 ${currentCategory}`;
+
+    if (navCart) navCart.style.display = 'flex';
+    if (navOrders) navOrders.style.display = 'flex';
+
+    if (workWithUs) workWithUs.style.display = 'flex';
+    if (marketerDash) marketerDash.style.display = 'flex';
+    if (merchantJoin) merchantJoin.style.display = 'flex';
+
     renderProducts(filteredProducts);
   } else {
     if (btnInternational) {
@@ -1386,8 +1412,16 @@ function switchStoreTab(tab) {
     }
     if (banner) banner.style.display = 'none';
     if (intBanner) intBanner.style.display = 'block';
-    if (catFilter) catFilter.style.display = 'none';
-    if (sectionTitle) sectionTitle.textContent = '🌐 منتجات عالمية مختارة';
+    if (catFilter) catFilter.style.display = 'flex';
+    if (sectionTitle) sectionTitle.textContent = currentCategory === 'الكل' ? '🌐 منتجات عالمية مختارة' : `🌐 منتجات عالمية - ${currentCategory}`;
+
+    if (navCart) navCart.style.display = 'none';
+    if (navOrders) navOrders.style.display = 'none';
+
+    if (workWithUs) workWithUs.style.display = 'none';
+    if (marketerDash) marketerDash.style.display = 'none';
+    if (merchantJoin) merchantJoin.style.display = 'none';
+
     loadInternationalProducts();
   }
 }
@@ -1448,10 +1482,22 @@ function renderInternationalProducts(products) {
     return;
   }
 
-  const searchVal = document.getElementById('searchInput').value.trim().toLowerCase();
   let list = products;
+
+  // Filter by category if selected
+  if (currentCategory && currentCategory !== 'الكل') {
+    list = list.filter(p => matchCategory(p.category, currentCategory));
+  }
+
+  // Filter by search query if typed
+  const searchVal = document.getElementById('searchInput').value.trim().toLowerCase();
   if (searchVal) {
-    list = products.filter(p => p.name_ar.toLowerCase().includes(searchVal) || (p.description_ar && p.description_ar.toLowerCase().includes(searchVal)));
+    list = list.filter(p => p.name_ar.toLowerCase().includes(searchVal) || (p.description_ar && p.description_ar.toLowerCase().includes(searchVal)));
+  }
+
+  if (list.length === 0) {
+    grid.innerHTML = '<div style="padding:40px 20px; text-align:center; color:#aaa; grid-column:1/-1;"><i class="fas fa-search" style="font-size:40px; display:block; margin-bottom:12px;"></i>لا توجد منتجات عالمية مطابقة لهذا القسم أو البحث</div>';
+    return;
   }
 
   grid.innerHTML = list.map(p => `

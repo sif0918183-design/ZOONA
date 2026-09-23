@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS public.aliexpress_products (
     slug TEXT UNIQUE NOT NULL,
     name_ar TEXT NOT NULL,
     description_ar TEXT,
+    category TEXT DEFAULT 'عام',
     image_url TEXT NOT NULL,
     price NUMERIC NOT NULL,
     currency TEXT DEFAULT 'USD',
@@ -13,6 +14,9 @@ CREATE TABLE IF NOT EXISTS public.aliexpress_products (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Add category column if table exists without it
+ALTER TABLE public.aliexpress_products ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'عام';
 
 -- Indexes for fast lookup
 CREATE INDEX IF NOT EXISTS idx_aliexpress_products_slug ON public.aliexpress_products(slug);
