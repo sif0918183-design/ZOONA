@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     }
 
     try {
-      const fetchUrl = `${SUPABASE_URL}/rest/v1/aliexpress_products?is_active=eq.true&select=id,slug,name_ar,description_ar,image_url,price,currency,affiliate_link,source_product_id,created_at&order=created_at.desc`;
+      const fetchUrl = `${SUPABASE_URL}/rest/v1/aliexpress_products?is_active=eq.true&select=id,slug,name_ar,description_ar,category,image_url,price,currency,affiliate_link,source_product_id,created_at&order=created_at.desc`;
       const response = await fetch(fetchUrl, {
         headers: {
           'apikey': SUPABASE_KEY,

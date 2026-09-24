@@ -681,11 +681,8 @@
             <div id="aliSearchResults" style="display: none; margin-bottom: 30px;">
                 <h4 style="color: var(--primary-color); margin-bottom: 10px;">نتائج البحث:</h4>
                 <div id="aliResultsGrid" class="ali-results-grid"></div>
-                <div id="aliLoadMoreWrap" style="display:none; text-align:center; margin-top:15px;">
-                    <button id="aliLoadMoreBtn" class="btn btn-primary" onclick="loadMoreAliExpressResults()" style="padding:10px 24px;">
-                        <i class="fas fa-plus-circle"></i> عرض المزيد من النتائج
-                    </button>
-                </div>
+                <div id="aliSearchStatus" style="text-align: center; padding: 20px 10px; color: #718096; font-size: 14px; font-family: 'Tajawal';"></div>
+                <div id="aliSearchSentinel" style="height: 10px; margin-top: 10px;"></div>
             </div>
 
             <hr style="margin: 25px 0; border: none; border-top: 1px solid #e2e8f0;">
@@ -1925,7 +1922,28 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             // ========== دوال إدارة المنتجات العالمية (AliExpress Affiliate) ==========
             let currentAliSearchQuery = '';
             let currentAliSearchPage = 1;
+            let totalAliSearchPages = 1;
+            let isAliSearchLoading = false;
+            let hasMoreAliResults = true;
+            let currentSearchGen = 0;
+            let seenAliProductIds = new Set();
+            let aliObserver = null;
             let pendingProductToAdd = null;
+
+            function setupAliObserver() {
+                if (aliObserver) aliObserver.disconnect();
+
+                const sentinel = document.getElementById('aliSearchSentinel');
+                if (!sentinel) return;
+
+                aliObserver = new IntersectionObserver((entries) => {
+                    if (entries[0].isIntersecting && !isAliSearchLoading && hasMoreAliResults && currentAliSearchQuery) {
+                        loadNextAliPage();
+                    }
+                }, { rootMargin: '250px' });
+
+                aliObserver.observe(sentinel);
+            }
 
             async function searchAliExpress() {
                 const query = document.getElementById('aliSearchInput').value.trim();
@@ -1934,78 +1952,147 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                     return;
                 }
 
+                currentSearchGen++;
+                const thisGen = currentSearchGen;
+
                 currentAliSearchQuery = query;
                 currentAliSearchPage = 1;
+                totalAliSearchPages = 1;
+                isAliSearchLoading = true;
+                hasMoreAliResults = true;
+                seenAliProductIds.clear();
 
                 const resultsGrid = document.getElementById('aliResultsGrid');
                 const resultsContainer = document.getElementById('aliSearchResults');
-                const loadMoreWrap = document.getElementById('aliLoadMoreWrap');
+                const statusWrap = document.getElementById('aliSearchStatus');
 
                 resultsContainer.style.display = 'block';
-                if (loadMoreWrap) loadMoreWrap.style.display = 'none';
-                resultsGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> جاري البحث في AliExpress...</div>';
+                resultsGrid.innerHTML = '';
+                statusWrap.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري البحث في AliExpress...';
 
                 try {
                     const pass = getAdminPassword();
                     const res = await fetch(`/api/admin-aliexpress?action=search&q=${encodeURIComponent(query)}&page=1&adminPassword=${encodeURIComponent(pass)}`);
+
+                    if (thisGen !== currentSearchGen) return;
+
                     const data = await res.json();
 
                     if (!res.ok) {
-                        resultsGrid.innerHTML = `<div style="grid-column: 1/-1; color: var(--danger-color); text-align: center;">${data.error || 'فشل البحث في AliExpress'}</div>`;
+                        statusWrap.innerHTML = `<span style="color: var(--danger-color);">${data.error || 'فشل البحث في AliExpress'}</span>`;
+                        hasMoreAliResults = false;
                         return;
                     }
 
                     if (!data.products || data.products.length === 0) {
-                        resultsGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #718096;">لم يتم العثور على منتجات مطابقة.</div>';
+                        statusWrap.innerHTML = 'لم يتم العثور على منتجات مطابقة.';
+                        hasMoreAliResults = false;
                         return;
+                    }
+
+                    if (data.total_page_no !== undefined) {
+                        totalAliSearchPages = data.total_page_no;
+                    } else {
+                        totalAliSearchPages = data.products.length >= 50 ? 1000 : 1;
                     }
 
                     renderAliSearchResults(data.products, false);
 
-                    if (loadMoreWrap && data.products.length >= 20) {
-                        loadMoreWrap.style.display = 'block';
+                    if (currentAliSearchPage >= totalAliSearchPages || data.products.length < 50) {
+                        hasMoreAliResults = false;
+                        statusWrap.innerHTML = 'تم عرض جميع النتائج';
+                    } else {
+                        statusWrap.innerHTML = '';
+                        setupAliObserver();
                     }
 
                 } catch (err) {
+                    if (thisGen !== currentSearchGen) return;
                     console.error('AliExpress Search Error:', err);
-                    resultsGrid.innerHTML = '<div style="grid-column: 1/-1; color: var(--danger-color); text-align: center;">حدث خطأ أثناء الاتصال بالخادم</div>';
+                    statusWrap.innerHTML = '<span style="color: var(--danger-color);">حدث خطأ أثناء الاتصال بالخادم</span>';
+                    hasMoreAliResults = false;
+                } finally {
+                    if (thisGen === currentSearchGen) {
+                        isAliSearchLoading = false;
+                    }
                 }
             }
 
-            async function loadMoreAliExpressResults() {
-                if (!currentAliSearchQuery) return;
-                currentAliSearchPage++;
+            async function loadNextAliPage() {
+                if (isAliSearchLoading || !hasMoreAliResults || !currentAliSearchQuery) return;
 
-                const btn = document.getElementById('aliLoadMoreBtn');
-                const originalText = btn.innerHTML;
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحميل...';
+                isAliSearchLoading = true;
+                const thisGen = currentSearchGen;
+                const nextPage = currentAliSearchPage + 1;
+
+                const statusWrap = document.getElementById('aliSearchStatus');
+                statusWrap.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري تحميل المزيد...';
 
                 try {
                     const pass = getAdminPassword();
-                    const res = await fetch(`/api/admin-aliexpress?action=search&q=${encodeURIComponent(currentAliSearchQuery)}&page=${currentAliSearchPage}&adminPassword=${encodeURIComponent(pass)}`);
+                    const res = await fetch(`/api/admin-aliexpress?action=search&q=${encodeURIComponent(currentAliSearchQuery)}&page=${nextPage}&adminPassword=${encodeURIComponent(pass)}`);
+
+                    if (thisGen !== currentSearchGen) return;
+
                     const data = await res.json();
 
-                    if (res.ok && data.products && data.products.length > 0) {
-                        renderAliSearchResults(data.products, true);
-                        if (data.products.length < 20) {
-                            document.getElementById('aliLoadMoreWrap').style.display = 'none';
-                        }
-                    } else {
-                        document.getElementById('aliLoadMoreWrap').style.display = 'none';
+                    if (!res.ok) {
+                        statusWrap.innerHTML = `
+                            <div style="color: var(--danger-color);">
+                                تعذر تحميل المزيد من النتائج.
+                                <button class="btn btn-sm btn-primary" onclick="loadNextAliPage()" style="margin-right:8px; padding:4px 10px; font-family:'Tajawal';">إعادة المحاولة</button>
+                            </div>`;
+                        return;
                     }
+
+                    if (!data.products || data.products.length === 0) {
+                        hasMoreAliResults = false;
+                        statusWrap.innerHTML = 'تم عرض جميع النتائج';
+                        return;
+                    }
+
+                    currentAliSearchPage = nextPage;
+                    if (data.total_page_no !== undefined) {
+                        totalAliSearchPages = data.total_page_no;
+                    }
+
+                    const addedCount = renderAliSearchResults(data.products, true);
+
+                    if (currentAliSearchPage >= totalAliSearchPages || data.products.length < 50 || addedCount === 0) {
+                        hasMoreAliResults = false;
+                        statusWrap.innerHTML = 'تم عرض جميع النتائج';
+                    } else {
+                        statusWrap.innerHTML = '';
+                    }
+
                 } catch (err) {
-                    console.error('Load more error:', err);
-                    alert('حدث خطأ أثناء جلب المزيد من النتائج');
+                    if (thisGen !== currentSearchGen) return;
+                    console.error('Load next page error:', err);
+                    statusWrap.innerHTML = `
+                        <div style="color: var(--danger-color);">
+                            تعذر تحميل المزيد من النتائج.
+                            <button class="btn btn-sm btn-primary" onclick="loadNextAliPage()" style="margin-right:8px; padding:4px 10px; font-family:'Tajawal';">إعادة المحاولة</button>
+                        </div>`;
                 } finally {
-                    btn.disabled = false;
-                    btn.innerHTML = originalText;
+                    if (thisGen === currentSearchGen) {
+                        isAliSearchLoading = false;
+                    }
                 }
             }
 
             function renderAliSearchResults(products, append = false) {
                 const resultsGrid = document.getElementById('aliResultsGrid');
-                const html = products.map(p => `
+
+                const newProducts = products.filter(p => {
+                    if (!p.source_product_id) return true;
+                    if (seenAliProductIds.has(p.source_product_id)) return false;
+                    seenAliProductIds.add(p.source_product_id);
+                    return true;
+                });
+
+                if (newProducts.length === 0) return 0;
+
+                const html = newProducts.map(p => `
                     <div class="ali-card">
                         <img src="${p.image_url}" alt="${p.name_ar}">
                         <div class="ali-title">${p.name_ar}</div>
@@ -2022,6 +2109,8 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                 } else {
                     resultsGrid.innerHTML = html;
                 }
+
+                return newProducts.length;
             }
 
             function openAliCategoryModal(product) {

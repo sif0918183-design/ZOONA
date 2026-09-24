@@ -87,6 +87,9 @@ export default async function handler(req, res) {
 
     try {
       const timestamp = getTopTimestamp();
+      const hasArabic = /[\u0600-\u06FF]/.test(parsed.value);
+      const targetLang = hasArabic ? 'AR' : 'EN';
+
       let apiParams = {
         app_key: APP_KEY,
         method: 'aliexpress.affiliate.product.query',
@@ -96,7 +99,7 @@ export default async function handler(req, res) {
         sign_method: 'md5',
         tracking_id: TRACKING_ID,
         target_currency: 'USD',
-        target_language: 'AR'
+        target_language: targetLang
       };
 
       const pageNo = req.query.page || reqBody.page || '1';
@@ -106,7 +109,7 @@ export default async function handler(req, res) {
       } else {
         apiParams.keywords = parsed.value;
         apiParams.page_no = pageNo.toString();
-        apiParams.page_size = '20';
+        apiParams.page_size = '50';
       }
 
       const sign = generateTopSignature(apiParams, APP_SECRET);
@@ -122,9 +125,17 @@ export default async function handler(req, res) {
 
       const aliData = await aliRes.json();
       let products = [];
+      let paginationInfo = {};
+
       const responseObj = aliData.aliexpress_affiliate_product_query_response;
       if (responseObj && responseObj.resp_result && responseObj.resp_result.result) {
         const resultObj = responseObj.resp_result.result;
+
+        if (resultObj.current_record_count !== undefined) paginationInfo.current_record_count = resultObj.current_record_count;
+        if (resultObj.total_record_count !== undefined) paginationInfo.total_record_count = resultObj.total_record_count;
+        if (resultObj.current_page_no !== undefined) paginationInfo.current_page_no = resultObj.current_page_no;
+        if (resultObj.total_page_no !== undefined) paginationInfo.total_page_no = resultObj.total_page_no;
+
         if (resultObj.products && resultObj.products.product) {
           const rawProducts = Array.isArray(resultObj.products.product) ? resultObj.products.product : [resultObj.products.product];
           products = rawProducts.map(item => ({
@@ -139,7 +150,12 @@ export default async function handler(req, res) {
         }
       }
 
-      return res.status(200).json({ success: true, count: products.length, products });
+      return res.status(200).json({
+        success: true,
+        count: products.length,
+        products,
+        ...paginationInfo
+      });
 
     } catch (err) {
       console.error('Error querying AliExpress:', err);
