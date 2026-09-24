@@ -159,11 +159,22 @@ export default async function handler(req, res) {
     .product-title { font-size: 22px; font-weight: 900; color: #222; margin-bottom: 12px; line-height: 1.4; }
     .product-price-badge { display: inline-block; background: #FFEBEE; color: var(--red); font-size: 24px; font-weight: 900; padding: 6px 16px; border-radius: 10px; margin-bottom: 20px; }
     .product-desc { font-size: 15px; color: #555; line-height: 1.8; margin-bottom: 25px; white-space: pre-wrap; background: #fdfdfd; padding: 15px; border-radius: 10px; border: 1px solid #eee; }
-    .buy-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; background: linear-gradient(135deg, #ff4747 0%, #d32f2f 100%); color: #fff; font-size: 18px; font-weight: 800; text-decoration: none; padding: 16px; border-radius: 14px; box-shadow: 0 6px 20px rgba(211,47,47,.3); transition: .25s; }
+    .buy-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; background: linear-gradient(135deg, #ff4747 0%, #d32f2f 100%); color: #fff; font-size: 18px; font-weight: 800; text-decoration: none; padding: 16px; border-radius: 14px; box-shadow: 0 6px 20px rgba(211,47,47,.3); transition: .25s; border: none; cursor: pointer; font-family: var(--font); }
     .buy-btn:hover { filter: brightness(1.1); transform: translateY(-2px); }
     .disclaimer { text-align: center; font-size: 13px; color: #888; margin-top: 14px; font-weight: 500; }
-    .lang-tip { text-align: center; font-size: 12px; color: #666; margin-top: 10px; font-weight: 500; background: #f8f9fa; padding: 10px 12px; border-radius: 10px; border: 1px solid #edf2f7; line-height: 1.5; }
-    .lang-tip i { color: #3182ce; margin-left: 4px; }
+
+    /* Popup Modal */
+    .popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 16px; opacity: 0; transition: opacity 0.25s ease; }
+    .popup-overlay.active { display: flex; opacity: 1; }
+    .popup-modal { background: #fff; border-radius: 20px; padding: 22px 20px; max-width: 400px; width: 100%; position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.2); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); direction: rtl; text-align: center; }
+    @keyframes popIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .popup-close { position: absolute; top: 12px; left: 14px; background: #f0f2f5; border: none; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #666; cursor: pointer; transition: 0.2s; line-height: 1; }
+    .popup-close:hover { background: #e2e8f0; color: #2d3748; }
+    .popup-icon { width: 50px; height: 50px; background: #ebf8ff; color: #3182ce; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; margin: 0 auto 12px; }
+    .popup-title { font-size: 17px; font-weight: 800; color: #2d3748; margin-bottom: 10px; }
+    .popup-text { font-size: 14px; color: #4a5568; line-height: 1.6; margin-bottom: 20px; font-weight: 500; }
+    .popup-action-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: linear-gradient(135deg, #ff4747 0%, #d32f2f 100%); color: #fff; font-size: 16px; font-weight: 800; text-decoration: none; padding: 14px; border-radius: 12px; box-shadow: 0 4px 14px rgba(211,47,47,0.3); transition: 0.25s; }
+    .popup-action-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
     .back-nav { display: inline-flex; align-items: center; gap: 6px; color: var(--red); text-decoration: none; font-weight: 700; margin-bottom: 16px; font-size: 14px; }
     .footer { text-align: center; padding: 20px; color: #888; font-size: 13px; border-top: 1px solid #eee; margin-top: 30px; background: #fff; }
   </style>
@@ -184,13 +195,42 @@ export default async function handler(req, res) {
       <h1 class="product-title">${esc(product.name_ar)}</h1>
       <div class="product-price-badge">${esc(product.price)} ${esc(product.currency || 'USD')}</div>
       ${product.description_ar ? `<div class="product-desc">${esc(product.description_ar)}</div>` : ''}
-      <a href="${esc(product.affiliate_link)}" target="_blank" rel="nofollow sponsored noopener" class="buy-btn">
+      <button type="button" class="buy-btn" onclick="openPopup()">
         <i class="fas fa-external-link-alt"></i> اشترِ الآن
-      </a>
+      </button>
       <div class="disclaimer"><i class="fas fa-info-circle"></i> يتم الشراء والتوصيل عبر AliExpress مباشرة.</div>
-      <div class="lang-tip"><i class="fas fa-globe"></i> سيتم تحويلك إلى AliExpress لإتمام الشراء. إذا ظهرت الصفحة بالإنجليزية، يمكنك تغيير اللغة إلى العربية من أعلى صفحة AliExpress نفسها.</div>
     </div>
   </div>
+
+  <div class="popup-overlay" id="aliPopup" onclick="closePopupOnBackdrop(event)">
+    <div class="popup-modal">
+      <button type="button" class="popup-close" onclick="closePopup()">&times;</button>
+      <div class="popup-icon"><i class="fas fa-globe"></i></div>
+      <div class="popup-title">تنبيه قبل التحويل</div>
+      <div class="popup-text">
+        سيتم تحويلك إلى AliExpress لإتمام الشراء. إذا ظهرت الصفحة بالإنجليزية، يمكنك تغيير اللغة إلى العربية من أعلى صفحة AliExpress نفسها.
+      </div>
+      <a href="${esc(product.affiliate_link)}" target="_blank" rel="nofollow sponsored noopener" class="popup-action-btn" onclick="closePopup()">
+        <i class="fas fa-external-link-alt"></i> متابعة إلى AliExpress
+      </a>
+    </div>
+  </div>
+
+  <script>
+    function openPopup() {
+      const popup = document.getElementById('aliPopup');
+      if (popup) popup.classList.add('active');
+    }
+    function closePopup() {
+      const popup = document.getElementById('aliPopup');
+      if (popup) popup.classList.remove('active');
+    }
+    function closePopupOnBackdrop(e) {
+      if (e.target && e.target.id === 'aliPopup') {
+        closePopup();
+      }
+    }
+  </script>
 
   <footer class="footer">
     ZOONA © 2026 - جميع الحقوق محفوظة
