@@ -1432,21 +1432,7 @@ function switchStoreTab(tab) {
 async function loadInternationalProducts(forceRefresh = false) {
   const grid = document.getElementById('productsGrid');
 
-  if (!forceRefresh) {
-    const cached = localStorage.getItem(INT_PRODUCTS_CACHE_KEY);
-    if (cached) {
-      try {
-        const cacheData = JSON.parse(cached);
-        if (Date.now() - cacheData.timestamp < INT_CACHE_DURATION) {
-          internationalProducts = cacheData.products;
-          renderInternationalProducts(internationalProducts);
-          return;
-        }
-      } catch (e) {}
-    }
-  }
-
-  if (grid) {
+  if (grid && (!internationalProducts || internationalProducts.length === 0)) {
     grid.innerHTML = '<div style="padding:40px 20px; text-align:center; color:#888; grid-column:1/-1;"><i class="fas fa-spinner fa-spin" style="font-size:24px;"></i><br><br>جاري تحميل المنتجات العالمية...</div>';
   }
 
@@ -2474,7 +2460,11 @@ function initPullToRefresh() {
     indicator.style.top = '-70px';
     if (dy > 80) {
       showToast('جاري تحديث المنتجات...', '');
-      loadProducts(true);
+      if (currentStoreTab === 'international') {
+        loadInternationalProducts(true);
+      } else {
+        loadProducts(true);
+      }
     }
   }, { passive: true });
 }
