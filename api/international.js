@@ -162,6 +162,8 @@ export default async function handler(req, res) {
     .buy-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; background: linear-gradient(135deg, #ff4747 0%, #d32f2f 100%); color: #fff; font-size: 18px; font-weight: 800; text-decoration: none; padding: 16px; border-radius: 14px; box-shadow: 0 6px 20px rgba(211,47,47,.3); transition: .25s; }
     .buy-btn:hover { filter: brightness(1.1); transform: translateY(-2px); }
     .disclaimer { text-align: center; font-size: 13px; color: #888; margin-top: 14px; font-weight: 500; }
+    .lang-tip { text-align: center; font-size: 12px; color: #666; margin-top: 10px; font-weight: 500; background: #f8f9fa; padding: 10px 12px; border-radius: 10px; border: 1px solid #edf2f7; line-height: 1.5; }
+    .lang-tip i { color: #3182ce; margin-left: 4px; }
     .back-nav { display: inline-flex; align-items: center; gap: 6px; color: var(--red); text-decoration: none; font-weight: 700; margin-bottom: 16px; font-size: 14px; }
     .footer { text-align: center; padding: 20px; color: #888; font-size: 13px; border-top: 1px solid #eee; margin-top: 30px; background: #fff; }
   </style>
@@ -186,6 +188,7 @@ export default async function handler(req, res) {
         <i class="fas fa-external-link-alt"></i> اشترِ الآن
       </a>
       <div class="disclaimer"><i class="fas fa-info-circle"></i> يتم الشراء والتوصيل عبر AliExpress مباشرة.</div>
+      <div class="lang-tip"><i class="fas fa-globe"></i> سيتم تحويلك إلى AliExpress لإتمام الشراء. إذا ظهرت الصفحة بالإنجليزية، يمكنك تغيير اللغة إلى العربية من أعلى صفحة AliExpress نفسها.</div>
     </div>
   </div>
 
