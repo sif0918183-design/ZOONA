@@ -950,10 +950,15 @@
 
             // AliExpress Functions
             window.searchAliExpress = searchAliExpress;
+            window.loadNextAliPage = loadNextAliPage;
             window.addAliExpressProduct = addAliExpressProduct;
             window.loadAliExpressProducts = loadAliExpressProducts;
             window.displayAliExpressProducts = displayAliExpressProducts;
+            window.openAliCategoryModal = openAliCategoryModal;
+            window.openAliCategoryModalBySourceId = openAliCategoryModalBySourceId;
+            window.confirmAddAliExpressProduct = confirmAddAliExpressProduct;
             window.openAliExpressEditModal = openAliExpressEditModal;
+            window.openAliExpressEditModalById = openAliExpressEditModalById;
             window.saveAliExpressEdit = saveAliExpressEdit;
             window.toggleAliExpressStatus = toggleAliExpressStatus;
             window.deleteAliExpressProduct = deleteAliExpressProduct;
@@ -1927,6 +1932,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             let hasMoreAliResults = true;
             let currentSearchGen = 0;
             let seenAliProductIds = new Set();
+            let currentAliSearchResultsMap = new Map();
             let aliObserver = null;
             let pendingProductToAdd = null;
 
@@ -1961,6 +1967,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                 isAliSearchLoading = true;
                 hasMoreAliResults = true;
                 seenAliProductIds.clear();
+                currentAliSearchResultsMap.clear();
 
                 const resultsGrid = document.getElementById('aliResultsGrid');
                 const resultsContainer = document.getElementById('aliSearchResults');
@@ -2092,13 +2099,23 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
 
                 if (newProducts.length === 0) return 0;
 
+                newProducts.forEach(p => {
+                    if (p.source_product_id) {
+                        currentAliSearchResultsMap.set(String(p.source_product_id), p);
+                    }
+                });
+
+                const escHtml = (str) => String(str || '').replace(/[&<>"']/g, (m) => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                }[m]));
+
                 const html = newProducts.map(p => `
                     <div class="ali-card">
-                        <img src="${p.image_url}" alt="${p.name_ar}">
-                        <div class="ali-title">${p.name_ar}</div>
-                        <div class="ali-price">${p.price} ${p.currency}</div>
-                        <div class="ali-id">ID: ${p.source_product_id}</div>
-                        <button class="btn btn-primary btn-sm" onclick="openAliCategoryModal(${JSON.stringify(p).replace(/"/g, '&quot;')})">
+                        <img src="${escHtml(p.image_url)}" alt="${escHtml(p.name_ar)}">
+                        <div class="ali-title">${escHtml(p.name_ar)}</div>
+                        <div class="ali-price">${escHtml(p.price)} ${escHtml(p.currency)}</div>
+                        <div class="ali-id">ID: ${escHtml(p.source_product_id)}</div>
+                        <button class="btn btn-primary btn-sm" onclick="openAliCategoryModalBySourceId('${escHtml(p.source_product_id)}')">
                             <i class="fas fa-plus"></i> إضافة للمتجر
                         </button>
                     </div>
@@ -2111,6 +2128,15 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                 }
 
                 return newProducts.length;
+            }
+
+            function openAliCategoryModalBySourceId(sourceId) {
+                const product = currentAliSearchResultsMap.get(String(sourceId));
+                if (!product) {
+                    alert('حدث خطأ في تحديد بيانات المنتج.');
+                    return;
+                }
+                openAliCategoryModal(product);
             }
 
             function openAliCategoryModal(product) {
@@ -2215,7 +2241,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                         <td><a href="/international/${p.slug}" target="_blank" style="color:var(--secondary-color); font-weight:600;">صفحة المنتج</a></td>
                         <td>
                             <div style="display:flex; gap:5px; flex-wrap:wrap;">
-                                <button class="btn btn-primary btn-sm" onclick="openAliExpressEditModal(${JSON.stringify(p).replace(/"/g, '&quot;')})" title="تعديل">
+                                <button class="btn btn-primary btn-sm" onclick="openAliExpressEditModalById(${p.id})" title="تعديل">
                                     <i class="fas fa-edit"></i>
                                 </button>
                                 <button class="btn ${p.is_active ? 'btn-warning' : 'btn-success'} btn-sm" onclick="toggleAliExpressStatus(${p.id}, ${p.is_active})" title="${p.is_active ? 'إخفاء' : 'إظهار'}">
@@ -2231,6 +2257,12 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                         </td>
                     </tr>
                 `).join('');
+            }
+
+            function openAliExpressEditModalById(id) {
+                const p = allAliProducts.find(item => item.id == id);
+                if (!p) return;
+                openAliExpressEditModal(p);
             }
 
             function openAliExpressEditModal(p) {
