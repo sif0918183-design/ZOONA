@@ -86,12 +86,15 @@ export default async function handler(req, res) {
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[m]));
 
+    const productCategory = (product.category && product.category.trim()) ? product.category.trim() : 'عام';
+
     const jsonLd = {
       "@context": "https://schema.org/",
       "@type": "Product",
       "name": product.name_ar,
       "image": [product.image_url],
       "description": metaDescription,
+      "category": productCategory,
       "sku": `ALIEXPRESS-${product.source_product_id}`,
       "offers": {
         "@type": "Offer",
@@ -152,6 +155,7 @@ export default async function handler(req, res) {
     .container { max-width: 800px; margin: 20px auto; padding: 0 16px; flex: 1; width: 100%; }
     .card { background: #fff; border-radius: 18px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,.08); }
     .product-img { width: 100%; max-height: 380px; object-fit: contain; background: #fafafa; border-radius: 12px; margin-bottom: 20px; }
+    .product-category-badge { display: inline-flex; align-items: center; gap: 6px; background: #f0f4f8; color: #4a5568; font-size: 13px; font-weight: 700; padding: 5px 12px; border-radius: 8px; margin-bottom: 12px; }
     .product-title { font-size: 22px; font-weight: 900; color: #222; margin-bottom: 12px; line-height: 1.4; }
     .product-price-badge { display: inline-block; background: #FFEBEE; color: var(--red); font-size: 24px; font-weight: 900; padding: 6px 16px; border-radius: 10px; margin-bottom: 20px; }
     .product-desc { font-size: 15px; color: #555; line-height: 1.8; margin-bottom: 25px; white-space: pre-wrap; background: #fdfdfd; padding: 15px; border-radius: 10px; border: 1px solid #eee; }
@@ -174,6 +178,7 @@ export default async function handler(req, res) {
     <a href="/" class="back-nav"><i class="fas fa-arrow-right"></i> العودة للمتجر الرئيسي</a>
     <div class="card">
       <img src="${esc(product.image_url)}" alt="${esc(product.name_ar)}" class="product-img">
+      <div class="product-category-badge"><i class="fas fa-folder"></i> التصنيف: ${esc(productCategory)}</div>
       <h1 class="product-title">${esc(product.name_ar)}</h1>
       <div class="product-price-badge">${esc(product.price)} ${esc(product.currency || 'USD')}</div>
       ${product.description_ar ? `<div class="product-desc">${esc(product.description_ar)}</div>` : ''}
