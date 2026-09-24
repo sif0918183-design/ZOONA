@@ -1,4 +1,4 @@
-import { generateTopSignature, getTopTimestamp, parseAliExpressInput, generateSlug } from '../lib/aliexpress-helpers.js';
+import { generateTopSignature, getTopTimestamp, parseAliExpressInput, generateSlug, translateTitleToArabic } from '../lib/aliexpress-helpers.js';
 
 export default async function handler(req, res) {
   // CORS & Origin Check
@@ -228,10 +228,15 @@ export default async function handler(req, res) {
   // 3. POST: Add a new product to store
   if (req.method === 'POST') {
     try {
-      const { source_product_id, name_ar, description_ar, category, image_url, price, currency, product_detail_url, promotion_link } = reqBody;
+      let { source_product_id, name_ar, description_ar, category, image_url, price, currency, product_detail_url, promotion_link } = reqBody;
 
       if (!source_product_id || !name_ar || !image_url) {
         return res.status(400).json({ error: 'Missing required product fields' });
+      }
+
+      // If title is in English, translate it to Arabic before storing
+      if (/[a-zA-Z]/.test(name_ar)) {
+        name_ar = await translateTitleToArabic(name_ar);
       }
 
       // Duplicate Check
