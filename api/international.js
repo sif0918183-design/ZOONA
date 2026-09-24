@@ -88,11 +88,26 @@ export default async function handler(req, res) {
 
     const productCategory = (product.category && product.category.trim()) ? product.category.trim() : 'عام';
 
+    // Additional gallery images
+    let extraImages = [];
+    if (product.additional_images) {
+      if (Array.isArray(product.additional_images)) {
+        extraImages = product.additional_images.filter(img => typeof img === 'string' && img.trim() && img !== product.image_url);
+      } else if (typeof product.additional_images === 'string') {
+        try {
+          const parsed = JSON.parse(product.additional_images);
+          if (Array.isArray(parsed)) extraImages = parsed.filter(img => typeof img === 'string' && img.trim() && img !== product.image_url);
+        } catch (e) {}
+      }
+    }
+
+    const allImages = [product.image_url, ...extraImages];
+
     const jsonLd = {
       "@context": "https://schema.org/",
       "@type": "Product",
       "name": product.name_ar,
-      "image": [product.image_url],
+      "image": allImages,
       "description": metaDescription,
       "category": productCategory,
       "sku": `ALIEXPRESS-${product.source_product_id}`,
@@ -154,7 +169,10 @@ export default async function handler(req, res) {
     .header a { color: #fff; text-decoration: none; font-weight: 800; font-size: 18px; display: flex; align-items: center; gap: 8px; }
     .container { max-width: 800px; margin: 20px auto; padding: 0 16px; flex: 1; width: 100%; }
     .card { background: #fff; border-radius: 18px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,.08); }
-    .product-img { width: 100%; max-height: 380px; object-fit: contain; background: #fafafa; border-radius: 12px; margin-bottom: 20px; }
+    .product-img { width: 100%; max-height: 380px; object-fit: contain; background: #fafafa; border-radius: 12px; margin-bottom: 12px; transition: opacity 0.2s ease; }
+    .gallery-thumbs { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 18px; scrollbar-width: thin; }
+    .gallery-thumb { width: 64px; height: 64px; min-width: 64px; border-radius: 10px; object-fit: cover; background: #fafafa; border: 2px solid #edf2f7; cursor: pointer; transition: all 0.2s ease; }
+    .gallery-thumb.active, .gallery-thumb:hover { border-color: var(--red); transform: scale(1.04); }
     .product-category-badge { display: inline-flex; align-items: center; gap: 6px; background: #f0f4f8; color: #4a5568; font-size: 13px; font-weight: 700; padding: 5px 12px; border-radius: 8px; margin-bottom: 12px; }
     .product-title { font-size: 22px; font-weight: 900; color: #222; margin-bottom: 12px; line-height: 1.4; }
     .product-price-badge { display: inline-block; background: #FFEBEE; color: var(--red); font-size: 24px; font-weight: 900; padding: 6px 16px; border-radius: 10px; margin-bottom: 20px; }
@@ -190,7 +208,14 @@ export default async function handler(req, res) {
   <div class="container">
     <a href="/" class="back-nav"><i class="fas fa-arrow-right"></i> العودة للمتجر الرئيسي</a>
     <div class="card">
-      <img src="${esc(product.image_url)}" alt="${esc(product.name_ar)}" class="product-img">
+      <img id="mainProductImg" src="${esc(product.image_url)}" alt="${esc(product.name_ar)}" class="product-img">
+      ${allImages.length > 1 ? `
+      <div class="gallery-thumbs">
+        ${allImages.map((img, idx) => `
+          <img src="${esc(img)}" alt="${esc(product.name_ar)} - ${idx + 1}" class="gallery-thumb ${idx === 0 ? 'active' : ''}" onclick="swapMainImage('${esc(img)}', this)">
+        `).join('')}
+      </div>
+      ` : ''}
       <div class="product-category-badge"><i class="fas fa-folder"></i> التصنيف: ${esc(productCategory)}</div>
       <h1 class="product-title">${esc(product.name_ar)}</h1>
       <div class="product-price-badge">${esc(product.price)} ${esc(product.currency || 'USD')}</div>
@@ -217,6 +242,18 @@ export default async function handler(req, res) {
   </div>
 
   <script>
+    function swapMainImage(src, thumbEl) {
+      const mainImg = document.getElementById('mainProductImg');
+      if (mainImg) {
+        mainImg.style.opacity = '0.5';
+        setTimeout(() => {
+          mainImg.src = src;
+          mainImg.style.opacity = '1';
+        }, 150);
+      }
+      document.querySelectorAll('.gallery-thumb').forEach(t => t.classList.remove('active'));
+      if (thumbEl) thumbEl.classList.add('active');
+    }
     function openPopup() {
       const popup = document.getElementById('aliPopup');
       if (popup) popup.classList.add('active');

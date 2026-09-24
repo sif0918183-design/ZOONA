@@ -183,6 +183,63 @@ export default async function handler(req, res) {
     }
   }
 
+  // Helper: Fetch extra product details (such as small images and category) via aliexpress.affiliate.productdetail.get
+  async function fetchExtraProductDetail(productId) {
+    if (!APP_KEY || !APP_SECRET || !TRACKING_ID || !productId) {
+      return { additionalImages: [], suggestedCategory: null };
+    }
+
+    try {
+      const timestamp = getTopTimestamp();
+      const apiParams = {
+        app_key: APP_KEY,
+        method: 'aliexpress.affiliate.productdetail.get',
+        timestamp: timestamp,
+        format: 'json',
+        v: '2.0',
+        sign_method: 'md5',
+        product_ids: productId.toString(),
+        target_currency: 'USD',
+        target_language: 'AR',
+        tracking_id: TRACKING_ID
+      };
+
+      const sign = generateTopSignature(apiParams, APP_SECRET);
+      apiParams.sign = sign;
+
+      const urlParams = new URLSearchParams(apiParams);
+      const aliRes = await fetch(`https://api-sg.aliexpress.com/sync?${urlParams.toString()}`);
+      if (aliRes.ok) {
+        const aliData = await aliRes.json();
+        const respObj = aliData.aliexpress_affiliate_productdetail_get_response;
+        if (respObj && respObj.resp_result && respObj.resp_result.result) {
+          const productsObj = respObj.resp_result.result.products;
+          if (productsObj && productsObj.product) {
+            const prod = Array.isArray(productsObj.product) ? productsObj.product[0] : productsObj.product;
+
+            let additionalImages = [];
+            if (prod.product_small_image_urls) {
+              const urls = prod.product_small_image_urls.string || prod.product_small_image_urls;
+              if (Array.isArray(urls)) {
+                additionalImages = urls.filter(u => typeof u === 'string' && u.trim());
+              } else if (typeof urls === 'string') {
+                additionalImages = [urls];
+              }
+            }
+
+            const suggestedCategory = prod.first_level_category_name || prod.second_level_category_name || null;
+
+            return { additionalImages, suggestedCategory };
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching extra product detail from AliExpress:', e);
+    }
+
+    return { additionalImages: [], suggestedCategory: null };
+  }
+
   // Helper: Generate Affiliate Link via AliExpress API
   async function generateAffiliateLink(sourceUrl) {
     if (!APP_KEY || !APP_SECRET || !TRACKING_ID) {
@@ -267,6 +324,17 @@ export default async function handler(req, res) {
         slug = `${slug}-${Date.now().toString().slice(-4)}`;
       }
 
+      // Fetch extra details (gallery images & category suggestion) via aliexpress.affiliate.productdetail.get
+      let additionalImages = [];
+      try {
+        const extraData = await fetchExtraProductDetail(source_product_id);
+        if (extraData && extraData.additionalImages && extraData.additionalImages.length > 0) {
+          additionalImages = extraData.additionalImages;
+        }
+      } catch (e) {
+        console.error('Failed to fetch additional images, fallback engaged:', e);
+      }
+
       const newProduct = {
         slug,
         name_ar,
@@ -277,6 +345,7 @@ export default async function handler(req, res) {
         currency: currency || 'USD',
         affiliate_link: finalAffiliateLink,
         source_product_id: source_product_id.toString(),
+        additional_images: additionalImages,
         is_active: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
