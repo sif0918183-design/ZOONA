@@ -5,6 +5,7 @@ export default async function handler(req, res) {
   // 1. التحقق من النطاق (Allowed Origins)
   const origin = req.headers.origin || req.headers.referer || '';
   const allowedOrigins = [
+    "https://zoona-git-jules-2721342884738575238-5a4705ea-sifians-projects.vercel.app",
     "https://zoona-git-jules-7250375803931180038-595003bf-sifians-projects.vercel.app",
     'https://zoona-git-remove-all-ads-17040014475127364802-sifians-projects.vercel.app',
     'https://zoona-git-jules-13000984564981705862-1b0a7b19-sifians-projects.vercel.app',

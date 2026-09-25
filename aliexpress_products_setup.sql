@@ -18,6 +18,9 @@ CREATE TABLE IF NOT EXISTS public.aliexpress_products (
 -- Add category column if table exists without it
 ALTER TABLE public.aliexpress_products ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'عام';
 
+-- Add additional_images column for gallery images
+ALTER TABLE public.aliexpress_products ADD COLUMN IF NOT EXISTS additional_images JSONB DEFAULT '[]'::jsonb;
+
 -- Indexes for fast lookup
 CREATE INDEX IF NOT EXISTS idx_aliexpress_products_slug ON public.aliexpress_products(slug);
 CREATE INDEX IF NOT EXISTS idx_aliexpress_products_source_product_id ON public.aliexpress_products(source_product_id);
