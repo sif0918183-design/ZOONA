@@ -779,15 +779,27 @@
         </div>
     </div>
 
-    <!-- Modal تحديد قسم المنتج العالمي -->
+    <!-- Modal تحديد قسم وبيانات المنتج العالمي -->
     <div id="aliCategoryModal" style="align-items: center; background: rgba(0,0,0,0.5); display: none; height: 100%; justify-content: center; left: 0; position: fixed; top: 0; width: 100%; z-index: 1000;">
-        <div style="background: white; border-radius: 12px; max-width: 450px; padding: 25px; width: 90%; font-family: 'Tajawal'; direction: rtl;">
-            <h3 style="margin-bottom: 15px; color: var(--primary-color);"><i class="fas fa-tags"></i> اختر قسم المنتج</h3>
-            <p style="font-size:13px; color:#666; margin-bottom:15px;">حدد قسم المتجر المناسب لعرض هذا المنتج تحته في الواجهة:</p>
+        <div style="background: white; border-radius: 12px; max-width: 500px; padding: 25px; width: 90%; font-family: 'Tajawal'; direction: rtl; max-height: 90vh; overflow-y: auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                <h3 style="margin:0; color: var(--primary-color); font-size:18px;"><i class="fas fa-tags"></i> إضافة منتج عالمي</h3>
+                <button type="button" class="btn btn-sm" id="aliAiEnhanceModalBtn" onclick="triggerModalAiEnhance()" style="background:#8b5cf6; color:white; border-radius:8px; font-size:12px; font-weight:700; border:none; padding:6px 12px; cursor:pointer;">
+                    <i class="fas fa-magic"></i> تحسين بالذكاء الاصطناعي
+                </button>
+            </div>
             <form onsubmit="confirmAddAliExpressProduct(event)">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 700; margin-bottom: 6px; font-size:13px;">اسم المنتج بالعربية</label>
+                    <input id="aliImportNameAr" required style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 10px; width: 100%; font-family:'Tajawal'; font-size:13px;" type="text" />
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 700; margin-bottom: 6px; font-size:13px;">وصف المنتج بالعربية (اختياري)</label>
+                    <textarea id="aliImportDescAr" rows="3" style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 10px; width: 100%; font-family:'Tajawal'; font-size:13px; resize:vertical;"></textarea>
+                </div>
                 <div style="margin-bottom: 20px;">
-                    <label style="display: block; font-weight: 700; margin-bottom: 8px;">القسم</label>
-                    <select id="aliSelectCategory" style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 12px; width: 100%; font-family: 'Tajawal'; font-size:14px;">
+                    <label style="display: block; font-weight: 700; margin-bottom: 6px; font-size:13px;">القسم</label>
+                    <select id="aliSelectCategory" style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 10px; width: 100%; font-family: 'Tajawal'; font-size:13px;">
                         <option value="عام">عام (بدون قسم محدّد)</option>
                         <option value="موبايلات">موبايلات</option>
                         <option value="أجهزة إلكترونية">أجهزة إلكترونية</option>
@@ -802,8 +814,8 @@
                     </select>
                 </div>
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                    <button class="btn" onclick="document.getElementById('aliCategoryModal').style.display='none'" style="background: #718096; color: white;" type="button">إلغاء</button>
-                    <button class="btn btn-primary" type="submit"><i class="fas fa-plus"></i> إكمال الإضافة</button>
+                    <button class="btn" onclick="document.getElementById('aliCategoryModal').style.display='none'" style="background: #718096; color: white; border-radius:8px;" type="button">إلغاء</button>
+                    <button class="btn btn-primary" type="submit" style="border-radius:8px;"><i class="fas fa-plus"></i> إكمال الإضافة</button>
                 </div>
             </form>
         </div>
@@ -2119,9 +2131,14 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                         <div class="ali-title">${escHtml(p.name_ar)}</div>
                         <div class="ali-price">${escHtml(p.price)} ${escHtml(p.currency)}</div>
                         <div class="ali-id">ID: ${escHtml(p.source_product_id)}</div>
-                        <button class="btn btn-primary btn-sm" onclick="openAliCategoryModalBySourceId('${escHtml(p.source_product_id)}')">
-                            <i class="fas fa-plus"></i> إضافة للمتجر
-                        </button>
+                        <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
+                            <button class="btn btn-sm" style="background:#8b5cf6; color:white; font-size:11px; flex:1; border:none; padding:6px; border-radius:6px; cursor:pointer;" onclick="openAliModalWithAiEnhance('${escHtml(p.source_product_id)}')">
+                                <i class="fas fa-magic"></i> تحسين بالذكاء الاصطناعي
+                            </button>
+                            <button class="btn btn-primary btn-sm" style="font-size:11px; flex:1; padding:6px; border-radius:6px;" onclick="openAliCategoryModalBySourceId('${escHtml(p.source_product_id)}')">
+                                <i class="fas fa-plus"></i> إضافة للمتجر
+                            </button>
+                        </div>
                     </div>
                 `).join('');
 
@@ -2145,8 +2162,55 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
 
             function openAliCategoryModal(product) {
                 pendingProductToAdd = product;
-                document.getElementById('aliSelectCategory').value = 'عام';
+                document.getElementById('aliImportNameAr').value = product.name_ar || '';
+                document.getElementById('aliImportDescAr').value = product.description_ar || '';
+                document.getElementById('aliSelectCategory').value = product.suggestedCategory || 'عام';
                 document.getElementById('aliCategoryModal').style.display = 'flex';
+            }
+
+            async function openAliModalWithAiEnhance(sourceId) {
+                const product = currentAliSearchResultsMap.get(String(sourceId));
+                if (!product) {
+                    alert('حدث خطأ في تحديد بيانات المنتج.');
+                    return;
+                }
+                openAliCategoryModal(product);
+                await triggerModalAiEnhance();
+            }
+
+            async function triggerModalAiEnhance() {
+                if (!pendingProductToAdd) return;
+                const btn = document.getElementById('aliAiEnhanceModalBtn');
+                const origText = btn ? btn.innerHTML : '';
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحسين...';
+                }
+
+                try {
+                    const pass = getAdminPassword();
+                    const sourceId = pendingProductToAdd.source_product_id;
+                    const res = await fetch(`/api/admin-aliexpress?action=enhance&productId=${encodeURIComponent(sourceId)}&adminPassword=${encodeURIComponent(pass)}`);
+                    const data = await res.json();
+
+                    if (data && data.success && data.enhanced) {
+                        if (data.title_ar) document.getElementById('aliImportNameAr').value = data.title_ar;
+                        if (data.description_ar) document.getElementById('aliImportDescAr').value = data.description_ar;
+                        if (data.category && document.querySelector(`#aliSelectCategory option[value="${data.category}"]`)) {
+                            document.getElementById('aliSelectCategory').value = data.category;
+                        }
+                    } else {
+                        alert(data.message || 'تعذّر التحسين التلقائي، يمكنك كتابة العنوان/الوصف يدويًا');
+                    }
+                } catch (err) {
+                    console.error('AI Enhance Error:', err);
+                    alert('تعذّر التحسين التلقائي، يمكنك كتابة العنوان/الوصف يدويًا');
+                } finally {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = origText;
+                    }
+                }
             }
 
             async function confirmAddAliExpressProduct(e) {
@@ -2154,9 +2218,18 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                 if (!pendingProductToAdd) return;
 
                 const category = document.getElementById('aliSelectCategory').value || 'عام';
+                const name_ar = document.getElementById('aliImportNameAr').value.trim() || pendingProductToAdd.name_ar;
+                const description_ar = document.getElementById('aliImportDescAr').value.trim() || '';
+
                 document.getElementById('aliCategoryModal').style.display = 'none';
 
-                await addAliExpressProduct(pendingProductToAdd, category);
+                const productToSave = {
+                    ...pendingProductToAdd,
+                    name_ar,
+                    description_ar
+                };
+
+                await addAliExpressProduct(productToSave, category);
                 pendingProductToAdd = null;
             }
 
@@ -2170,7 +2243,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                             adminPassword: pass,
                             source_product_id: product.source_product_id,
                             name_ar: product.name_ar,
-                            description_ar: '',
+                            description_ar: product.description_ar || '',
                             category: category,
                             image_url: product.image_url,
                             price: product.price,

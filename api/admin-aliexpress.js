@@ -1,4 +1,4 @@
-import { generateTopSignature, getTopTimestamp, parseAliExpressInput, generateSlug, translateTitleToArabic } from '../lib/aliexpress-helpers.js';
+import { generateTopSignature, getTopTimestamp, parseAliExpressInput, generateSlug, translateTitleToArabic, enhanceProductWithGroq } from '../lib/aliexpress-helpers.js';
 
 export default async function handler(req, res) {
   // CORS & Origin Check
@@ -132,6 +132,96 @@ export default async function handler(req, res) {
     }
 
     return { products, paginationInfo, rawData: aliData };
+  }
+
+  // 0. ACTION: ENHANCE product title & description using Groq AI
+  if (action === 'enhance') {
+    const productId = req.query.productId || reqBody.productId || req.query.q || reqBody.q;
+    if (!productId) {
+      return res.status(400).json({ error: 'productId is required for AI enhancement' });
+    }
+
+    try {
+      // Fetch product detail in English
+      const timestamp = getTopTimestamp();
+      const cleanId = productId.toString().trim();
+      const apiParams = {
+        app_key: APP_KEY,
+        method: 'aliexpress.affiliate.productdetail.get',
+        timestamp: timestamp,
+        format: 'json',
+        v: '2.0',
+        sign_method: 'md5',
+        product_ids: cleanId,
+        target_currency: 'USD',
+        target_language: 'EN',
+        tracking_id: TRACKING_ID
+      };
+
+      const sign = generateTopSignature(apiParams, APP_SECRET);
+      apiParams.sign = sign;
+
+      const urlParams = new URLSearchParams(apiParams);
+      const aliRes = await fetch(`https://api-sg.aliexpress.com/sync?${urlParams.toString()}`);
+
+      let title_en = '';
+      let category = '';
+      let evaluate_rate = '';
+      let volume = '';
+
+      if (aliRes.ok) {
+        const aliData = await aliRes.json();
+        const respObj = aliData.aliexpress_affiliate_productdetail_get_response;
+        if (respObj && respObj.resp_result && respObj.resp_result.result) {
+          const productsObj = respObj.resp_result.result.products;
+          if (productsObj && productsObj.product) {
+            const prod = Array.isArray(productsObj.product) ? productsObj.product[0] : productsObj.product;
+            title_en = prod.product_title || '';
+            category = prod.first_level_category_name || prod.second_level_category_name || '';
+            evaluate_rate = prod.evaluate_rate ? prod.evaluate_rate.toString() : '';
+            volume = prod.volume ? prod.volume.toString() : '';
+          }
+        }
+      }
+
+      if (!title_en) {
+        title_en = reqBody.title_en || req.query.title_en || '';
+      }
+
+      const enhanced = await enhanceProductWithGroq({ title_en, category, evaluate_rate, volume });
+
+      if (enhanced) {
+        return res.status(200).json({
+          success: true,
+          enhanced: true,
+          title_en,
+          title_ar: enhanced.title_ar,
+          description_ar: enhanced.description_ar,
+          category,
+          evaluate_rate,
+          volume
+        });
+      } else {
+        return res.status(200).json({
+          success: false,
+          enhanced: false,
+          message: 'تعذّر التحسين التلقائي، يمكنك كتابة العنوان/الوصف يدويًا',
+          title_en,
+          category,
+          evaluate_rate,
+          volume
+        });
+      }
+
+    } catch (err) {
+      console.error('Error in enhance action:', err);
+      return res.status(200).json({
+        success: false,
+        enhanced: false,
+        message: 'تعذّر التحسين التلقائي، يمكنك كتابة العنوان/الوصف يدويًا',
+        details: err.message
+      });
+    }
   }
 
   // 1. ACTION: SEARCH via AliExpress API
