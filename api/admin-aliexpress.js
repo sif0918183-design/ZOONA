@@ -402,6 +402,7 @@ export default async function handler(req, res) {
         let newPrice = null;
         if (APP_KEY && APP_SECRET) {
           const timestamp = getTopTimestamp();
+          const cleanSourceId = (sourceProductId || '').toString().trim();
           const apiParams = {
             app_key: APP_KEY,
             method: 'aliexpress.affiliate.product.query',
@@ -410,25 +411,44 @@ export default async function handler(req, res) {
             v: '2.0',
             sign_method: 'md5',
             tracking_id: TRACKING_ID,
-            product_ids: sourceProductId,
-            target_currency: 'USD'
+            product_ids: cleanSourceId,
+            target_currency: 'USD',
+            target_language: 'AR'
           };
+
+          const sortedKeys = Object.keys(apiParams).sort();
+          let baseString = sortedKeys.map(k => `${k}${apiParams[k]}`).join('');
 
           const sign = generateTopSignature(apiParams, APP_SECRET);
           apiParams.sign = sign;
+
+          console.log('[PRICE_UPDATE_DIAGNOSTIC] sourceProductId:', cleanSourceId);
+          console.log('[PRICE_UPDATE_DIAGNOSTIC] TRACKING_ID length:', TRACKING_ID ? TRACKING_ID.length : 0);
+          console.log('[PRICE_UPDATE_DIAGNOSTIC] apiParams:', JSON.stringify(apiParams));
+          console.log('[PRICE_UPDATE_DIAGNOSTIC] Signature baseString:', baseString);
 
           const urlParams = new URLSearchParams(apiParams);
           const aliRes = await fetch(`https://api-sg.aliexpress.com/sync?${urlParams.toString()}`);
           if (aliRes.ok) {
             const aliData = await aliRes.json();
+            console.log('[PRICE_UPDATE_DIAGNOSTIC] Raw aliData:', JSON.stringify(aliData));
+
             const responseObj = aliData.aliexpress_affiliate_product_query_response;
-            if (responseObj && responseObj.resp_result && responseObj.resp_result.result) {
-              const productsObj = responseObj.resp_result.result.products;
-              if (productsObj && productsObj.product) {
-                const prod = Array.isArray(productsObj.product) ? productsObj.product[0] : productsObj.product;
+            if (responseObj && responseObj.resp_result) {
+              const rr = responseObj.resp_result;
+              console.log('[PRICE_UPDATE_DIAGNOSTIC] resp_code:', rr.resp_code, 'resp_msg:', rr.resp_msg);
+              if (rr.result && rr.result.products && rr.result.products.product) {
+                const prod = Array.isArray(rr.result.products.product) ? rr.result.products.product[0] : rr.result.products.product;
+                console.log('[PRICE_UPDATE_DIAGNOSTIC] prod price fields:', {
+                  target_sale_price: prod.target_sale_price,
+                  target_original_price: prod.target_original_price,
+                  app_sale_price: prod.app_sale_price
+                });
                 newPrice = prod.target_sale_price || prod.target_original_price || prod.app_sale_price;
               }
             }
+          } else {
+            console.error('[PRICE_UPDATE_DIAGNOSTIC] HTTP Error:', aliRes.status, await aliRes.text());
           }
         }
 
