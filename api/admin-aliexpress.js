@@ -73,12 +73,69 @@ export default async function handler(req, res) {
 
   const action = req.query.action || reqBody.action;
 
-  // 1. ACTION: SEARCH via AliExpress API
-  if (action === 'search' || (req.method === 'GET' && req.query.q)) {
+  // Helper: Query AliExpress products using unified parameters and signature
+  async function queryAliExpressProducts(extraParams = {}) {
     if (!APP_KEY || !APP_SECRET || !TRACKING_ID) {
-      return res.status(500).json({ error: 'AliExpress API credentials not configured in environment variables' });
+      throw new Error('AliExpress API credentials not configured in environment variables');
     }
 
+    const timestamp = getTopTimestamp();
+    const apiParams = {
+      app_key: APP_KEY,
+      method: 'aliexpress.affiliate.product.query',
+      timestamp: timestamp,
+      format: 'json',
+      v: '2.0',
+      sign_method: 'md5',
+      tracking_id: TRACKING_ID,
+      target_currency: 'USD',
+      target_language: 'AR',
+      ...extraParams
+    };
+
+    const sign = generateTopSignature(apiParams, APP_SECRET);
+    apiParams.sign = sign;
+
+    const urlParams = new URLSearchParams(apiParams);
+    const aliRes = await fetch(`https://api-sg.aliexpress.com/sync?${urlParams.toString()}`);
+
+    if (!aliRes.ok) {
+      const errText = await aliRes.text();
+      throw new Error(`Failed to communicate with AliExpress API (${aliRes.status}): ${errText}`);
+    }
+
+    const aliData = await aliRes.json();
+    let products = [];
+    let paginationInfo = {};
+
+    const responseObj = aliData.aliexpress_affiliate_product_query_response;
+    if (responseObj && responseObj.resp_result && responseObj.resp_result.result) {
+      const resultObj = responseObj.resp_result.result;
+
+      if (resultObj.current_record_count !== undefined) paginationInfo.current_record_count = resultObj.current_record_count;
+      if (resultObj.total_record_count !== undefined) paginationInfo.total_record_count = resultObj.total_record_count;
+      if (resultObj.current_page_no !== undefined) paginationInfo.current_page_no = resultObj.current_page_no;
+      if (resultObj.total_page_no !== undefined) paginationInfo.total_page_no = resultObj.total_page_no;
+
+      if (resultObj.products && resultObj.products.product) {
+        const rawProducts = Array.isArray(resultObj.products.product) ? resultObj.products.product : [resultObj.products.product];
+        products = rawProducts.map(item => ({
+          source_product_id: item.product_id ? item.product_id.toString() : '',
+          name_ar: item.product_title || '',
+          image_url: item.product_main_image_url || '',
+          price: item.target_sale_price || item.target_original_price || item.app_sale_price || 0,
+          currency: item.target_sale_price_currency || 'USD',
+          product_detail_url: item.product_detail_url || '',
+          promotion_link: item.promotion_link || ''
+        }));
+      }
+    }
+
+    return { products, paginationInfo, rawData: aliData };
+  }
+
+  // 1. ACTION: SEARCH via AliExpress API
+  if (action === 'search' || (req.method === 'GET' && req.query.q)) {
     const queryInput = req.query.q || reqBody.q || '';
     if (!queryInput) {
       return res.status(400).json({ error: 'Query parameter q is required' });
@@ -87,69 +144,21 @@ export default async function handler(req, res) {
     const parsed = parseAliExpressInput(queryInput);
 
     try {
-      const timestamp = getTopTimestamp();
       const hasArabic = /[\u0600-\u06FF]/.test(parsed.value);
       const targetLang = hasArabic ? 'AR' : 'EN';
-
-      let apiParams = {
-        app_key: APP_KEY,
-        method: 'aliexpress.affiliate.product.query',
-        timestamp: timestamp,
-        format: 'json',
-        v: '2.0',
-        sign_method: 'md5',
-        tracking_id: TRACKING_ID,
-        target_currency: 'USD',
-        target_language: targetLang
-      };
-
       const pageNo = req.query.page || reqBody.page || '1';
 
+      const queryParams = { target_language: targetLang };
+
       if (parsed.type === 'product_id') {
-        apiParams.product_ids = parsed.value;
+        queryParams.product_ids = parsed.value;
       } else {
-        apiParams.keywords = parsed.value;
-        apiParams.page_no = pageNo.toString();
-        apiParams.page_size = '50';
+        queryParams.keywords = parsed.value;
+        queryParams.page_no = pageNo.toString();
+        queryParams.page_size = '50';
       }
 
-      const sign = generateTopSignature(apiParams, APP_SECRET);
-      apiParams.sign = sign;
-
-      const urlParams = new URLSearchParams(apiParams);
-      const aliRes = await fetch(`https://api-sg.aliexpress.com/sync?${urlParams.toString()}`);
-
-      if (!aliRes.ok) {
-        const errText = await aliRes.text();
-        return res.status(502).json({ error: 'Failed to communicate with AliExpress API', details: errText });
-      }
-
-      const aliData = await aliRes.json();
-      let products = [];
-      let paginationInfo = {};
-
-      const responseObj = aliData.aliexpress_affiliate_product_query_response;
-      if (responseObj && responseObj.resp_result && responseObj.resp_result.result) {
-        const resultObj = responseObj.resp_result.result;
-
-        if (resultObj.current_record_count !== undefined) paginationInfo.current_record_count = resultObj.current_record_count;
-        if (resultObj.total_record_count !== undefined) paginationInfo.total_record_count = resultObj.total_record_count;
-        if (resultObj.current_page_no !== undefined) paginationInfo.current_page_no = resultObj.current_page_no;
-        if (resultObj.total_page_no !== undefined) paginationInfo.total_page_no = resultObj.total_page_no;
-
-        if (resultObj.products && resultObj.products.product) {
-          const rawProducts = Array.isArray(resultObj.products.product) ? resultObj.products.product : [resultObj.products.product];
-          products = rawProducts.map(item => ({
-            source_product_id: item.product_id ? item.product_id.toString() : '',
-            name_ar: item.product_title || '',
-            image_url: item.product_main_image_url || '',
-            price: item.target_sale_price || item.target_original_price || item.app_sale_price || 0,
-            currency: item.target_sale_price_currency || 'USD',
-            product_detail_url: item.product_detail_url || '',
-            promotion_link: item.promotion_link || ''
-          }));
-        }
-      }
+      const { products, paginationInfo } = await queryAliExpressProducts(queryParams);
 
       return res.status(200).json({
         success: true,
@@ -398,61 +407,23 @@ export default async function handler(req, res) {
         }
 
         const sourceProductId = getData[0].source_product_id;
+        const cleanSourceId = (sourceProductId || '').toString().trim();
 
         let newPrice = null;
-        if (APP_KEY && APP_SECRET) {
-          const timestamp = getTopTimestamp();
-          const cleanSourceId = (sourceProductId || '').toString().trim();
-          const apiParams = {
-            app_key: APP_KEY,
-            method: 'aliexpress.affiliate.product.query',
-            timestamp: timestamp,
-            format: 'json',
-            v: '2.0',
-            sign_method: 'md5',
-            tracking_id: TRACKING_ID,
+        try {
+          const { products } = await queryAliExpressProducts({
             product_ids: cleanSourceId,
-            target_currency: 'USD',
             target_language: 'AR'
-          };
+          });
 
-          const sortedKeys = Object.keys(apiParams).sort();
-          let baseString = sortedKeys.map(k => `${k}${apiParams[k]}`).join('');
-
-          const sign = generateTopSignature(apiParams, APP_SECRET);
-          apiParams.sign = sign;
-
-          console.log('[PRICE_UPDATE_DIAGNOSTIC] sourceProductId:', cleanSourceId);
-          console.log('[PRICE_UPDATE_DIAGNOSTIC] TRACKING_ID length:', TRACKING_ID ? TRACKING_ID.length : 0);
-          console.log('[PRICE_UPDATE_DIAGNOSTIC] apiParams:', JSON.stringify(apiParams));
-          console.log('[PRICE_UPDATE_DIAGNOSTIC] Signature baseString:', baseString);
-
-          const urlParams = new URLSearchParams(apiParams);
-          const aliRes = await fetch(`https://api-sg.aliexpress.com/sync?${urlParams.toString()}`);
-          if (aliRes.ok) {
-            const aliData = await aliRes.json();
-            console.log('[PRICE_UPDATE_DIAGNOSTIC] Raw aliData:', JSON.stringify(aliData));
-
-            const responseObj = aliData.aliexpress_affiliate_product_query_response;
-            if (responseObj && responseObj.resp_result) {
-              const rr = responseObj.resp_result;
-              console.log('[PRICE_UPDATE_DIAGNOSTIC] resp_code:', rr.resp_code, 'resp_msg:', rr.resp_msg);
-              if (rr.result && rr.result.products && rr.result.products.product) {
-                const prod = Array.isArray(rr.result.products.product) ? rr.result.products.product[0] : rr.result.products.product;
-                console.log('[PRICE_UPDATE_DIAGNOSTIC] prod price fields:', {
-                  target_sale_price: prod.target_sale_price,
-                  target_original_price: prod.target_original_price,
-                  app_sale_price: prod.app_sale_price
-                });
-                newPrice = prod.target_sale_price || prod.target_original_price || prod.app_sale_price;
-              }
-            }
-          } else {
-            console.error('[PRICE_UPDATE_DIAGNOSTIC] HTTP Error:', aliRes.status, await aliRes.text());
+          if (products && products.length > 0) {
+            newPrice = products[0].price;
           }
+        } catch (e) {
+          console.error('[Price Update] Error querying AliExpress:', e);
         }
 
-        if (newPrice === null || newPrice === undefined) {
+        if (newPrice === null || newPrice === undefined || newPrice === 0) {
           return res.status(502).json({ error: 'Could not retrieve updated price from AliExpress API' });
         }
 
