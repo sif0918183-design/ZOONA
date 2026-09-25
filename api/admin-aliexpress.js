@@ -141,6 +141,15 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'productId is required for AI enhancement' });
     }
 
+    if (!process.env.GROQ_API_KEY) {
+      console.warn('GROQ_API_KEY is missing in environment variables');
+      return res.status(200).json({
+        success: false,
+        enhanced: false,
+        message: 'مفتاح GROQ_API_KEY غير مكوّن في متغيرات البيئة السحابية (Vercel). يرجى تعيين المفتاح لاستخدام التحسين بالذكاء الاصطناعي.'
+      });
+    }
+
     try {
       // Fetch product detail in English
       const timestamp = getTopTimestamp();

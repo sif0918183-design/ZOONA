@@ -979,6 +979,8 @@
             window.toggleAliExpressStatus = toggleAliExpressStatus;
             window.deleteAliExpressProduct = deleteAliExpressProduct;
             window.refreshAliExpressPrice = refreshAliExpressPrice;
+            window.triggerModalAiEnhance = triggerModalAiEnhance;
+            window.openAliModalWithAiEnhance = openAliModalWithAiEnhance;
 
             // ========== متغيرات الإعدادات ==========
             let commissionSettings = {
@@ -2179,7 +2181,11 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
             }
 
             async function triggerModalAiEnhance() {
-                if (!pendingProductToAdd) return;
+                console.log('[AI Enhance] triggerModalAiEnhance called. pendingProductToAdd:', pendingProductToAdd);
+                if (!pendingProductToAdd) {
+                    console.warn('[AI Enhance] pendingProductToAdd is empty!');
+                    return;
+                }
                 const btn = document.getElementById('aliAiEnhanceModalBtn');
                 const origText = btn ? btn.innerHTML : '';
                 if (btn) {
@@ -2190,8 +2196,10 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                 try {
                     const pass = getAdminPassword();
                     const sourceId = pendingProductToAdd.source_product_id;
+                    console.log(`[AI Enhance] Sending fetch for source_product_id=${sourceId}`);
                     const res = await fetch(`/api/admin-aliexpress?action=enhance&productId=${encodeURIComponent(sourceId)}&adminPassword=${encodeURIComponent(pass)}`);
                     const data = await res.json();
+                    console.log('[AI Enhance] Response received:', data);
 
                     if (data && data.success && data.enhanced) {
                         if (data.title_ar) document.getElementById('aliImportNameAr').value = data.title_ar;
@@ -2203,7 +2211,7 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                         alert(data.message || 'تعذّر التحسين التلقائي، يمكنك كتابة العنوان/الوصف يدويًا');
                     }
                 } catch (err) {
-                    console.error('AI Enhance Error:', err);
+                    console.error('[AI Enhance] Error:', err);
                     alert('تعذّر التحسين التلقائي، يمكنك كتابة العنوان/الوصف يدويًا');
                 } finally {
                     if (btn) {
