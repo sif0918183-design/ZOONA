@@ -13,6 +13,7 @@ const categorySlugs = {
   'عطور': 'perfumes',
   'أزياء نسائية': 'women-fashion',
   'المنزل والمطبخ': 'home-kitchen',
+  'مستلزمات الأطفال': 'kids-baby',
   'اللياقة والرياضة': 'sports-fitness',
   'الرياضة واللياقة': 'sports-fitness'
 };
