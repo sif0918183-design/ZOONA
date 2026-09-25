@@ -409,9 +409,11 @@ export default async function handler(req, res) {
             format: 'json',
             v: '2.0',
             sign_method: 'md5',
+            tracking_id: TRACKING_ID,
             product_ids: sourceProductId,
             target_currency: 'USD'
           };
+
           const sign = generateTopSignature(apiParams, APP_SECRET);
           apiParams.sign = sign;
 
