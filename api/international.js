@@ -178,7 +178,8 @@ export default async function handler(req, res) {
     .gallery-thumb.active, .gallery-thumb:hover { border-color: var(--red); transform: scale(1.04); }
     .product-category-badge { display: inline-flex; align-items: center; gap: 6px; background: #f0f4f8; color: #4a5568; font-size: 13px; font-weight: 700; padding: 5px 12px; border-radius: 8px; margin-bottom: 12px; }
     .product-title { font-size: 22px; font-weight: 900; color: #222; margin-bottom: 12px; line-height: 1.4; }
-    .product-price-badge { display: inline-block; background: #FFEBEE; color: var(--red); font-size: 24px; font-weight: 900; padding: 6px 16px; border-radius: 10px; margin-bottom: 20px; }
+    .product-price-badge { display: inline-block; background: #FFEBEE; color: var(--red); font-size: 24px; font-weight: 900; padding: 6px 16px; border-radius: 10px; margin-bottom: 12px; }
+    .price-notice { font-size: 12px; color: #718096; margin-top: -4px; margin-bottom: 20px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
     .product-desc { font-size: 15px; color: #555; line-height: 1.8; margin-bottom: 25px; white-space: pre-wrap; background: #fdfdfd; padding: 15px; border-radius: 10px; border: 1px solid #eee; }
     .buy-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; background: linear-gradient(135deg, #ff4747 0%, #d32f2f 100%); color: #fff; font-size: 18px; font-weight: 800; text-decoration: none; padding: 16px; border-radius: 14px; box-shadow: 0 6px 20px rgba(211,47,47,.3); transition: .25s; border: none; cursor: pointer; font-family: var(--font); }
     .buy-btn:hover { filter: brightness(1.1); transform: translateY(-2px); }
@@ -222,6 +223,7 @@ export default async function handler(req, res) {
       <div class="product-category-badge"><i class="fas fa-folder"></i> التصنيف: ${esc(productCategory)}</div>
       <h1 class="product-title">${esc(product.name_ar)}</h1>
       <div class="product-price-badge">${esc(product.price)} ${esc(product.currency || 'USD')}</div>
+      <div class="price-notice"><i class="fas fa-info-circle" style="color: #a0aec0;"></i> السعر النهائي قد يختلف قليلاً على AliExpress حسب العروض والخصومات المتاحة وقت الشراء.</div>
       ${product.description_ar ? `<div class="product-desc">${esc(product.description_ar)}</div>` : ''}
       <button type="button" class="buy-btn" onclick="openPopup()">
         <i class="fas fa-external-link-alt"></i> اشترِ الآن
