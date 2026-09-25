@@ -193,14 +193,15 @@ export default async function handler(req, res) {
     }
   }
 
-  // Helper: Fetch extra product details (such as small images and category) via aliexpress.affiliate.productdetail.get
-  async function fetchExtraProductDetail(productId) {
+  // Helper: Fetch full product details (exact real-time price, small images, category) via aliexpress.affiliate.productdetail.get
+  async function getProductDetailFromAliExpress(productId) {
     if (!APP_KEY || !APP_SECRET || !TRACKING_ID || !productId) {
-      return { additionalImages: [], suggestedCategory: null };
+      return { price: null, additionalImages: [], suggestedCategory: null, product: null };
     }
 
     try {
       const timestamp = getTopTimestamp();
+      const cleanId = productId.toString().trim();
       const apiParams = {
         app_key: APP_KEY,
         method: 'aliexpress.affiliate.productdetail.get',
@@ -208,7 +209,7 @@ export default async function handler(req, res) {
         format: 'json',
         v: '2.0',
         sign_method: 'md5',
-        product_ids: productId.toString(),
+        product_ids: cleanId,
         target_currency: 'USD',
         target_language: 'AR',
         tracking_id: TRACKING_ID
@@ -238,16 +239,27 @@ export default async function handler(req, res) {
             }
 
             const suggestedCategory = prod.first_level_category_name || prod.second_level_category_name || null;
+            const parsedPrice = parseFloat(prod.target_sale_price || prod.target_original_price || prod.app_sale_price || 0);
 
-            return { additionalImages, suggestedCategory };
+            return {
+              price: parsedPrice > 0 ? parsedPrice : null,
+              additionalImages,
+              suggestedCategory,
+              product: prod
+            };
           }
         }
       }
     } catch (e) {
-      console.error('Error fetching extra product detail from AliExpress:', e);
+      console.error('Error fetching product detail from AliExpress:', e);
     }
 
-    return { additionalImages: [], suggestedCategory: null };
+    return { price: null, additionalImages: [], suggestedCategory: null, product: null };
+  }
+
+  async function fetchExtraProductDetail(productId) {
+    const detail = await getProductDetailFromAliExpress(productId);
+    return { additionalImages: detail.additionalImages, suggestedCategory: detail.suggestedCategory };
   }
 
   // Helper: Generate Affiliate Link via AliExpress API
@@ -407,21 +419,8 @@ export default async function handler(req, res) {
         }
 
         const sourceProductId = getData[0].source_product_id;
-        const cleanSourceId = (sourceProductId || '').toString().trim();
-
-        let newPrice = null;
-        try {
-          const { products } = await queryAliExpressProducts({
-            product_ids: cleanSourceId,
-            target_language: 'AR'
-          });
-
-          if (products && products.length > 0) {
-            newPrice = products[0].price;
-          }
-        } catch (e) {
-          console.error('[Price Update] Error querying AliExpress:', e);
-        }
+        const detail = await getProductDetailFromAliExpress(sourceProductId);
+        const newPrice = detail.price;
 
         if (newPrice === null || newPrice === undefined || newPrice === 0) {
           return res.status(502).json({ error: 'Could not retrieve updated price from AliExpress API' });
