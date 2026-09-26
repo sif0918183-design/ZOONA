@@ -353,7 +353,7 @@ textarea.form-control{resize:vertical;min-height:80px}
               تطبيق التعديل على ملحوظة المستودع
             </label>
           </div>
-          <input type="text" id="bulkWarehouseNoteInput" class="form-control" placeholder="أدخل ملحوظة المستودع الجماعية (مثال: متوفر بيع جملة فقط أو اتركها فارغة للمسح)..." oninput="onBulkWarehouseNoteChange()" style="border:1.5px solid #ffa726;">
+          <input type="text" id="bulkWarehouseNoteInput" class="form-control" placeholder="أدخل ملحوظة المستودع الجماعية (مثال: متوفر بيع جملة فقط أو اتركها فارغة للمسح)..." oninput="onBulkWarehouseNoteChange()" onchange="onBulkWarehouseNoteChange()" onpaste="setTimeout(onBulkWarehouseNoteChange,50)" style="border:1.5px solid #ffa726;">
           <div style="font-size:11px; color:#666; margin-top:6px;"><i class="fas fa-info-circle"></i> عند تفعيل خيار التطبيق، سيتم تعميم هذه الملحوظة على جميع منتجات المستودع عند الضغط على زر الحفظ النهائي.</div>
         </div>
 
@@ -1752,6 +1752,7 @@ async function confirmBulkUpdates() {
     // 3. Apply bulk warehouse note if enabled
     if (isNoteApplied) {
       data.warehouse_note = bulkNoteVal;
+      needsUpdate = true;
     }
 
     if (needsUpdate) {
