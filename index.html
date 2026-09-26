@@ -926,6 +926,10 @@ html, body {
       <div class="modal-price" id="modalPrice"></div>
       <div class="modal-old" id="modalOld"></div>
     </div>
+    <div id="modalWarehouseNote" style="display:none; margin-bottom:12px; background:#fff3e0; color:#e65100; border:1px solid #ffe0b2; padding:8px 12px; border-radius:10px; font-size:13px; font-weight:700; align-items:center; gap:6px;">
+      <i class="fas fa-info-circle"></i>
+      <span id="modalWarehouseNoteText"></span>
+    </div>
     <div class="modal-desc" id="modalDesc"></div>
     <div class="modal-delivery-section" id="modalDeliverySection" style="display:none">
       <div class="modal-delivery-title"><i class="fas fa-shipping-fast"></i> مدن التوصيل المتاحة</div>
@@ -1289,6 +1293,7 @@ function renderProducts(products) {
         ${p.is_out_of_stock ? `<div class="out-of-stock-overlay"><div class="out-of-stock-text">نفذت الكمية</div></div>` : ''}
         <div class="product-label">${displayCategory}</div>
         <div class="product-name">${p.name}</div>
+        ${p.warehouse_note ? `<div class="product-warehouse-note" style="font-size:11px; color:#e65100; background:#fff3e0; padding:2px 6px; border-radius:4px; font-weight:700; margin-bottom:6px; display:inline-block;"><i class="fas fa-info-circle"></i> ${p.warehouse_note}</div>` : ''}
         <div class="product-prices">
           <span class="product-price">${p.price.toLocaleString()} SDG</span>
           ${(p.oldPrice || p.old_price) ? `<span class="product-old-price">${(p.oldPrice || p.old_price).toLocaleString()} SDG</span>` : ''}
@@ -1634,6 +1639,18 @@ function openModal(id, fromPopState = false) {
   document.getElementById('modalName').textContent = p.name;
   document.getElementById('modalPrice').textContent = p.price.toLocaleString() + ' SDG';
   document.getElementById('modalOld').textContent = (p.oldPrice || p.old_price) ? (p.oldPrice || p.old_price).toLocaleString() + ' SDG' : '';
+
+  const whNoteEl = document.getElementById('modalWarehouseNote');
+  const whNoteTextEl = document.getElementById('modalWarehouseNoteText');
+  if (whNoteEl && whNoteTextEl) {
+    if (p.warehouse_note) {
+      whNoteTextEl.textContent = p.warehouse_note;
+      whNoteEl.style.display = 'flex';
+    } else {
+      whNoteEl.style.display = 'none';
+    }
+  }
+
   document.getElementById('modalDesc').textContent = p.description;
   document.getElementById('modalQty').textContent = modalQty;
 

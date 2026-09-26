@@ -545,6 +545,12 @@ textarea.form-control{resize:vertical;min-height:80px}
         </select>
       </div>
 
+      <!-- Warehouse Note -->
+      <div class="form-group">
+        <label class="form-label">ملحوظة المستودع (مثال: متوفر بيع جملة فقط)</label>
+        <input type="text" id="fWarehouseNote" class="form-control" placeholder="أدخل ملحوظة خاصة بمستودع المنتج...">
+      </div>
+
       <!-- Out of Stock Status -->
       <div class="form-group" style="display:flex; align-items:center; gap:10px; background:#fff3e0; padding:12px; border-radius:12px; border:1px solid #ffe0b2; margin-bottom:20px;">
         <input type="checkbox" id="fOutOfStock" style="width:22px; height:22px; cursor:pointer; accent-color:var(--red);">
@@ -892,6 +898,7 @@ function renderProducts() {
       <div class="prod-body">
         <div class="prod-cat">${displayCategory}</div>
         <div class="prod-name">${p.name}</div>
+        ${p.warehouse_note ? `<div style="font-size:11px; color:#e65100; background:#fff3e0; padding:2px 6px; border-radius:4px; font-weight:700; margin-bottom:4px; display:inline-block;"><i class="fas fa-info-circle"></i> ${p.warehouse_note}</div>` : ''}
         <div class="prod-price">${Number(p.price).toLocaleString()} SDG</div>
         ${p.old_price ? `<div class="prod-old">${Number(p.old_price).toLocaleString()} SDG</div>` : ''}
         <div class="prod-actions">
@@ -938,6 +945,7 @@ function openEditModal(id) {
   document.getElementById('fDiscount').value = p.discount || '';
   document.getElementById('fDesc').value = p.description || '';
   document.getElementById('fWarehouse').value = p.warehouse || 'الخرطوم';
+  document.getElementById('fWarehouseNote').value = p.warehouse_note || '';
   document.getElementById('fOutOfStock').checked = p.is_out_of_stock || false;
   document.getElementById('fImage').value = p.image || '';
 
@@ -969,6 +977,7 @@ function closeFormModal(e) {
 
 function resetForm() {
   document.getElementById('productForm').reset();
+  if (document.getElementById('fWarehouseNote')) document.getElementById('fWarehouseNote').value = '';
   document.getElementById('fOutOfStock').checked = false;
   document.getElementById('fImage').value = '';
   document.getElementById('imgPreview').style.display = 'none';
@@ -1103,6 +1112,7 @@ async function submitForm(e) {
     discount: Number(document.getElementById('fDiscount').value) || null,
     description: document.getElementById('fDesc').value.trim(),
     warehouse: document.getElementById('fWarehouse').value,
+    warehouse_note: document.getElementById('fWarehouseNote') ? document.getElementById('fWarehouseNote').value.trim() : '',
     is_out_of_stock: document.getElementById('fOutOfStock').checked,
     image: image,
     delivery_cities: deliveryCities
