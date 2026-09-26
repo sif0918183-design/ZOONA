@@ -108,12 +108,13 @@ export default async function handler(req, res) {
   try {
     const { id } = req.query;
     const baseUrl = `${SUPABASE_URL}/rest/v1/products`;
+    const dbKey = SERVICE_KEY || SUPABASE_KEY;
     let fetchUrl = '';
     let fetchOptions = {
       method: req.method,
       headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'apikey': dbKey,
+        'Authorization': `Bearer ${dbKey}`,
         'Content-Type': 'application/json',
         'Prefer': req.method === 'POST' ? 'return=representation' : 'return=minimal'
       }
@@ -149,6 +150,7 @@ export default async function handler(req, res) {
     const response = await fetch(fetchUrl, fetchOptions);
     if (!response.ok) {
       const errorText = await response.text();
+      console.error(`[Admin-Products] Supabase ${req.method} failed:`, response.status, errorText);
       throw new Error(`Supabase error: ${response.status} - ${errorText}`);
     }
 
