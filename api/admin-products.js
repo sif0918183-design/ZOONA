@@ -31,7 +31,8 @@ export default async function handler(req, res) {
     'https://zoona-git-feat-add-perfumes-category-11-43fd62-sifians-projects.vercel.app',
     'https://zoona-git-feat-turnstile-and-whatsapp-g-bd6ebc-sifians-projects.vercel.app',
     'https://zoona-git-update-bulk-price-matching-17-2d9de5-sifians-projects.vercel.app',
-    'https://zoona-git-fix-home-ads-display-96408452-b26732-sifians-projects.vercel.app'
+    'https://zoona-git-fix-home-ads-display-96408452-b26732-sifians-projects.vercel.app',
+    'https://zoona-git-fix-bulk-warehouse-note-updat-add481-sifians-projects.vercel.app'
   ];
   const isAllowed = allowedOrigins.some(allowed => origin === allowed || origin.startsWith(allowed + "/"));
   
@@ -107,12 +108,13 @@ export default async function handler(req, res) {
   try {
     const { id } = req.query;
     const baseUrl = `${SUPABASE_URL}/rest/v1/products`;
+    const dbKey = SERVICE_KEY || SUPABASE_KEY;
     let fetchUrl = '';
     let fetchOptions = {
       method: req.method,
       headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'apikey': dbKey,
+        'Authorization': `Bearer ${dbKey}`,
         'Content-Type': 'application/json',
         'Prefer': req.method === 'POST' ? 'return=representation' : 'return=minimal'
       }
@@ -148,6 +150,7 @@ export default async function handler(req, res) {
     const response = await fetch(fetchUrl, fetchOptions);
     if (!response.ok) {
       const errorText = await response.text();
+      console.error(`[Admin-Products] Supabase ${req.method} failed:`, response.status, errorText);
       throw new Error(`Supabase error: ${response.status} - ${errorText}`);
     }
 

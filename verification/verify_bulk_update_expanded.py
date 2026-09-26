@@ -60,7 +60,7 @@ def verify_bulk_update_expanded():
         page.wait_for_timeout(2000)
 
         # Expand the section
-        page.click("text=التحديث الجماعي لأسعار ومدن المستودعات")
+        page.click("text=التحديث الجماعي لأسعار ومدن وملحوظات المستودعات")
         page.wait_for_timeout(500)
 
         # Select "الخرطوم" from the warehouse dropdown

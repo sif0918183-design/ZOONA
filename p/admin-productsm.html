@@ -346,15 +346,21 @@ textarea.form-control{resize:vertical;min-height:80px}
 
         <!-- Collective Warehouse Note Section -->
         <div id="bulkWarehouseNoteSection" style="display:none; border:2px solid #1565C0; border-radius:12px; padding:16px; margin-bottom:20px; background:#fff3e0;">
-          <div style="font-weight:700; color:#e65100; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+          <div style="font-weight:700; color:#e65100; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
             <span><i class="fas fa-sticky-note"></i> تحديث ملحوظة المستودع الجماعية</span>
-            <label style="font-size:12px; color:#222; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px;">
-              <input type="checkbox" id="bulkApplyWarehouseNoteCheck" onchange="renderBulkProductsMiniList()" style="accent-color:#e65100; width:16px; height:16px;">
-              تطبيق التعديل على ملحوظة المستودع
-            </label>
           </div>
-          <input type="text" id="bulkWarehouseNoteInput" class="form-control" placeholder="أدخل ملحوظة المستودع الجماعية (مثال: متوفر بيع جملة فقط أو اتركها فارغة للمسح)..." oninput="onBulkWarehouseNoteChange()" style="border:1.5px solid #ffa726;">
-          <div style="font-size:11px; color:#666; margin-top:6px;"><i class="fas fa-info-circle"></i> عند تفعيل خيار التطبيق، سيتم تعميم هذه الملحوظة على جميع منتجات المستودع عند الضغط على زر الحفظ النهائي.</div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <input type="text" id="bulkWarehouseNoteInput" class="form-control" placeholder="أدخل ملحوظة المستودع الجماعية (مثال: متوفر بيع جملة فقط أو اتركها فارغة للمسح)..." style="border:1.5px solid #ffa726;">
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button type="button" class="add-btn" onclick="activateBulkNote()" style="background:linear-gradient(135deg, #e65100, #ef6c00); flex:2; justify-content:center; box-shadow:0 3px 10px rgba(230,81,0,.3); height:40px; font-size:13px; margin:0;">
+              <i class="fas fa-check-circle"></i> تفعيل الملحوظة مؤقتاً
+            </button>
+            <button type="button" class="add-btn" onclick="clearBulkNote()" style="background:#757575; box-shadow:none; flex:1; justify-content:center; height:40px; font-size:13px; margin:0;">
+              مسح
+            </button>
+          </div>
+          <div style="font-size:11px; color:#666; margin-top:8px;"><i class="fas fa-info-circle"></i> أدخل الملحوظة واضغط على "تفعيل الملحوظة مؤقتاً" ثم اضغط على زر الحفظ النهائي بالأسفل لتأكيد التحديث لقاعدة البيانات.</div>
         </div>
 
         <!-- Price Parsing and Updating Area -->
@@ -761,6 +767,7 @@ let isUploadingImage = false;
 // Warehouse bulk update global variables
 let bulkTempPrices = {};
 let bulkDeliveryCitiesData = { cod: [], prepaid: [] };
+let bulkTempNote = null;
 
 // Session configuration - 30 days persistence
 const SESSION_KEY = 'admin_auth';
@@ -1349,18 +1356,17 @@ function onBulkWarehouseChange() {
   if (bList) bList.style.display = 'block';
   if (bFooter) bFooter.style.display = 'block';
 
-  // Clear bulk temp prices & UI
+  // Clear bulk temp prices, notes & UI
   bulkTempPrices = {};
+  bulkTempNote = null;
   document.getElementById('bulkPasteArea').value = '';
   const bulkPercentInp = document.getElementById('bulkPercentInput');
   if (bulkPercentInp) bulkPercentInp.value = '';
   document.getElementById('bulkParsingSummary').style.display = 'none';
 
-  // Reset bulk note checkbox & prefill input from first product if available
+  // Prefill note input from first product if available
   const whProds = allProducts.filter(p => p.warehouse === wh);
   const bulkNoteInp = document.getElementById('bulkWarehouseNoteInput');
-  const bulkNoteCheck = document.getElementById('bulkApplyWarehouseNoteCheck');
-  if (bulkNoteCheck) bulkNoteCheck.checked = false;
   if (bulkNoteInp) {
     bulkNoteInp.value = (whProds.length > 0 && whProds[0].warehouse_note) ? whProds[0].warehouse_note : '';
   }
@@ -1389,10 +1395,28 @@ function onBulkWarehouseChange() {
   renderBulkProductsMiniList();
 }
 
-function onBulkWarehouseNoteChange() {
-  const check = document.getElementById('bulkApplyWarehouseNoteCheck');
-  if (check) check.checked = true;
+function activateBulkNote() {
+  const wh = document.getElementById('bulkWarehouseSelect').value;
+  if (!wh) {
+    showToast('⚠️ يرجى اختيار مستودع أولاً', 'red');
+    return;
+  }
+  const noteInp = document.getElementById('bulkWarehouseNoteInput');
+  bulkTempNote = noteInp ? noteInp.value.trim() : '';
   renderBulkProductsMiniList();
+  if (bulkTempNote) {
+    showToast(`✅ تم تفعيل الملحوظة الجماعية مؤقتاً: "${bulkTempNote}"`, 'green');
+  } else {
+    showToast(`🧹 تم تفعيل مسح الملحوظة الجماعية مؤقتاً`, 'orange');
+  }
+}
+
+function clearBulkNote() {
+  bulkTempNote = null;
+  const noteInp = document.getElementById('bulkWarehouseNoteInput');
+  if (noteInp) noteInp.value = '';
+  renderBulkProductsMiniList();
+  showToast('🧹 تم مسح الملحوظة المؤقتة');
 }
 
 function renderBulkProductsMiniList() {
@@ -1406,9 +1430,6 @@ function renderBulkProductsMiniList() {
     listEl.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">لا توجد منتجات في هذا المستودع حالياً</div>';
     return;
   }
-
-  const applyNote = document.getElementById('bulkApplyWarehouseNoteCheck')?.checked || false;
-  const proposedNote = document.getElementById('bulkWarehouseNoteInput')?.value.trim() || '';
 
   listEl.innerHTML = whProds.map(p => {
     const hasTempPrice = p.id in bulkTempPrices;
@@ -1444,12 +1465,12 @@ function renderBulkProductsMiniList() {
         <div style="font-size:11px; color:#666; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
           <i class="fas fa-map-marker-alt"></i> مدن التوصيل: ${citiesStr}
         </div>
-        ${applyNote ? `
+        ${bulkTempNote !== null ? `
           <div style="font-size:11px; color:#e65100; font-weight:bold;">
-            <i class="fas fa-sticky-note"></i> ملحوظة المستودع الجديدة المقترحة: ${proposedNote ? `"${proposedNote}"` : '<span style="color:#d32f2f;">(مسح الملحوظة)</span>'}
+            <i class="fas fa-sticky-note"></i> ملحوظة المستودع الجديدة المقترحة: ${bulkTempNote ? `"${bulkTempNote}"` : '<span style="color:#d32f2f;">(مسح الملحوظة)</span>'}
           </div>
         ` : (currentNote ? `
-          <div style="font-size:11px; color:#e65100;">
+          <div style="font-size:11px; color:#888;">
             <i class="fas fa-sticky-note"></i> ملحوظة المستودع الحالية: "${currentNote}"
           </div>
         ` : '')}
@@ -1702,8 +1723,8 @@ async function confirmBulkUpdates() {
   const finalCities = [...bulkDeliveryCitiesData.cod, ...bulkDeliveryCitiesData.prepaid];
   const priceChangesCount = Object.keys(bulkTempPrices).length;
 
-  const isNoteApplied = document.getElementById('bulkApplyWarehouseNoteCheck')?.checked || false;
-  const bulkNoteVal = isNoteApplied ? document.getElementById('bulkWarehouseNoteInput').value.trim() : null;
+  const isNoteApplied = bulkTempNote !== null;
+  const bulkNoteVal = bulkTempNote;
 
   let confirmMsg = `هل أنت متأكد من حفظ التعديلات لـ ${whProds.length} منتج في مستودع "${wh}"؟\n` +
                    `- عدد المنتجات التي ستتغير أسعارها: ${priceChangesCount}\n` +
@@ -1750,8 +1771,9 @@ async function confirmBulkUpdates() {
     needsUpdate = true;
 
     // 3. Apply bulk warehouse note if enabled
-    if (isNoteApplied) {
-      data.warehouse_note = bulkNoteVal;
+    if (bulkTempNote !== null) {
+      data.warehouse_note = bulkTempNote;
+      needsUpdate = true;
     }
 
     if (needsUpdate) {

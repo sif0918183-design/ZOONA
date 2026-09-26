@@ -8,7 +8,8 @@ export default async function handler(req, res) {
     "https://zoona-git-jules-7250375803931180038-595003bf-sifians-projects.vercel.app",
     'https://zoonasd.com',
     'https://www.zoonasd.com',
-    'zoonasd.com'
+    'zoonasd.com',
+    'https://zoona-git-fix-bulk-warehouse-note-updat-add481-sifians-projects.vercel.app'
   ];
 
   const isAllowed = allowedOrigins.some(allowed => origin === allowed || origin.startsWith(allowed + "/"));
