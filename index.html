@@ -1204,7 +1204,7 @@ async function loadProducts(forceRefresh = false) {
       if (cached) {
         const cacheData = JSON.parse(cached);
         if (Date.now() - cacheData.timestamp < CACHE_DURATION) {
-          allProducts = cacheData.products;
+          allProducts = cacheData.products.filter(p => !p.is_hidden);
           filteredProducts = [...allProducts];
           renderProducts(filteredProducts);
           checkUrlForProduct();
@@ -1217,13 +1217,15 @@ async function loadProducts(forceRefresh = false) {
     const fetchUrl = forceRefresh ? `/api/products?_=${Date.now()}` : '/api/products';
     const response = await fetch(fetchUrl);
     if (!response.ok) throw new Error('Failed to fetch from API');
-    allProducts = await response.json();
+    const fetchedProducts = await response.json();
     
     // Cache the products
     localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify({
-      products: allProducts,
+      products: fetchedProducts,
       timestamp: Date.now()
     }));
+
+    allProducts = fetchedProducts.filter(p => !p.is_hidden);
 
     // Refresh delivery cities in existing cart items using fresh product data
     let cartUpdated = false;
@@ -1255,7 +1257,7 @@ async function loadProducts(forceRefresh = false) {
     const cached = localStorage.getItem(PRODUCTS_CACHE_KEY);
     if (cached) {
       const cacheData = JSON.parse(cached);
-      allProducts = cacheData.products;
+      allProducts = cacheData.products.filter(p => !p.is_hidden);
       filteredProducts = [...allProducts];
       renderProducts(filteredProducts);
       checkUrlForProduct();
