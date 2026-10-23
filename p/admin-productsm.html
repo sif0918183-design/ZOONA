@@ -571,10 +571,18 @@ textarea.form-control{resize:vertical;min-height:80px}
       </div>
 
       <!-- Out of Stock Status -->
-      <div class="form-group" style="display:flex; align-items:center; gap:10px; background:#fff3e0; padding:12px; border-radius:12px; border:1px solid #ffe0b2; margin-bottom:20px;">
+      <div class="form-group" style="display:flex; align-items:center; gap:10px; background:#fff3e0; padding:12px; border-radius:12px; border:1px solid #ffe0b2; margin-bottom:12px;">
         <input type="checkbox" id="fOutOfStock" style="width:22px; height:22px; cursor:pointer; accent-color:var(--red);">
         <label for="fOutOfStock" style="font-size:14px; font-weight:800; color:#e65100; cursor:pointer; margin:0;">
           <i class="fas fa-exclamation-triangle"></i> تصنيف المنتج كمنتج (نفذت الكمية)
+        </label>
+      </div>
+
+      <!-- Hide Product Status -->
+      <div class="form-group" style="display:flex; align-items:center; gap:10px; background:#ffebee; padding:12px; border-radius:12px; border:1px solid #ffcdd2; margin-bottom:20px;">
+        <input type="checkbox" id="fIsHidden" style="width:22px; height:22px; cursor:pointer; accent-color:var(--red);">
+        <label for="fIsHidden" style="font-size:14px; font-weight:800; color:var(--red-dark); cursor:pointer; margin:0;">
+          <i class="fas fa-eye-slash"></i> إخفاء المنتج من الواجهة الرئيسية للمتجر
         </label>
       </div>
 
@@ -911,9 +919,10 @@ function renderProducts() {
     const displayCategory = p.category ? p.category.split('/').map(c => c.trim() === 'مستحضرات تجميل' ? 'تجميل' : c.trim()).join(' / ') : '';
     const optimizedImg = getTransformedImageUrl(p.image, 150, 70);
     return `
-    <div class="prod-card" style="${p.is_out_of_stock ? 'opacity:0.8;' : ''}">
+    <div class="prod-card" style="${p.is_hidden ? 'opacity:0.65; border:2px dashed var(--red);' : (p.is_out_of_stock ? 'opacity:0.8;' : '')}">
       <img class="prod-img" src="${optimizedImg}" alt="${p.name}" loading="lazy" decoding="async" onerror="if (this.src !== '${p.image}') { this.src = '${p.image || '../assets/splash-logo.png'}'; } else { this.src = '../assets/splash-logo.png'; }">
-      ${p.is_out_of_stock ? `<div class="prod-badge" style="background:#666; right:auto; left:8px;">نفذت الكمية</div>` : ''}
+      ${p.is_hidden ? `<div class="prod-badge" style="background:#d32f2f; right:auto; left:8px;">مخفي</div>` : ''}
+      ${p.is_out_of_stock ? `<div class="prod-badge" style="background:#666; right:auto; ${p.is_hidden ? 'left:60px;' : 'left:8px;'}">نفذت الكمية</div>` : ''}
       ${p.discount ? `<div class="prod-badge">-${p.discount}%</div>` : ''}
       <div class="prod-body">
         <div class="prod-cat">${displayCategory}</div>
@@ -967,6 +976,7 @@ function openEditModal(id) {
   document.getElementById('fWarehouse').value = p.warehouse || 'الخرطوم';
   document.getElementById('fWarehouseNote').value = p.warehouse_note || '';
   document.getElementById('fOutOfStock').checked = p.is_out_of_stock || false;
+  document.getElementById('fIsHidden').checked = p.is_hidden || false;
   document.getElementById('fImage').value = p.image || '';
 
   setDeliveryCitiesToForm(p.delivery_cities || []);
@@ -999,6 +1009,7 @@ function resetForm() {
   document.getElementById('productForm').reset();
   if (document.getElementById('fWarehouseNote')) document.getElementById('fWarehouseNote').value = '';
   document.getElementById('fOutOfStock').checked = false;
+  document.getElementById('fIsHidden').checked = false;
   document.getElementById('fImage').value = '';
   document.getElementById('imgPreview').style.display = 'none';
   document.getElementById('urlPreview').style.display = 'none';
@@ -1134,6 +1145,7 @@ async function submitForm(e) {
     warehouse: document.getElementById('fWarehouse').value,
     warehouse_note: document.getElementById('fWarehouseNote') ? document.getElementById('fWarehouseNote').value.trim() : '',
     is_out_of_stock: document.getElementById('fOutOfStock').checked,
+    is_hidden: document.getElementById('fIsHidden').checked,
     image: image,
     delivery_cities: deliveryCities
   };

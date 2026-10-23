@@ -16,7 +16,8 @@ export default async function handler(req, res) {
       "https://zoona-git-jules-2721342884738575238-5a4705ea-sifians-projects.vercel.app",
       "https://zoona-git-jules-7250375803931180038-595003bf-sifians-projects.vercel.app",
       'https://zoonasd.com', 'https://www.zoonasd.com', 'zoonasd.com',
-      'https://zoona-git-fix-bulk-warehouse-note-updat-add481-sifians-projects.vercel.app'
+      'https://zoona-git-fix-bulk-warehouse-note-updat-add481-sifians-projects.vercel.app',
+      'https://zoona-git-feat-add-product-hide-option-3ddb43-sifians-projects.vercel.app'
     ];
 
     const currentOrigin = req.headers.origin;

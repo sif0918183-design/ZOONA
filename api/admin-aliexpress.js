@@ -9,7 +9,8 @@ export default async function handler(req, res) {
     'https://zoonasd.com',
     'https://www.zoonasd.com',
     'zoonasd.com',
-    'https://zoona-git-fix-bulk-warehouse-note-updat-add481-sifians-projects.vercel.app'
+    'https://zoona-git-fix-bulk-warehouse-note-updat-add481-sifians-projects.vercel.app',
+    'https://zoona-git-feat-add-product-hide-option-3ddb43-sifians-projects.vercel.app'
   ];
 
   const isAllowed = allowedOrigins.some(allowed => origin === allowed || origin.startsWith(allowed + "/"));

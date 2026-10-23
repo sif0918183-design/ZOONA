@@ -27,7 +27,8 @@ export default async function handler(req, res) {
     'https://zoona-git-feat-turnstile-and-whatsapp-g-bd6ebc-sifians-projects.vercel.app',
     'https://zoona-git-update-bulk-price-matching-17-2d9de5-sifians-projects.vercel.app',
     'https://zoona-git-fix-home-ads-display-96408452-b26732-sifians-projects.vercel.app',
-    'https://zoona-git-fix-bulk-warehouse-note-updat-add481-sifians-projects.vercel.app'
+    'https://zoona-git-fix-bulk-warehouse-note-updat-add481-sifians-projects.vercel.app',
+    'https://zoona-git-feat-add-product-hide-option-3ddb43-sifians-projects.vercel.app'
   ];
   const isAllowed = allowedOrigins.some(allowed => origin === allowed || origin.startsWith(allowed + "/"));
   
@@ -66,7 +67,8 @@ export default async function handler(req, res) {
     'https://zoona-git-feat-turnstile-and-whatsapp-g-bd6ebc-sifians-projects.vercel.app',
     'https://zoona-git-update-bulk-price-matching-17-2d9de5-sifians-projects.vercel.app',
     'https://zoona-git-fix-home-ads-display-96408452-b26732-sifians-projects.vercel.app',
-    'https://zoona-git-fix-bulk-warehouse-note-updat-add481-sifians-projects.vercel.app'
+    'https://zoona-git-fix-bulk-warehouse-note-updat-add481-sifians-projects.vercel.app',
+    'https://zoona-git-feat-add-product-hide-option-3ddb43-sifians-projects.vercel.app'
   ];
   const currentOrigin = req.headers.origin;
   
