@@ -497,6 +497,9 @@
                 <div class="nav-tab" onclick="showTab('aliexpress')">
                     <i class="fas fa-globe"></i> منتجات عالمية
                 </div>
+                <div class="nav-tab" onclick="showTab('coupons')">
+                    <i class="fas fa-ticket-alt"></i> إدارة الكوبونات
+                </div>
                 <div class="nav-tab" onclick="showTab('settings')">
                     <i class="fas fa-cogs"></i> إعدادات العمولة
                 </div>
@@ -625,6 +628,40 @@
                     </thead>
                     <tbody id="affiliatesBody"></tbody>
                 </table>
+            </div>
+        </div>
+
+        <!-- تبويب إدارة الكوبونات -->
+        <div class="tab-content" id="coupons-tab">
+            <div class="affiliate-details">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h4 style="color: var(--primary-color); margin: 0;">
+                        <i class="fas fa-ticket-alt"></i> إدارة كوبونات الخصم
+                    </h4>
+                    <button class="btn btn-primary" onclick="showAddCouponModal()">
+                        <i class="fas fa-plus"></i> إضافة كوبون جديد
+                    </button>
+                </div>
+
+                <div class="loading" id="couponsLoading" style="display: none;">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <div>جاري تحميل الكوبونات...</div>
+                </div>
+
+                <div class="table-container">
+                    <table id="couponsTable">
+                        <thead>
+                            <tr>
+                                <th>كود الكوبون</th>
+                                <th>نسبة الخصم</th>
+                                <th>الحالة</th>
+                                <th>تاريخ الإضافة</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="couponsBody"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -823,6 +860,40 @@
         </div>
     </div>
 
+    <!-- Modal إضافة/تعديل كوبون -->
+    <div id="couponModal" style="align-items: center; background: rgba(0,0,0,0.5); display: none; height: 100%; justify-content: center; left: 0; position: fixed; top: 0; width: 100%; z-index: 1000;">
+        <div style="background: white; border-radius: 12px; max-width: 450px; padding: 25px; width: 90%; font-family: 'Tajawal'; direction: rtl;">
+            <h3 id="couponModalTitle" style="margin-bottom: 20px; color: var(--primary-color); font-size: 18px;">
+                <i class="fas fa-ticket-alt"></i> إضافة كوبون جديد
+            </h3>
+            <form id="couponForm" onsubmit="saveCoupon(event)">
+                <input id="couponId" type="hidden" />
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">كود الكوبون</label>
+                    <input id="couponCode" required placeholder="مثال: ZOONA10" style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 10px; width: 100%; font-family:'Tajawal'; text-transform: uppercase;" type="text" />
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">نسبة الخصم (%)</label>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input id="couponDiscount" min="1" max="100" step="1" required placeholder="مثال: 10" style="flex: 1; border-radius: 8px; border: 1px solid #e2e8f0; padding: 10px; font-family:'Tajawal';" type="number" />
+                        <span style="font-weight: 700;">%</span>
+                    </div>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">الحالة</label>
+                    <select id="couponStatus" style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 10px; width: 100%; font-family: 'Tajawal';">
+                        <option value="true">نشط (ساري)</option>
+                        <option value="false">غير نشط (معطل)</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button class="btn" onclick="closeCouponModal()" style="background: #718096; color: white; border-radius: 8px;" type="button">إلغاء</button>
+                    <button class="btn btn-primary" type="submit" style="border-radius: 8px;"><i class="fas fa-save"></i> حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modal تعديل منتج عالمي -->
     <div id="aliModal" style="align-items: center; background: rgba(0,0,0,0.5); display: none; height: 100%; justify-content: center; left: 0; position: fixed; top: 0; width: 100%; z-index: 1000;">
         <div style="background: white; border-radius: 10px; max-width: 500px; padding: 30px; width: 90%;">
@@ -947,6 +1018,7 @@
             let allProducts = [];
             let allAffiliateOrders = [];
             let allAliProducts = [];
+            let allCoupons = [];
             let isLoggedIn = false;
 
             // ========== تعريف الدوال في النطاق العام ==========
@@ -967,6 +1039,14 @@
             window.copyOrderSummary = copyOrderSummary;
             window.markCommissionPaid = markCommissionPaid;
             window.saveCommissionSettings = saveCommissionSettings;
+
+            // Coupons Functions
+            window.loadCoupons = loadCoupons;
+            window.showAddCouponModal = showAddCouponModal;
+            window.closeCouponModal = closeCouponModal;
+            window.editCoupon = editCoupon;
+            window.deleteCoupon = deleteCoupon;
+            window.saveCoupon = saveCoupon;
 
             // AliExpress Functions
             window.searchAliExpress = searchAliExpress;
@@ -1112,7 +1192,8 @@
                     'affiliates': 1,
                     'products': 2,
                     'aliexpress': 3,
-                    'settings': 4
+                    'coupons': 4,
+                    'settings': 5
                 };
                 if (tabMap[tabName] !== undefined && navTabs[tabMap[tabName]]) {
                     navTabs[tabMap[tabName]].classList.add('active');
@@ -1126,6 +1207,8 @@
                     loadProducts();
                 } else if (tabName === 'aliexpress') {
                     loadAliExpressProducts();
+                } else if (tabName === 'coupons') {
+                    loadCoupons();
                 } else if (tabName === 'settings') {
                     loadCommissionSettings();
                 }
@@ -1333,6 +1416,11 @@
                     hour: '2-digit',
                     minute: '2-digit'
                 });
+
+                const couponInfoText = (order.coupon_code || (order.discount_amount > 0)) ? `
+ 🎟️ كوبون الخصم: ${order.coupon_code || 'ساري'}
+ 💰 الخصم المطبق: ${(order.discount_amount || 0).toLocaleString()} ج.س
+ 🏷️ السعر قبل الخصم: ${(order.original_total || ((order.total_amount || 0) + (order.discount_amount || 0))).toLocaleString()} ج.س` : '';
                 
                 const summary = `
  ملخص الطلب - Zoona mall
@@ -1345,7 +1433,7 @@ ${order.phone2 ? ` هاتف إضافي: ${order.phone2}` : ''}
  العنوان: ${order.address || 'غير محدد'}
 ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''}
  المنتجات: ${productsText}
- السعر الإجمالي: ${order.total_amount ? order.total_amount.toLocaleString() + ' ج.س' : 'غير محدد'}
+ السعر الإجمالي: ${order.total_amount ? order.total_amount.toLocaleString() + ' ج.س' : 'غير محدد'}${couponInfoText}
  تكلفة التوصيل: ${order.shipping_cost ? order.shipping_cost.toLocaleString() + ' ج.س' : 'غير محدد'}
  التاريخ: ${formattedDate}
                 `.trim();
@@ -1455,7 +1543,13 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                         </td>
                         <td>${affiliate ? `${affiliate.affiliate_id}<br><small>${affiliate.name}</small>` : 'طلب مباشر'}</td>
                         <td>${order.city || 'غير محدد'}</td>
-                        <td class="price-display">${order.total_amount ? order.total_amount.toLocaleString() : '0'} ج.س</td>
+                        <td class="price-display">
+                            ${order.total_amount ? order.total_amount.toLocaleString() : '0'} ج.س
+                            ${(order.coupon_code || order.discount_amount > 0) ? `
+                                <br><small style="color:var(--danger-color); font-weight:700;"><i class="fas fa-ticket-alt"></i> كوبون: ${order.coupon_code || ''} (خصم ${(order.discount_amount || 0).toLocaleString()} ج.س)</small>
+                                <br><small style="color:#718096; text-decoration:line-through;">قبل الخصم: ${(order.original_total || ((order.total_amount || 0) + (order.discount_amount || 0))).toLocaleString()} ج.س</small>
+                            ` : ''}
+                        </td>
                         <td class="price-display">${order.shipping_cost ? order.shipping_cost.toLocaleString() : '0'} ج.س</td>
                         <td>
                             ${order.location_link ? 
@@ -1945,6 +2039,211 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                 if (currentEditingProductId) productData.id = currentEditingProductId;
                 saveProduct(productData);
             });
+
+            // ========== دوال إدارة الكوبونات ==========
+            async function loadCoupons() {
+                if (!isLoggedIn) return;
+
+                const loadingEl = document.getElementById('couponsLoading');
+                const tableEl = document.getElementById('couponsTable');
+                if (loadingEl) loadingEl.style.display = 'block';
+
+                try {
+                    let coupons = [];
+                    try {
+                        coupons = await callSupabase('coupons?select=*&order=created_at.desc');
+                    } catch (err) {
+                        console.warn('⚠️ تعذر استعلام جدول coupons، جاري تجربة الحافظة البديلة:', err);
+                        const settings = await callSupabase('admin_settings?select=*&key=eq.coupons_list');
+                        if (settings && settings.length > 0 && settings[0].value) {
+                            try { coupons = JSON.parse(settings[0].value); } catch(e) { coupons = []; }
+                        }
+                    }
+
+                    allCoupons = coupons || [];
+                    displayCoupons(allCoupons);
+
+                } catch (error) {
+                    console.error('خطأ في تحميل الكوبونات:', error);
+                    document.getElementById('couponsBody').innerHTML =
+                        '<tr><td colspan="5" style="text-align: center; color: #e53e3e; padding: 20px;">حدث خطأ في تحميل الكوبونات</td></tr>';
+                } finally {
+                    if (loadingEl) loadingEl.style.display = 'none';
+                    if (tableEl) tableEl.style.display = 'table';
+                }
+            }
+
+            function displayCoupons(coupons) {
+                const tbody = document.getElementById('couponsBody');
+                if (!tbody) return;
+
+                if (!coupons || coupons.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 30px; color: #718096;">لا توجد كوبونات خصم مضافة حالياً</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = '';
+
+                coupons.forEach((coupon) => {
+                    const isActive = coupon.is_active === true || coupon.is_active === 'true';
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><strong style="color:var(--primary-color); font-size:1rem;">${coupon.code}</strong></td>
+                        <td><span style="font-weight:700; color:var(--success-color); font-size:1.05rem;">%${coupon.discount_percent}</span></td>
+                        <td>
+                            <span class="status-badge status-${isActive ? 'active' : 'inactive'}">
+                                ${isActive ? 'نشط' : 'غير نشط'}
+                            </span>
+                        </td>
+                        <td>${formatDateEnglish(coupon.created_at)}</td>
+                        <td>
+                            <div style="display: flex; gap: 5px;">
+                                <button class="btn btn-primary btn-sm" onclick="editCoupon('${coupon.id}')" title="تعديل">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteCoupon('${coupon.id}')" title="حذف">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+
+            function showAddCouponModal() {
+                document.getElementById('couponModalTitle').innerHTML = '<i class="fas fa-ticket-alt"></i> إضافة كوبون جديد';
+                document.getElementById('couponForm').reset();
+                document.getElementById('couponId').value = '';
+                document.getElementById('couponStatus').value = 'true';
+                document.getElementById('couponModal').style.display = 'flex';
+            }
+
+            function closeCouponModal() {
+                document.getElementById('couponModal').style.display = 'none';
+            }
+
+            function editCoupon(couponId) {
+                const coupon = allCoupons.find(c => c.id == couponId || c.code == couponId);
+                if (!coupon) {
+                    alert('الكوبون غير موجود');
+                    return;
+                }
+
+                document.getElementById('couponModalTitle').innerHTML = '<i class="fas fa-edit"></i> تعديل الكوبون';
+                document.getElementById('couponId').value = coupon.id || coupon.code;
+                document.getElementById('couponCode').value = coupon.code || '';
+                document.getElementById('couponDiscount').value = coupon.discount_percent || 10;
+                document.getElementById('couponStatus').value = (coupon.is_active === true || coupon.is_active === 'true') ? 'true' : 'false';
+
+                document.getElementById('couponModal').style.display = 'flex';
+            }
+
+            async function deleteCoupon(couponId) {
+                if (!confirm('هل أنت متأكد من حذف هذا الكوبون؟')) return;
+
+                try {
+                    let success = false;
+                    try {
+                        await callSupabase(`coupons?id=eq.${couponId}`, { method: 'DELETE' });
+                        success = true;
+                    } catch (e) {
+                        // Fallback sync to admin_settings
+                        const updatedCoupons = allCoupons.filter(c => c.id != couponId && c.code != couponId);
+                        await callSupabase('admin_settings', {
+                            method: 'POST',
+                            body: JSON.stringify([{ key: 'coupons_list', value: JSON.stringify(updatedCoupons) }])
+                        });
+                        success = true;
+                    }
+
+                    if (success) {
+                        alert('✅ تم حذف الكوبون بنجاح');
+                        loadCoupons();
+                    }
+                } catch (error) {
+                    console.error('خطأ في حذف الكوبون:', error);
+                    alert('❌ حدث خطأ في حذف الكوبون');
+                }
+            }
+
+            async function saveCoupon(e) {
+                e.preventDefault();
+
+                const id = document.getElementById('couponId').value;
+                const code = document.getElementById('couponCode').value.trim().toUpperCase();
+                const discount_percent = parseFloat(document.getElementById('couponDiscount').value);
+                const is_active = document.getElementById('couponStatus').value === 'true';
+
+                if (!code || isNaN(discount_percent) || discount_percent <= 0 || discount_percent > 100) {
+                    alert('يرجى إدخال بيانات صحيحة للكوبون (نسبة الخصم بين 1 و 100)');
+                    return;
+                }
+
+                try {
+                    const payload = {
+                        code: code,
+                        discount_percent: discount_percent,
+                        is_active: is_active,
+                        updated_at: new Date().toISOString()
+                    };
+
+                    let primarySuccess = false;
+                    try {
+                        if (id) {
+                            await callSupabase(`coupons?id=eq.${id}`, {
+                                method: 'PATCH',
+                                body: JSON.stringify(payload)
+                            });
+                        } else {
+                            payload.created_at = new Date().toISOString();
+                            await callSupabase('coupons', {
+                                method: 'POST',
+                                body: JSON.stringify([payload])
+                            });
+                        }
+                        primarySuccess = true;
+                    } catch (err) {
+                        console.warn('⚠️ فشل حفظ الكوبون في جدول coupons الرئيسي، استخدام المزامنة الاحتياطية:', err);
+                    }
+
+                    // Always sync to admin_settings coupons_list as a guaranteed fallback array
+                    let existingCoupons = [...allCoupons];
+                    if (id) {
+                        const idx = existingCoupons.findIndex(c => c.id == id || c.code == id);
+                        if (idx !== -1) existingCoupons[idx] = { ...existingCoupons[idx], ...payload };
+                    } else {
+                        if (!existingCoupons.some(c => c.code === code)) {
+                            existingCoupons.push({ id: Date.now(), ...payload, created_at: new Date().toISOString() });
+                        }
+                    }
+
+                    try {
+                        const existingSetting = await callSupabase('admin_settings?select=id&key=eq.coupons_list');
+                        if (existingSetting && existingSetting.length > 0) {
+                            await callSupabase(`admin_settings?id=eq.${existingSetting[0].id}`, {
+                                method: 'PATCH',
+                                body: JSON.stringify({ value: JSON.stringify(existingCoupons), updated_at: new Date().toISOString() })
+                            });
+                        } else {
+                            await callSupabase('admin_settings', {
+                                method: 'POST',
+                                body: JSON.stringify([{ key: 'coupons_list', value: JSON.stringify(existingCoupons) }])
+                            });
+                        }
+                    } catch (e) {
+                        console.warn('فشل حفظ المزامنة الاحتياطية في admin_settings:', e);
+                    }
+
+                    closeCouponModal();
+                    alert(id ? '✅ تم تحديث الكوبون بنجاح' : '✅ تم إضافة الكوبون بنجاح');
+                    loadCoupons();
+
+                } catch (error) {
+                    console.error('خطأ في حفظ الكوبون:', error);
+                    alert('❌ حدث خطأ في حفظ الكوبون');
+                }
+            }
 
             // ========== دوال إدارة المنتجات العالمية (AliExpress Affiliate) ==========
             let currentAliSearchQuery = '';
