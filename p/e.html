@@ -818,6 +818,37 @@
                     </div>
                 </div>
             </div>
+
+            <!-- قسم كوبون الخصم -->
+            <div class="coupon-section" style="background: #f8f9fa; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 15px; margin: 15px 0;">
+                <div id="couponToggleWrap" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.9rem; font-weight: 600; color: #2d3748;">
+                        <i class="fas fa-ticket-alt" style="color: #e63946; margin-left: 5px;"></i> كوبون الخصم
+                    </span>
+                    <button type="button" id="toggleCouponBtn" onclick="toggleCouponInput()" style="background: transparent; border: 1px solid #e63946; color: #e63946; padding: 6px 12px; border-radius: 6px; font-weight: 600; cursor: pointer; font-family: 'Tajawal', sans-serif; font-size: 0.85rem; transition: all 0.2s;">
+                        <i class="fas fa-plus"></i> إضافة كوبون خصم
+                    </button>
+                </div>
+
+                <div id="couponInputWrap" style="display: none; margin-top: 10px;">
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <input type="text" id="couponCodeInput" placeholder="أدخل كود الكوبون" style="flex: 1; min-width: 0; width: auto; padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 6px; font-family: 'Tajawal'; font-size: 0.85rem; text-transform: uppercase;">
+                        <button type="button" id="applyCouponBtn" onclick="applyCoupon()" style="width: auto; flex-shrink: 0; background: #2a4365; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; font-family: 'Tajawal'; font-size: 0.85rem; margin-top: 0;">
+                            تفعيل
+                        </button>
+                    </div>
+                    <div id="couponMessage" style="font-size: 0.82rem; margin-top: 6px; font-weight: 600;"></div>
+                </div>
+
+                <div id="appliedCouponWrap" style="display: none; margin-top: 8px; background: #f0fff4; border: 1px solid #9ae6b4; padding: 8px 12px; border-radius: 6px; justify-content: space-between; align-items: center;">
+                    <div>
+                        <span style="color: #276749; font-weight: bold; font-size: 0.85rem;" id="appliedCouponText"></span>
+                    </div>
+                    <button type="button" onclick="removeCoupon()" style="background: transparent; border: none; color: #c53030; cursor: pointer; font-size: 0.8rem; font-family: 'Tajawal'; text-decoration: underline;">
+                        إلغاء الكوبون
+                    </button>
+                </div>
+            </div>
             
             <div class="total-container">
                 <div>
@@ -867,6 +898,8 @@
         <div class="pdf-products" id="pdfProductsList"></div>
         
         <div class="pdf-details">
+            <div id="pdfOriginalTotalRow" style="display:none;"><span class="pdf-label">السعر قبل الخصم:</span> <span id="pdfOriginalTotal"></span></div>
+            <div id="pdfDiscountRow" style="display:none;"><span class="pdf-label">قيمة الخصم:</span> <span id="pdfDiscount"></span></div>
             <div><span class="pdf-label">المجموع الكلي:</span> <span id="pdfTotal"></span></div>
         </div>
         
@@ -1057,34 +1090,181 @@
             }
         }
         
+        // ========== دوال إدارة كوبون الخصم والتعليق ==========
+        let activeCoupon = null;
+        const COUPON_BLOCK_DURATION_MS = 6 * 60 * 60 * 1000; // 6 ساعات
+
+        function checkCouponBlockStatus() {
+            const blockedUntil = parseInt(localStorage.getItem('zoona_coupon_blocked_until') || '0');
+            const now = Date.now();
+            if (blockedUntil > now) {
+                return true;
+            }
+            if (blockedUntil > 0 && blockedUntil <= now) {
+                localStorage.removeItem('zoona_coupon_blocked_until');
+                localStorage.setItem('zoona_coupon_failed_attempts', '0');
+            }
+            return false;
+        }
+
+        function toggleCouponInput() {
+            const msgEl = document.getElementById('couponMessage');
+            const inputWrap = document.getElementById('couponInputWrap');
+
+            if (checkCouponBlockStatus()) {
+                inputWrap.style.display = 'block';
+                if (msgEl) {
+                    msgEl.style.color = '#c53030';
+                    msgEl.textContent = 'لايمكنك استخدام هذه الميزة حالياً';
+                }
+                return;
+            }
+
+            if (inputWrap.style.display === 'none' || !inputWrap.style.display) {
+                inputWrap.style.display = 'block';
+                if (msgEl) msgEl.textContent = '';
+            } else {
+                inputWrap.style.display = 'none';
+            }
+        }
+
+        async function applyCoupon() {
+            const msgEl = document.getElementById('couponMessage');
+            const inputEl = document.getElementById('couponCodeInput');
+            const code = inputEl ? inputEl.value.trim().toUpperCase() : '';
+
+            if (checkCouponBlockStatus()) {
+                if (msgEl) {
+                    msgEl.style.color = '#c53030';
+                    msgEl.textContent = 'لايمكنك استخدام هذه الميزة حالياً';
+                }
+                return;
+            }
+
+            if (!code) {
+                if (msgEl) {
+                    msgEl.style.color = '#c53030';
+                    msgEl.textContent = 'يرجى إدخال كود الكوبون';
+                }
+                return;
+            }
+
+            msgEl.style.color = '#2b6cb0';
+            msgEl.textContent = 'جاري التحقق من الكوبون...';
+
+            let foundCoupon = null;
+
+            try {
+                // 1. Try DB coupons table
+                try {
+                    const res = await callSupabase(`coupons?code=eq.${encodeURIComponent(code)}&is_active=eq.true`);
+                    if (res && res.length > 0) {
+                        foundCoupon = res[0];
+                    }
+                } catch (e) {
+                    console.warn('تعذر الفحص من جدول coupons، جاري تجربة admin_settings:', e);
+                }
+
+                // 2. Fallback check in admin_settings coupons_list
+                if (!foundCoupon) {
+                    try {
+                        const settings = await callSupabase('admin_settings?select=*&key=eq.coupons_list');
+                        if (settings && settings.length > 0 && settings[0].value) {
+                            const couponsList = JSON.parse(settings[0].value);
+                            foundCoupon = couponsList.find(c => c.code === code && (c.is_active === true || c.is_active === 'true'));
+                        }
+                    } catch (e) {
+                        console.warn('خطأ في استعلام admin_settings للكوبونات:', e);
+                    }
+                }
+
+                if (foundCoupon) {
+                    localStorage.setItem('zoona_coupon_failed_attempts', '0');
+                    activeCoupon = {
+                        code: foundCoupon.code,
+                        discount_percent: parseFloat(foundCoupon.discount_percent)
+                    };
+
+                    document.getElementById('couponInputWrap').style.display = 'none';
+                    document.getElementById('appliedCouponWrap').style.display = 'flex';
+                    document.getElementById('appliedCouponText').textContent = `تم تفعيل الكوبون ${activeCoupon.code} (خصم %${activeCoupon.discount_percent})`;
+
+                    updateSummaryAndTotal();
+                } else {
+                    let failedAttempts = parseInt(localStorage.getItem('zoona_coupon_failed_attempts') || '0') + 1;
+                    localStorage.setItem('zoona_coupon_failed_attempts', failedAttempts.toString());
+
+                    if (failedAttempts > 4) {
+                        localStorage.setItem('zoona_coupon_blocked_until', (Date.now() + COUPON_BLOCK_DURATION_MS).toString());
+                        msgEl.style.color = '#c53030';
+                        msgEl.textContent = 'لايمكنك استخدام هذه الميزة حالياً';
+                    } else {
+                        msgEl.style.color = '#c53030';
+                        msgEl.textContent = 'كود الكوبون خطأ';
+                    }
+                }
+
+            } catch (err) {
+                console.error('خطأ في التحقق من الكوبون:', err);
+                msgEl.style.color = '#c53030';
+                msgEl.textContent = 'حدث خطأ في التحقق من الكوبون، يرجى المحاولة لاحقاً';
+            }
+        }
+
+        function removeCoupon() {
+            activeCoupon = null;
+            document.getElementById('appliedCouponWrap').style.display = 'none';
+            document.getElementById('couponInputWrap').style.display = 'none';
+            document.getElementById('couponCodeInput').value = '';
+            const msgEl = document.getElementById('couponMessage');
+            if (msgEl) msgEl.textContent = '';
+            updateSummaryAndTotal();
+        }
+
         // ========== دالة إنشاء الطلب ==========
         async function createNewOrder(orderData) {
             console.log('📝 بدء إنشاء طلب جديد:', orderData.orderId);
 
-            // 1. إنشاء الطلب الرئيسي
-            await callSupabase('orders', {
-                method: 'POST',
-                body: JSON.stringify([{
-                    order_id: orderData.orderId,
-                    user_id: orderData.userId,
-                    name: orderData.name,
-                    phone: orderData.phone,
-                    phone2: orderData.phone2 || null,
-                    city: orderData.city || 'متعدد',
-                    city_type: orderData.cityType || 'cod',
-                    shipping_cost: orderData.shippingCost || 0,
-                    total_amount: orderData.total,
-                    address: orderData.address,
-                    location_lat: orderData.location?.lat || null,
-                    location_lng: orderData.location?.lng || null,
-                    location_link: orderData.location?.link || null,
-                    payment_type: orderData.cityType === 'cod' ? 'دفع عند الاستلام' : 'دفع مقدم',
-                    affiliate_id: orderData.affiliateId || 'direct',
-                    status: 'new',
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                }])
-            });
+            const orderPayload = {
+                order_id: orderData.orderId,
+                user_id: orderData.userId,
+                name: orderData.name,
+                phone: orderData.phone,
+                phone2: orderData.phone2 || null,
+                city: orderData.city || 'متعدد',
+                city_type: orderData.cityType || 'cod',
+                shipping_cost: orderData.shippingCost || 0,
+                total_amount: orderData.total,
+                original_total: orderData.originalTotal || orderData.total,
+                coupon_code: orderData.couponCode || null,
+                discount_amount: orderData.discountAmount || 0,
+                address: orderData.address,
+                location_lat: orderData.location?.lat || null,
+                location_lng: orderData.location?.lng || null,
+                location_link: orderData.location?.link || null,
+                payment_type: orderData.cityType === 'cod' ? 'دفع عند الاستلام' : 'دفع مقدم',
+                affiliate_id: orderData.affiliateId || 'direct',
+                status: 'new',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+
+            // 1. إنشاء الطلب الرئيسي مع حماية عدم تعطل Schema
+            try {
+                await callSupabase('orders', {
+                    method: 'POST',
+                    body: JSON.stringify([orderPayload])
+                });
+            } catch (err) {
+                console.warn('⚠️ تعذر إدخال حقول الكوبون المباشرة في orders، جاري إعادة المحاولة بدون الحقول الجديدة:', err);
+                delete orderPayload.coupon_code;
+                delete orderPayload.discount_amount;
+                delete orderPayload.original_total;
+                await callSupabase('orders', {
+                    method: 'POST',
+                    body: JSON.stringify([orderPayload])
+                });
+            }
             console.log('✅ تم إدخال الطلب الرئيسي بنجاح');
 
             // 2. إدخال منتجات الطلب
@@ -1542,9 +1722,33 @@
             });
             
             if (anyCitySelected) {
+                let discountAmount = 0;
+                let finalTotal = grandTotal;
+
+                if (activeCoupon) {
+                    discountAmount = Math.round(grandTotal * (activeCoupon.discount_percent / 100));
+                    finalTotal = Math.max(0, grandTotal - discountAmount);
+                    activeCoupon.discount_amount = discountAmount;
+                    activeCoupon.original_total = grandTotal;
+                }
+
                 summaryHTML += `<div class="summary-row"><span>إجمالي تكاليف الشحن:</span><span>${totalShipping.toLocaleString()} SDG</span></div>`;
-                summaryHTML += `<div class="summary-total summary-row"><span>المجموع الكلي:</span><span>${grandTotal.toLocaleString()} SDG</span></div>`;
-                totalAmount.textContent = `${grandTotal.toLocaleString()} SDG`;
+
+                if (activeCoupon) {
+                    summaryHTML += `<div class="summary-row" style="color:#38a169; font-weight:bold;">
+                        <span>خصم الكوبون (${activeCoupon.code} - %${activeCoupon.discount_percent}):</span>
+                        <span>-${discountAmount.toLocaleString()} SDG</span>
+                    </div>`;
+                    summaryHTML += `<div class="summary-total summary-row">
+                        <span>المجموع الكلي بعد الخصم:</span>
+                        <span>${finalTotal.toLocaleString()} SDG</span>
+                    </div>`;
+                    totalAmount.innerHTML = `${finalTotal.toLocaleString()} SDG <small style="font-size:0.75rem; text-decoration:line-through; color:#718096; margin-right:6px;">${grandTotal.toLocaleString()} SDG</small>`;
+                } else {
+                    summaryHTML += `<div class="summary-total summary-row"><span>المجموع الكلي:</span><span>${grandTotal.toLocaleString()} SDG</span></div>`;
+                    totalAmount.textContent = `${grandTotal.toLocaleString()} SDG`;
+                }
+
                 paymentType.textContent = allCod ? 'دفع عند الاستلام' : 'دفع مقدم (بعض المستودعات)';
             } else {
                 summaryHTML += `<div class="summary-total summary-row" style="color:#a0aec0;">
@@ -1657,7 +1861,23 @@
                 setPdfContent('pdfPhone2', orderData.phone2 || 'غير متوفر');
                 setPdfContent('pdfAddress', orderData.address || '');
                 setPdfContent('pdfPaymentType', orderData.cityType === 'cod' ? 'دفع عند الاستلام' : 'دفع مقدم');
-                setPdfContent('pdfTotal', `${orderData.total.toLocaleString()} SDG`);
+
+                if (orderData.couponCode || orderData.discountAmount > 0) {
+                    const origRow = document.getElementById('pdfOriginalTotalRow');
+                    const discRow = document.getElementById('pdfDiscountRow');
+                    if (origRow) origRow.style.display = 'flex';
+                    if (discRow) discRow.style.display = 'flex';
+                    setPdfContent('pdfOriginalTotal', `${(orderData.originalTotal || (orderData.total + orderData.discountAmount)).toLocaleString()} SDG`);
+                    setPdfContent('pdfDiscount', `${(orderData.discountAmount || 0).toLocaleString()} SDG (كوبون: ${orderData.couponCode || ''})`);
+                    setPdfContent('pdfTotal', `${orderData.total.toLocaleString()} SDG (بعد الخصم)`);
+                } else {
+                    const origRow = document.getElementById('pdfOriginalTotalRow');
+                    const discRow = document.getElementById('pdfDiscountRow');
+                    if (origRow) origRow.style.display = 'none';
+                    if (discRow) discRow.style.display = 'none';
+                    setPdfContent('pdfTotal', `${orderData.total.toLocaleString()} SDG`);
+                }
+
                 setPdfContent('pdfDate', getFormattedDate());
                 setPdfContent('pdfOrderId', `رقم الطلب: ${orderData.orderId || ''}`);
                 
@@ -1802,6 +2022,14 @@
                     }
                 });
                 
+                let discountAmount = 0;
+                let finalGrandTotal = grandTotal;
+
+                if (activeCoupon) {
+                    discountAmount = Math.round(grandTotal * (activeCoupon.discount_percent / 100));
+                    finalGrandTotal = Math.max(0, grandTotal - discountAmount);
+                }
+
                 const formData = {
                     orderId: orderId,
                     userId: userId,
@@ -1812,7 +2040,10 @@
                     city: selectedCities.map(c => c.city).join('، '),
                     cityType: paymentType === 'mixed' ? 'mixed' : 'cod',
                     shippingCost: totalShipping,
-                    total: grandTotal,
+                    total: finalGrandTotal,
+                    originalTotal: grandTotal,
+                    couponCode: activeCoupon ? activeCoupon.code : null,
+                    discountAmount: activeCoupon ? discountAmount : 0,
                     address: document.getElementById('address').value,
                     location: userLocation,
                     date: new Date().toISOString(),
