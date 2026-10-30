@@ -2030,6 +2030,9 @@
                     finalGrandTotal = Math.max(0, grandTotal - discountAmount);
                 }
 
+                // إذا تم تفعيل كوبون خصم ونجح الخصم، يحول الطلب إلى طلب مباشر ويلغى نسابه للمسوق
+                const effectiveAffiliateId = activeCoupon ? 'direct' : getAffiliateId();
+
                 const formData = {
                     orderId: orderId,
                     userId: userId,
@@ -2049,7 +2052,7 @@
                     date: new Date().toISOString(),
                     timestamp: Date.now(),
                     status: 'new',
-                    affiliateId: getAffiliateId(),
+                    affiliateId: effectiveAffiliateId,
                     warehouseSelections: selectedCities
                 };
                 
