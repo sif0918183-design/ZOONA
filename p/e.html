@@ -1038,16 +1038,39 @@
         }
         
         // ========== دوال إدارة معرف المسوق ==========
+        const AFFILIATE_COOKIE_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 يوماً
+
+        function setAffiliateWithExpiry(affiliateId) {
+            if (!affiliateId || affiliateId === 'direct') return;
+            const expiryTime = Date.now() + AFFILIATE_COOKIE_DURATION_MS;
+            localStorage.setItem('currentAffiliateId', affiliateId);
+            localStorage.setItem('affiliateExpiry', expiryTime.toString());
+        }
+
         function getAffiliateId() {
             const urlParams = new URLSearchParams(window.location.search);
             let affiliateId = urlParams.get('ref');
-            if (!affiliateId || affiliateId === 'direct') {
-                affiliateId = localStorage.getItem('currentAffiliateId');
+            if (affiliateId && affiliateId !== 'direct') {
+                setAffiliateWithExpiry(affiliateId);
+                return affiliateId;
             }
+
+            const storedId = localStorage.getItem('currentAffiliateId');
+            const expiry = parseInt(localStorage.getItem('affiliateExpiry') || '0', 10);
+            if (storedId && storedId !== 'direct') {
+                if (expiry && Date.now() > expiry) {
+                    localStorage.removeItem('currentAffiliateId');
+                    localStorage.removeItem('affiliateExpiry');
+                } else {
+                    affiliateId = storedId;
+                }
+            }
+
             if ((!affiliateId || affiliateId === 'direct') && cartItems.length > 0) {
                 const productWithAffiliate = cartItems.find(item => item.affiliateId && item.affiliateId !== 'direct');
                 if (productWithAffiliate) {
                     affiliateId = productWithAffiliate.affiliateId;
+                    setAffiliateWithExpiry(affiliateId);
                 }
             }
             if (affiliateId && affiliateId !== 'direct' && affiliateId !== 'null' && affiliateId !== 'undefined') {
@@ -1444,24 +1467,14 @@
         
         // ========== دالة تنظيف بيانات المسوق ==========
         function clearAffiliateIdFromStorage() {
-            const affiliateKeys = ['currentAffiliateId', 'affiliateId', 'ref'];
-            affiliateKeys.forEach(key => {
-                if (localStorage.getItem(key)) localStorage.removeItem(key);
-            });
-            const keysToRemove = [];
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key && (key.includes('affiliate') || key.includes('ref'))) keysToRemove.push(key);
-            }
-            keysToRemove.forEach(key => localStorage.removeItem(key));
-            cartItems.forEach(item => { if (item.affiliateId) delete item.affiliateId; });
-            localStorage.setItem('cartItems', JSON.stringify(cartItems));
+            // يتم الاحتفاظ بمعرف المسوق في المتصفح لمدة 30 يوماً ليحسب له أي طلب لاحق خلال هذه الفترة
+            // نقوم فقط بإزالة المعرف من الرابط لتفادي تكراره في الواجهة
             if (window.history.replaceState && window.location.search.includes('ref=')) {
                 const url = new URL(window.location);
                 url.searchParams.delete('ref');
                 window.history.replaceState({}, '', url);
             }
-            console.log('✅ تم تنظيف جميع بيانات المسوق بنجاح');
+            console.log('✅ تم إبقاء معرف المسوق لمدة 30 يوماً وتنظيف رابط الصفحة');
         }
         
         // ========== دوال التكامل مع الشريط العلوي ==========

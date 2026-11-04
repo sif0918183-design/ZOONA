@@ -2367,11 +2367,33 @@ function showToast(msg, type = '') {
 }
 
 // ── Affiliate ──
+const AFFILIATE_COOKIE_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 يوماً
+
+function setAffiliateWithExpiry(affiliateId) {
+  if (!affiliateId || affiliateId === 'direct') return;
+  const expiryTime = Date.now() + AFFILIATE_COOKIE_DURATION_MS;
+  localStorage.setItem('currentAffiliateId', affiliateId);
+  localStorage.setItem('affiliateExpiry', expiryTime.toString());
+}
+
 function getAffiliateId() {
   const p = new URLSearchParams(window.location.search);
   const ref = p.get('ref');
-  if (ref) { localStorage.setItem('currentAffiliateId', ref); return ref; }
-  return localStorage.getItem('currentAffiliateId') || 'direct';
+  if (ref && ref !== 'direct') {
+    setAffiliateWithExpiry(ref);
+    return ref;
+  }
+  const storedId = localStorage.getItem('currentAffiliateId');
+  const expiry = parseInt(localStorage.getItem('affiliateExpiry') || '0', 10);
+  if (storedId && storedId !== 'direct') {
+    if (expiry && Date.now() > expiry) {
+      localStorage.removeItem('currentAffiliateId');
+      localStorage.removeItem('affiliateExpiry');
+      return 'direct';
+    }
+    return storedId;
+  }
+  return 'direct';
 }
 
 // ── Service Worker ──
@@ -2561,8 +2583,8 @@ async function recordAffiliateClick() {
   const urlParams = new URLSearchParams(window.location.search);
   const ref = urlParams.get('ref');
 
-  if (ref) {
-    localStorage.setItem('currentAffiliateId', ref);
+  if (ref && ref !== 'direct') {
+    setAffiliateWithExpiry(ref);
 
     if (!sessionStorage.getItem('affiliate_click_recorded')) {
       try {
