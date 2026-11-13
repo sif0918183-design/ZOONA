@@ -503,6 +503,9 @@
                 <div class="nav-tab" onclick="showTab('settings')">
                     <i class="fas fa-cogs"></i> إعدادات العمولة
                 </div>
+                <div class="nav-tab" onclick="showTab('promos')">
+                    <i class="fas fa-bullhorn"></i> إدارة الرسائل المنبثقة والإعلانات
+                </div>
             </div>
         </div>
 
@@ -660,6 +663,42 @@
                             </tr>
                         </thead>
                         <tbody id="couponsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- تبويب إدارة الرسائل المنبثقة والإعلانات -->
+        <div class="tab-content" id="promos-tab">
+            <div class="affiliate-details">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                    <h4 style="color: var(--primary-color); margin: 0;">
+                        <i class="fas fa-bullhorn"></i> إدارة الرسائل المنبثقة والإعلانات
+                    </h4>
+                    <button class="btn btn-primary" onclick="showAddPromoModal()">
+                        <i class="fas fa-plus"></i> إنشاء رسالة جديدة
+                    </button>
+                </div>
+
+                <div class="loading" id="promosLoading" style="display: none;">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <div>جاري تحميل الرسائل...</div>
+                </div>
+
+                <div class="table-container">
+                    <table id="promosTable">
+                        <thead>
+                            <tr>
+                                <th>العنوان</th>
+                                <th>الحالة</th>
+                                <th>سياسة التكرار</th>
+                                <th>الأولوية</th>
+                                <th>تاريخ البداية</th>
+                                <th>تاريخ الانتهاء</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="promosBody"></tbody>
                     </table>
                 </div>
             </div>
@@ -894,6 +933,117 @@
         </div>
     </div>
 
+    <!-- Modal إنشاء/تعديل رسالة منبثقة -->
+    <div id="promoModal" style="align-items: center; background: rgba(0,0,0,0.5); display: none; height: 100%; justify-content: center; left: 0; position: fixed; top: 0; width: 100%; z-index: 1000;">
+        <div style="background: white; border-radius: 12px; max-width: 560px; padding: 25px; width: 92%; font-family: 'Tajawal'; direction: rtl; max-height: 92vh; overflow-y: auto;">
+            <h3 id="promoModalTitle" style="margin-bottom: 20px; color: var(--primary-color); font-size: 18px;">
+                <i class="fas fa-bullhorn"></i> إنشاء رسالة جديدة
+            </h3>
+            <form id="promoForm" onsubmit="savePromo(event)">
+                <input id="promoId" type="hidden" />
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">عنوان الرسالة <span style="color:var(--danger-color)">*</span></label>
+                    <input id="promoTitle" required maxlength="300" placeholder="مثال: 🎉 تحديث جديد لتطبيق Zoona!" style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 10px; width: 100%; font-family:'Tajawal';" type="text" />
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">نص الرسالة <span style="color:var(--danger-color)">*</span></label>
+                    <textarea id="promoBody" required maxlength="5000" rows="4" placeholder="اكتب نص الرسالة هنا..." style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 10px; width: 100%; font-family:'Tajawal'; resize: vertical;"></textarea>
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">رابط الصورة (اختياري)</label>
+                    <input id="promoImage" placeholder="https://... أو ارفع صورة" style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 10px; width: 100%; font-family:'Tajawal';" type="text" />
+                    <div style="display:flex; gap:8px; align-items:center; margin-top:6px;">
+                        <input id="promoImageFile" type="file" accept="image/*" style="font-size:12px; flex:1;" />
+                        <button type="button" class="btn btn-sm" onclick="uploadPromoImage()" style="background:#4a5568; color:#fff; border-radius:8px;">رفع الصورة</button>
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+                    <div>
+                        <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">نص الزر الرئيسي</label>
+                        <input id="promoPrimaryText" maxlength="100" placeholder="تحديث التطبيق الآن" style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 10px; width: 100%; font-family:'Tajawal';" type="text" />
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">رابط الزر الرئيسي</label>
+                        <input id="promoPrimaryUrl" placeholder="https://..." style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 10px; width: 100%; font-family:'Tajawal';" type="text" />
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+                    <div>
+                        <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">نص الزر الثانوي (اختياري)</label>
+                        <input id="promoSecondaryText" maxlength="100" placeholder="لاحقاً" style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 10px; width: 100%; font-family:'Tajawal';" type="text" />
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">رابط الزر الثانوي (اختياري)</label>
+                        <input id="promoSecondaryUrl" placeholder="https://..." style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 10px; width: 100%; font-family:'Tajawal';" type="text" />
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+                    <div>
+                        <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">مدة التأخير قبل الظهور (ثانية)</label>
+                        <input id="promoDelay" min="0" max="600" step="1" value="10" style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 10px; width: 100%; font-family:'Tajawal';" type="number" />
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">الأولوية (الأعلى يظهر أولاً)</label>
+                        <input id="promoPriority" step="1" value="0" style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 10px; width: 100%; font-family:'Tajawal';" type="number" />
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+                    <div>
+                        <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">تاريخ بداية العرض (اختياري)</label>
+                        <input id="promoStartAt" style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 10px; width: 100%; font-family:'Tajawal';" type="datetime-local" />
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">تاريخ انتهاء العرض (اختياري)</label>
+                        <input id="promoEndAt" style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 10px; width: 100%; font-family:'Tajawal';" type="datetime-local" />
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
+                    <div>
+                        <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">سياسة تكرار الظهور</label>
+                        <select id="promoRepeat" style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 10px; width: 100%; font-family:'Tajawal';">
+                            <option value="once">مرة واحدة فقط للمستخدم</option>
+                            <option value="24h">مرة كل 24 ساعة</option>
+                            <option value="3d">مرة كل 3 أيام</option>
+                            <option value="7d">مرة كل 7 أيام</option>
+                            <option value="every_visit">في كل زيارة جديدة</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">حالة الرسالة</label>
+                        <select id="promoStatus" style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 10px; width: 100%; font-family:'Tajawal';">
+                            <option value="true">مفعّلة</option>
+                            <option value="false">متوقفة</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- معاينة الرسالة -->
+                <div style="margin-bottom:15px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <label style="font-weight:700; font-size:13px; color:var(--primary-color);"><i class="fas fa-eye"></i> معاينة الرسالة</label>
+                        <button type="button" class="btn btn-sm" onclick="previewPromo()" style="background:#3182ce; color:#fff; border-radius:8px;">تحديث المعاينة</button>
+                    </div>
+                    <div id="promoPreviewBox" style="border:2px dashed #cbd5e0; border-radius:12px; padding:18px; background:#f8fafc; text-align:center; direction:rtl;">
+                        <div id="promoPreviewImage" style="display:none; margin-bottom:10px;">
+                            <img id="promoPreviewImg" src="" alt="" style="max-width:100%; max-height:160px; border-radius:10px;" />
+                        </div>
+                        <div id="promoPreviewTitle" style="font-weight:800; font-size:16px; color:#2d3748; margin-bottom:8px;">عنوان الرسالة</div>
+                        <div id="promoPreviewBody" style="font-size:13px; color:#4a5568; line-height:1.7; margin-bottom:14px; white-space:pre-wrap;">نص الرسالة</div>
+                        <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+                            <span id="promoPreviewPrimary" style="display:none; background:linear-gradient(135deg,#D32F2F,#B71C1C); color:#fff; font-weight:700; padding:9px 18px; border-radius:10px; font-size:13px;"></span>
+                            <span id="promoPreviewSecondary" style="display:none; background:#edf2f7; color:#2d3748; font-weight:700; padding:9px 18px; border-radius:10px; font-size:13px;"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button class="btn" onclick="closePromoModal()" style="background: #718096; color: white; border-radius: 8px;" type="button">إلغاء</button>
+                    <button class="btn btn-primary" type="submit" style="border-radius: 8px;"><i class="fas fa-save"></i> حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modal تعديل منتج عالمي -->
     <div id="aliModal" style="align-items: center; background: rgba(0,0,0,0.5); display: none; height: 100%; justify-content: center; left: 0; position: fixed; top: 0; width: 100%; z-index: 1000;">
         <div style="background: white; border-radius: 10px; max-width: 500px; padding: 30px; width: 90%;">
@@ -1048,6 +1198,18 @@
             window.deleteCoupon = deleteCoupon;
             window.saveCoupon = saveCoupon;
 
+            // Promo Messages Functions
+            window.loadPromos = loadPromos;
+            window.showAddPromoModal = showAddPromoModal;
+            window.closePromoModal = closePromoModal;
+            window.editPromo = editPromo;
+            window.deletePromo = deletePromo;
+            window.togglePromoStatus = togglePromoStatus;
+            window.savePromo = savePromo;
+            window.previewPromo = previewPromo;
+            window.uploadPromoImage = uploadPromoImage;
+            window.resetPromoState = resetPromoState;
+
             // AliExpress Functions
             window.searchAliExpress = searchAliExpress;
             window.loadNextAliPage = loadNextAliPage;
@@ -1193,7 +1355,8 @@
                     'products': 2,
                     'aliexpress': 3,
                     'coupons': 4,
-                    'settings': 5
+                    'settings': 5,
+                    'promos': 6
                 };
                 if (tabMap[tabName] !== undefined && navTabs[tabMap[tabName]]) {
                     navTabs[tabMap[tabName]].classList.add('active');
@@ -1211,6 +1374,8 @@
                     loadCoupons();
                 } else if (tabName === 'settings') {
                     loadCommissionSettings();
+                } else if (tabName === 'promos') {
+                    loadPromos();
                 }
             }
 
@@ -2242,6 +2407,317 @@ ${order.location_link ? ` *موقع التوصيل: ${order.location_link}` : ''
                 } catch (error) {
                     console.error('خطأ في حفظ الكوبون:', error);
                     alert('❌ حدث خطأ في حفظ الكوبون');
+                }
+            }
+
+            // ========== دوال إدارة الرسائل المنبثقة والإعلانات (Promo Messages) ==========
+            let allPromos = [];
+
+            const PROMO_REPEAT_LABELS = {
+                'once': 'مرة واحدة فقط',
+                '24h': 'كل 24 ساعة',
+                '3d': 'كل 3 أيام',
+                '7d': 'كل 7 أيام',
+                'every_visit': 'في كل زيارة'
+            };
+
+            // تحويل قيمة datetime-local إلى ISO (أو null)
+            function promoDateToIso(value) {
+                if (!value) return null;
+                const d = new Date(value);
+                return isNaN(d.getTime()) ? null : d.toISOString();
+            }
+
+            // تحويل ISO إلى قيمة مقبولة في datetime-local
+            function promoIsoToLocalInput(iso) {
+                if (!iso) return '';
+                const d = new Date(iso);
+                if (isNaN(d.getTime())) return '';
+                const pad = n => String(n).padStart(2, '0');
+                return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            }
+
+            function promoDateLabel(iso) {
+                if (!iso) return '<span style="color:#a0aec0;">—</span>';
+                return formatDateEnglish(iso);
+            }
+
+            async function loadPromos() {
+                if (!isLoggedIn) return;
+
+                const loadingEl = document.getElementById('promosLoading');
+                const tableEl = document.getElementById('promosTable');
+                if (loadingEl) loadingEl.style.display = 'block';
+
+                try {
+                    let promos = [];
+                    try {
+                        promos = await callSupabase('promo_messages?select=*&order=priority.desc,created_at.desc');
+                    } catch (err) {
+                        console.error('خطأ في جلب الرسائل:', err);
+                        promos = [];
+                    }
+
+                    allPromos = promos || [];
+                    displayPromos(allPromos);
+                } catch (error) {
+                    console.error('خطأ في تحميل الرسائل:', error);
+                    document.getElementById('promosBody').innerHTML =
+                        '<tr><td colspan="7" style="text-align: center; color: #e53e3e; padding: 20px;">حدث خطأ في تحميل الرسائل</td></tr>';
+                } finally {
+                    if (loadingEl) loadingEl.style.display = 'none';
+                    if (tableEl) tableEl.style.display = 'table';
+                }
+            }
+
+            function displayPromos(promos) {
+                const tbody = document.getElementById('promosBody');
+                if (!tbody) return;
+
+                if (!promos || promos.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 30px; color: #718096;">لا توجد رسائل مضافة حالياً</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                promos.forEach((promo) => {
+                    const isActive = promo.is_active === true || promo.is_active === 'true';
+                    const repeat = PROMO_REPEAT_LABELS[promo.repeat_policy] || promo.repeat_policy || '—';
+                    const safeTitle = String(promo.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><strong style="color:var(--primary-color);">${safeTitle}</strong></td>
+                        <td>
+                            <span class="status-badge status-${isActive ? 'active' : 'inactive'}">
+                                ${isActive ? 'مفعّلة' : 'متوقفة'}
+                            </span>
+                        </td>
+                        <td>${repeat}</td>
+                        <td><strong>${promo.priority != null ? promo.priority : 0}</strong></td>
+                        <td>${promoDateLabel(promo.start_at)}</td>
+                        <td>${promoDateLabel(promo.end_at)}</td>
+                        <td>
+                            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                                <button class="btn btn-primary btn-sm" onclick="editPromo('${promo.id}')" title="تعديل">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn ${isActive ? 'btn-warning' : 'btn-success'} btn-sm" onclick="togglePromoStatus('${promo.id}')" title="${isActive ? 'إيقاف' : 'تفعيل'}">
+                                    <i class="fas ${isActive ? 'fa-pause' : 'fa-play'}"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="deletePromo('${promo.id}')" title="حذف">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                <button class="btn btn-sm" onclick="resetPromoState('${promo.id}')" title="إعادة ضبط سياسة التكرار (إظهارها من جديد لجميع الزوار)" style="background:#805ad5; color:#fff;">
+                                    <i class="fas fa-redo"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+
+            function showAddPromoModal() {
+                document.getElementById('promoModalTitle').innerHTML = '<i class="fas fa-bullhorn"></i> إنشاء رسالة جديدة';
+                document.getElementById('promoForm').reset();
+                document.getElementById('promoId').value = '';
+                document.getElementById('promoDelay').value = 10;
+                document.getElementById('promoPriority').value = 0;
+                document.getElementById('promoRepeat').value = 'once';
+                document.getElementById('promoStatus').value = 'true';
+                document.getElementById('promoStartAt').value = '';
+                document.getElementById('promoEndAt').value = '';
+                previewPromo();
+                document.getElementById('promoModal').style.display = 'flex';
+            }
+
+            function closePromoModal() {
+                document.getElementById('promoModal').style.display = 'none';
+            }
+
+            function editPromo(promoId) {
+                const promo = allPromos.find(p => String(p.id) === String(promoId));
+                if (!promo) {
+                    alert('الرسالة غير موجودة');
+                    return;
+                }
+                document.getElementById('promoModalTitle').innerHTML = '<i class="fas fa-edit"></i> تعديل الرسالة';
+                document.getElementById('promoId').value = promo.id || '';
+                document.getElementById('promoTitle').value = promo.title || '';
+                document.getElementById('promoBody').value = promo.body || '';
+                document.getElementById('promoImage').value = promo.image_url || '';
+                document.getElementById('promoPrimaryText').value = promo.primary_text || '';
+                document.getElementById('promoPrimaryUrl').value = promo.primary_url || '';
+                document.getElementById('promoSecondaryText').value = promo.secondary_text || '';
+                document.getElementById('promoSecondaryUrl').value = promo.secondary_url || '';
+                document.getElementById('promoDelay').value = promo.delay_seconds != null ? promo.delay_seconds : 10;
+                document.getElementById('promoPriority').value = promo.priority != null ? promo.priority : 0;
+                document.getElementById('promoStartAt').value = promoIsoToLocalInput(promo.start_at);
+                document.getElementById('promoEndAt').value = promoIsoToLocalInput(promo.end_at);
+                document.getElementById('promoRepeat').value = promo.repeat_policy || 'once';
+                document.getElementById('promoStatus').value = (promo.is_active === true || promo.is_active === 'true') ? 'true' : 'false';
+                previewPromo();
+                document.getElementById('promoModal').style.display = 'flex';
+            }
+
+            function previewPromo() {
+                const title = document.getElementById('promoTitle').value.trim();
+                const body = document.getElementById('promoBody').value.trim();
+                const image = document.getElementById('promoImage').value.trim();
+                const pText = document.getElementById('promoPrimaryText').value.trim();
+                const sText = document.getElementById('promoSecondaryText').value.trim();
+
+                document.getElementById('promoPreviewTitle').textContent = title || 'عنوان الرسالة';
+                document.getElementById('promoPreviewBody').textContent = body || 'نص الرسالة';
+
+                const imgWrap = document.getElementById('promoPreviewImage');
+                const imgEl = document.getElementById('promoPreviewImg');
+                if (image) {
+                    imgEl.src = image;
+                    imgWrap.style.display = 'block';
+                } else {
+                    imgEl.removeAttribute('src');
+                    imgWrap.style.display = 'none';
+                }
+
+                const pBtn = document.getElementById('promoPreviewPrimary');
+                if (pText) { pBtn.textContent = pText; pBtn.style.display = 'inline-block'; }
+                else { pBtn.style.display = 'none'; }
+
+                const sBtn = document.getElementById('promoPreviewSecondary');
+                if (sText) { sBtn.textContent = sText; sBtn.style.display = 'inline-block'; }
+                else { sBtn.style.display = 'none'; }
+            }
+
+            async function uploadPromoImage() {
+                const fileInput = document.getElementById('promoImageFile');
+                if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                    alert('يرجى اختيار صورة أولاً');
+                    return;
+                }
+                const file = fileInput.files[0];
+                const formData = new FormData();
+                formData.append('image', file);
+
+                try {
+                    const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
+                    if (!res.ok) throw new Error('Upload failed');
+                    const data = await res.json();
+                    if (data && data.url) {
+                        document.getElementById('promoImage').value = data.url;
+                        previewPromo();
+                        alert('✅ تم رفع الصورة بنجاح');
+                    } else {
+                        throw new Error('No URL returned');
+                    }
+                } catch (err) {
+                    console.error('خطأ في رفع الصورة:', err);
+                    alert('❌ تعذّر رفع الصورة. يمكنك لصق رابط الصورة مباشرة.');
+                }
+            }
+
+            async function savePromo(e) {
+                e.preventDefault();
+
+                const id = document.getElementById('promoId').value;
+                const title = document.getElementById('promoTitle').value.trim();
+                const bodyText = document.getElementById('promoBody').value.trim();
+
+                if (!title || !bodyText) {
+                    alert('يرجى إدخال عنوان الرسالة ونصها');
+                    return;
+                }
+
+                const delayRaw = document.getElementById('promoDelay').value.trim();
+                const delayParsed = parseInt(delayRaw, 10);
+
+                const payload = {
+                    title: title,
+                    body: bodyText,
+                    image_url: document.getElementById('promoImage').value.trim() || null,
+                    primary_text: document.getElementById('promoPrimaryText').value.trim() || null,
+                    primary_url: document.getElementById('promoPrimaryUrl').value.trim() || null,
+                    secondary_text: document.getElementById('promoSecondaryText').value.trim() || null,
+                    secondary_url: document.getElementById('promoSecondaryUrl').value.trim() || null,
+                    delay_seconds: delayRaw === '' || isNaN(delayParsed) ? 10 : Math.min(Math.max(delayParsed, 0), 600),
+                    priority: parseInt(document.getElementById('promoPriority').value, 10) || 0,
+                    start_at: promoDateToIso(document.getElementById('promoStartAt').value),
+                    end_at: promoDateToIso(document.getElementById('promoEndAt').value),
+                    repeat_policy: document.getElementById('promoRepeat').value,
+                    is_active: document.getElementById('promoStatus').value === 'true',
+                    updated_at: new Date().toISOString()
+                };
+
+                try {
+                    if (id) {
+                        await callSupabase(`promo_messages?id=eq.${id}`, {
+                            method: 'PATCH',
+                            body: JSON.stringify(payload)
+                        });
+                    } else {
+                        payload.created_at = new Date().toISOString();
+                        await callSupabase('promo_messages', {
+                            method: 'POST',
+                            body: JSON.stringify(payload)
+                        });
+                    }
+                    closePromoModal();
+                    alert(id ? '✅ تم تحديث الرسالة بنجاح' : '✅ تم إنشاء الرسالة بنجاح');
+                    loadPromos();
+                } catch (error) {
+                    console.error('خطأ في حفظ الرسالة:', error);
+                    alert('❌ حدث خطأ في حفظ الرسالة');
+                }
+            }
+
+            async function togglePromoStatus(promoId) {
+                const promo = allPromos.find(p => String(p.id) === String(promoId));
+                if (!promo) return;
+                const isActive = promo.is_active === true || promo.is_active === 'true';
+                const newStatus = !isActive;
+
+                try {
+                    await callSupabase(`promo_messages?id=eq.${promoId}`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({ is_active: newStatus, updated_at: new Date().toISOString() })
+                    });
+                    alert(newStatus ? '✅ تم تفعيل الرسالة' : '⏸️ تم إيقاف الرسالة');
+                    loadPromos();
+                } catch (error) {
+                    console.error('خطأ في تغيير حالة الرسالة:', error);
+                    alert('❌ حدث خطأ في تغيير حالة الرسالة');
+                }
+            }
+
+            async function deletePromo(promoId) {
+                if (!confirm('هل أنت متأكد من حذف هذه الرسالة؟')) return;
+
+                try {
+                    await callSupabase(`promo_messages?id=eq.${promoId}`, { method: 'DELETE' });
+                    alert('✅ تم حذف الرسالة بنجاح');
+                    loadPromos();
+                } catch (error) {
+                    console.error('خطأ في حذف الرسالة:', error);
+                    alert('❌ حدث خطأ في حذف الرسالة');
+                }
+            }
+
+            async function resetPromoState(promoId) {
+                const promo = allPromos.find(p => String(p.id) === String(promoId));
+                if (!promo) return;
+                if (!confirm('سيتم إظهار هذه الرسالة من جديد لجميع الزوار وفق سياسة التكرار. هل أنت متأكد؟')) return;
+
+                const currentVersion = parseInt(promo.state_version, 10) || 1;
+                try {
+                    await callSupabase(`promo_messages?id=eq.${promoId}`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({ state_version: currentVersion + 1, updated_at: new Date().toISOString() })
+                    });
+                    alert('✅ تمت إعادة ضبط سياسة التكرار');
+                    loadPromos();
+                } catch (error) {
+                    console.error('خطأ في إعادة ضبط سياسة التكرار:', error);
+                    alert('❌ حدث خطأ في إعادة الضبط');
                 }
             }
 

@@ -246,6 +246,260 @@ export default async function handler(req, res) {
     });
   }
 
+  // =================================================================
+  // Specialized: promo_messages (الرسائل المنبثقة والإعلانات)
+  // المسار: /api/orders?endpoint=promo_messages
+  // ملاحظة: لا يُسمح بالوصول لأي جدول آخر عبر هذا الفرع.
+  // =================================================================
+  if (endpoint && endpoint.split('?')[0].split('/')[0] === 'promo_messages') {
+    if (!SUPABASE_URL || !SUPABASE_KEY) {
+      console.error('Supabase credentials missing');
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
+
+    const key = SERVICE_KEY || SUPABASE_KEY;
+    const sbHeaders = { 'apikey': key, 'Authorization': `Bearer ${key}` };
+
+    // الحقول العامة الآمنة (لا تكشف أي بيانات حساسة)
+    const PUBLIC_FIELDS = 'public_id,title,body,image_url,primary_text,primary_url,secondary_text,secondary_url,delay_seconds,start_at,end_at,repeat_policy,priority,state_version';
+    const REPEAT_POLICIES = ['once', '24h', '3d', '7d', 'every_visit'];
+
+    const sanitizeStr = (v, max) => {
+      if (v === undefined || v === null) return null;
+      const s = String(v).trim();
+      if (!s) return null;
+      return s.slice(0, max);
+    };
+    const sanitizeUrl = (v) => {
+      if (v === undefined || v === null) return null;
+      const s = String(v).trim();
+      if (!s) return null;
+      // اسمح فقط بالروابط http/https أو المسارات النسبية
+      if (/^https?:\/\//i.test(s) || s.startsWith('/')) return s.slice(0, 2000);
+      return null;
+    };
+    const toDateOrNull = (v) => {
+      if (!v) return null;
+      const d = new Date(v);
+      return isNaN(d.getTime()) ? null : d.toISOString();
+    };
+
+    // ---------- القراءة (GET) ----------
+    // عام: الرسائل المفعّلة والمؤهلة زمنياً فقط (حقول آمنة).
+    // إداري (مع كلمة مرور صحيحة): كل الرسائل لعرضها وإدارتها في اللوحة.
+    if (req.method === 'GET') {
+      try {
+        // هل الطلب إداري؟ (وجود كلمة مرور صحيحة يمنح عرض كل الرسائل)
+        let isAdmin = false;
+        if (adminPassword) {
+          try {
+            const crypto = await import('crypto');
+            const hashedProvided = crypto.createHash('sha256').update(adminPassword).digest('hex');
+            const authUrl = `${SUPABASE_URL}/rest/v1/admin_settings?key=eq.admin_password&select=value`;
+            const authResponse = await fetch(authUrl, { headers: sbHeaders });
+            if (authResponse.ok) {
+              const authData = await authResponse.json();
+              isAdmin = !!(authData && authData.length > 0 && authData[0].value === hashedProvided);
+            }
+          } catch (e) { isAdmin = false; }
+        }
+
+        const now = new Date().toISOString();
+        const encNow = encodeURIComponent(now);
+
+        let fetchUrl;
+        if (isAdmin) {
+          // كل الرسائل (بما فيها المتوقفة/المنتهية) لإدارتها من اللوحة
+          fetchUrl = `${SUPABASE_URL}/rest/v1/promo_messages?select=*` +
+            `&order=priority.desc,created_at.desc`;
+        } else {
+          // قراءة عامة مقيّدة
+          fetchUrl = `${SUPABASE_URL}/rest/v1/promo_messages?is_active=eq.true` +
+            `&select=${PUBLIC_FIELDS}` +
+            `&and=(or(start_at.is.null,start_at.lte.${encNow}),or(end_at.is.null,end_at.gte.${encNow}))` +
+            `&order=priority.desc,created_at.asc`;
+        }
+
+        const response = await fetch(fetchUrl, { headers: sbHeaders });
+        if (!response.ok) {
+          const errText = await response.text().catch(() => '');
+          console.error('[Orders-Proxy] promo_messages fetch error:', response.status, errText);
+          return res.status(500).json({ error: 'Failed to fetch promo messages' });
+        }
+        const data = await response.json();
+        return res.status(200).json(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('[Orders-Proxy] promo_messages read error:', err.message);
+        return res.status(500).json({ error: 'Internal Server Error' });
+      }
+    }
+
+    // ---------- عمليات الإدارة (كتابة) تتطلب كلمة مرور الإدارة ----------
+    if (['POST', 'PATCH', 'DELETE'].includes(req.method)) {
+      if (!adminPassword) {
+        return res.status(401).json({ error: 'Admin password required for this operation' });
+      }
+      try {
+        const crypto = await import('crypto');
+        const hashedProvided = crypto.createHash('sha256').update(adminPassword).digest('hex');
+        const authUrl = `${SUPABASE_URL}/rest/v1/admin_settings?key=eq.admin_password&select=value`;
+        const authResponse = await fetch(authUrl, { headers: sbHeaders });
+        if (!authResponse.ok) {
+          console.error('[Orders-Proxy] promo auth fetch failed:', authResponse.status);
+          return res.status(500).json({ error: 'Internal Auth Error' });
+        }
+        const authData = await authResponse.json();
+        if (!authData || authData.length === 0 || authData[0].value !== hashedProvided) {
+          return res.status(403).json({ error: 'Unauthorized: Invalid admin password' });
+        }
+      } catch (err) {
+        console.error('[Orders-Proxy] promo auth error:', err.message);
+        return res.status(500).json({ error: 'Internal Server Error' });
+      }
+    }
+
+    // ---------- الإنشاء (POST) ----------
+    if (req.method === 'POST') {
+      const body = req.body || {};
+      const title = sanitizeStr(body.title, 300);
+      const text = sanitizeStr(body.body, 5000);
+      if (!title || !text) {
+        return res.status(400).json({ error: 'العنوان ونص الرسالة مطلوبان' });
+      }
+      let repeat = REPEAT_POLICIES.includes(body.repeat_policy) ? body.repeat_policy : 'once';
+      let delay = parseInt(body.delay_seconds, 10);
+      if (isNaN(delay) || delay < 0) delay = 10;
+      if (delay > 600) delay = 600;
+      let priority = parseInt(body.priority, 10);
+      if (isNaN(priority)) priority = 0;
+
+      const record = {
+        title: title,
+        body: text,
+        image_url: sanitizeUrl(body.image_url),
+        primary_text: sanitizeStr(body.primary_text, 100),
+        primary_url: sanitizeUrl(body.primary_url),
+        secondary_text: sanitizeStr(body.secondary_text, 100),
+        secondary_url: sanitizeUrl(body.secondary_url),
+        delay_seconds: delay,
+        start_at: toDateOrNull(body.start_at),
+        end_at: toDateOrNull(body.end_at),
+        is_active: body.is_active !== false,
+        repeat_policy: repeat,
+        priority: priority,
+        state_version: 1,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      try {
+        const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/promo_messages`, {
+          method: 'POST',
+          headers: { ...sbHeaders, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+          body: JSON.stringify(record)
+        });
+        if (!insertRes.ok) {
+          const errText = await insertRes.text().catch(() => '');
+          console.error('[Orders-Proxy] promo insert failed:', insertRes.status, errText);
+          return res.status(500).json({ error: 'فشل إنشاء الرسالة' });
+        }
+        const inserted = await insertRes.json();
+        return res.status(201).json(Array.isArray(inserted) ? inserted[0] : inserted);
+      } catch (err) {
+        console.error('[Orders-Proxy] promo insert error:', err.message);
+        return res.status(500).json({ error: 'Internal Server Error' });
+      }
+    }
+
+    // ---------- التعديل (PATCH) ----------
+    if (req.method === 'PATCH') {
+      const params = new URLSearchParams(endpoint.split('?')[1] || '');
+      const idFilter = params.get('id');
+      const idMatch = idFilter && /^eq\.([0-9]+)$/.exec(idFilter);
+      if (!idMatch) {
+        return res.status(400).json({ error: 'معرّف الرسالة مطلوب للتعديل' });
+      }
+      const promoId = idMatch[1];
+      const body = req.body || {};
+      const updates = {};
+      if (body.title !== undefined) updates.title = sanitizeStr(body.title, 300);
+      if (body.body !== undefined) updates.body = sanitizeStr(body.body, 5000);
+      if (body.image_url !== undefined) updates.image_url = sanitizeUrl(body.image_url);
+      if (body.primary_text !== undefined) updates.primary_text = sanitizeStr(body.primary_text, 100);
+      if (body.primary_url !== undefined) updates.primary_url = sanitizeUrl(body.primary_url);
+      if (body.secondary_text !== undefined) updates.secondary_text = sanitizeStr(body.secondary_text, 100);
+      if (body.secondary_url !== undefined) updates.secondary_url = sanitizeUrl(body.secondary_url);
+      if (body.delay_seconds !== undefined) {
+        let delay = parseInt(body.delay_seconds, 10);
+        if (isNaN(delay) || delay < 0) delay = 10;
+        if (delay > 600) delay = 600;
+        updates.delay_seconds = delay;
+      }
+      if (body.start_at !== undefined) updates.start_at = toDateOrNull(body.start_at);
+      if (body.end_at !== undefined) updates.end_at = toDateOrNull(body.end_at);
+      if (body.is_active !== undefined) updates.is_active = body.is_active === true || body.is_active === 'true';
+      if (body.repeat_policy !== undefined) {
+        updates.repeat_policy = REPEAT_POLICIES.includes(body.repeat_policy) ? body.repeat_policy : 'once';
+      }
+      if (body.priority !== undefined) {
+        let priority = parseInt(body.priority, 10);
+        updates.priority = isNaN(priority) ? 0 : priority;
+      }
+      if (body.state_version !== undefined) {
+        let sv = parseInt(body.state_version, 10);
+        updates.state_version = (isNaN(sv) || sv < 1) ? 1 : sv;
+      }
+      if (updates.title === null || updates.body === null) {
+        delete updates.title; delete updates.body; // لا تسمح بإفراغ الحقول الإلزامية
+      }
+      updates.updated_at = new Date().toISOString();
+
+      try {
+        const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/promo_messages?id=eq.${promoId}`, {
+          method: 'PATCH',
+          headers: { ...sbHeaders, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+          body: JSON.stringify(updates)
+        });
+        if (!patchRes.ok) {
+          const errText = await patchRes.text().catch(() => '');
+          console.error('[Orders-Proxy] promo patch failed:', patchRes.status, errText);
+          return res.status(500).json({ error: 'فشل تعديل الرسالة' });
+        }
+        const updated = await patchRes.json();
+        return res.status(200).json(Array.isArray(updated) ? (updated[0] || {}) : updated);
+      } catch (err) {
+        console.error('[Orders-Proxy] promo patch error:', err.message);
+        return res.status(500).json({ error: 'Internal Server Error' });
+      }
+    }
+
+    // ---------- الحذف (DELETE) ----------
+    if (req.method === 'DELETE') {
+      const params = new URLSearchParams(endpoint.split('?')[1] || '');
+      const idFilter = params.get('id');
+      if (!idFilter || !/^[0-9]+$/.test(idFilter.replace('eq.', ''))) {
+        return res.status(400).json({ error: 'معرّف الرسالة مطلوب للحذف' });
+      }
+      try {
+        const delRes = await fetch(`${SUPABASE_URL}/rest/v1/promo_messages?id=eq.${idFilter.replace('eq.', '')}`, {
+          method: 'DELETE',
+          headers: { ...sbHeaders, 'Prefer': 'return=minimal' }
+        });
+        if (!delRes.ok && delRes.status !== 204) {
+          const errText = await delRes.text().catch(() => '');
+          console.error('[Orders-Proxy] promo delete failed:', delRes.status, errText);
+          return res.status(500).json({ error: 'فشل حذف الرسالة' });
+        }
+        return res.status(204).end();
+      } catch (err) {
+        console.error('[Orders-Proxy] promo delete error:', err.message);
+        return res.status(500).json({ error: 'Internal Server Error' });
+      }
+    }
+
+    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+  }
+
   if (!endpoint) {
     return res.status(400).json({ error: 'Endpoint query parameter is required' });
   }

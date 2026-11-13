@@ -60,6 +60,12 @@ self.addEventListener('fetch', event => {
   // تجاهل طلبات غير GET والطلبات الخارجية غير المقصودة
   if (event.request.method !== 'GET') return;
 
+  // استثناء محدود: طلبات الرسائل المنبثقة (promo_messages)
+  // لا تُخزَّن ولا تُسترجَع من الكاش لضمان انعكاس أي تغيير من لوحة الإدارة فوراً.
+  if (url.pathname.includes('/api/orders') && url.search.includes('promo_messages')) {
+    return; // اترك المتصفح يجلبها من الشبكة مباشرةً
+  }
+
   // 1. API Requests: Network-First
   if (url.pathname.includes('/api/')) {
     event.respondWith(

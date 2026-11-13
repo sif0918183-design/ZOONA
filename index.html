@@ -612,6 +612,24 @@ html, body {
 .modal-delivery-city.free .price{color:#2e7d32}
 .modal-no-cities{color:#888;font-size:12px;font-style:italic}
 
+/* ─── PROMO POPUP (الرسائل المنبثقة والإعلانات) ─── */
+#promoOverlay { position:fixed; inset:0; background:rgba(0,0,0,.55); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); z-index:9500; display:none; align-items:center; justify-content:center; padding:16px; }
+#promoOverlay.show { display:flex; }
+.promo-card { background:#fff; width:100%; max-width:420px; border-radius:20px; overflow:hidden; box-shadow:0 20px 50px rgba(0,0,0,.3); font-family:var(--font); direction:rtl; position:relative; animation:promoAppear .32s cubic-bezier(.2,.8,.25,1); }
+@keyframes promoAppear { from { opacity:0; transform:translateY(24px) scale(.98); } to { opacity:1; transform:none; } }
+.promo-close { position:absolute; top:12px; left:12px; z-index:3; width:34px; height:34px; border-radius:50%; border:none; background:rgba(0,0,0,.35); color:#fff; font-size:18px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.promo-close:hover { background:rgba(0,0,0,.55); }
+.promo-img-wrap { width:100%; background:var(--red-light); display:flex; align-items:center; justify-content:center; }
+.promo-img { width:100%; max-height:230px; object-fit:cover; display:block; }
+.promo-body { padding:20px 20px 22px; text-align:center; }
+.promo-icon { width:56px; height:56px; margin:0 auto 12px; border-radius:50%; background:var(--red-gradient); color:#fff; display:flex; align-items:center; justify-content:center; font-size:24px; }
+.promo-title { font-size:18px; font-weight:900; color:#222; margin-bottom:10px; line-height:1.4; }
+.promo-text { font-size:14px; color:#555; line-height:1.8; margin-bottom:18px; white-space:pre-wrap; }
+.promo-actions { display:flex; flex-direction:column; gap:10px; }
+.promo-btn-primary { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; background:var(--red-gradient); color:#fff; border:none; text-decoration:none; padding:14px; border-radius:14px; font-family:var(--font); font-size:16px; font-weight:800; cursor:pointer; box-shadow:0 6px 16px rgba(211,47,47,.3); }
+.promo-btn-primary:active { transform:scale(.99); }
+.promo-btn-secondary { display:flex; align-items:center; justify-content:center; width:100%; background:#f1f3f5; color:#333; border:none; text-decoration:none; padding:12px; border-radius:14px; font-family:var(--font); font-size:14px; font-weight:700; cursor:pointer; }
+
 </style>
 <script defer src="/_vercel/insights/script.js"></script>
 </head>
@@ -1279,6 +1297,25 @@ html, body {
     </div>
   </div>
   <button id="installBtn" style="width:100%; background:var(--red-gradient); color:#fff; border:none; padding:12px; border-radius:10px; font-family:var(--font); font-size:15px; font-weight:800; cursor:pointer;">تثبيت التطبيق</button>
+</div>
+
+<!-- PROMO MESSAGE POPUP (يُعبّأ ديناميكياً من promo_messages) -->
+<div id="promoOverlay" onclick="if(event.target===this)closePromoPopup()">
+  <div class="promo-card" role="dialog" aria-modal="true">
+    <button type="button" class="promo-close" onclick="closePromoPopup()" aria-label="إغلاق">✕</button>
+    <div class="promo-img-wrap" id="promoImgWrap" style="display:none;">
+      <img class="promo-img" id="promoImg" src="" alt="">
+    </div>
+    <div class="promo-body">
+      <div class="promo-icon" id="promoIcon" style="display:none;"><i class="fas fa-bullhorn"></i></div>
+      <div class="promo-title" id="promoTitle"></div>
+      <div class="promo-text" id="promoText"></div>
+      <div class="promo-actions">
+        <a class="promo-btn-primary" id="promoPrimaryBtn" style="display:none;" href="#" target="_blank" rel="noopener"></a>
+        <a class="promo-btn-secondary" id="promoSecondaryBtn" style="display:none;" href="#" target="_blank" rel="noopener"></a>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -2919,6 +2956,233 @@ async function recordAffiliateClick() {
   }
 }
 window.addEventListener('DOMContentLoaded', recordAffiliateClick);
+</script>
+
+<!-- ══════════════════════════════════════════
+     ZOONA - نظام الرسائل المنبثقة والإعلانات
+     (مستقل تماماً ولا يتداخل مع أي وظيفة قائمة)
+══════════════════════════════════════════ -->
+<script>
+(function () {
+  const PROMO_ENDPOINT = '/api/orders?endpoint=promo_messages';
+  const PROMO_STATE_KEY = 'zoona_promo_state_v1';
+  const PROMO_CACHE_KEY = 'zoona_promo_cache_v1';
+  const PROMO_CACHE_TTL = 2 * 60 * 1000; // دقيقتان
+  const REPEAT_INTERVALS = { '24h': 86400000, '3d': 259200000, '7d': 604800000 };
+
+  let promoMessages = [];
+  let promoQueue = [];
+  let promoTimer = null;
+  let promoShowing = false;
+  const promoShownThisSession = new Set();
+
+  // ── حالة التخزين المحلي ──
+  function readState() {
+    try { return JSON.parse(localStorage.getItem(PROMO_STATE_KEY) || '{}') || {}; }
+    catch (e) { return {}; }
+  }
+  function writeState(state) {
+    try { localStorage.setItem(PROMO_STATE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  // هل الرسالة مؤهلة للعرض وفق سياسة التكرار؟
+  function isPromoEligible(msg) {
+    if (!msg || !msg.public_id) return false;
+    const pid = msg.public_id;
+
+    // منع التكرار داخل نفس الجلسة
+    if (promoShownThisSession.has(pid)) return false;
+
+    // في كل زيارة: مرة واحدة لكل جلسة
+    if (msg.repeat_policy === 'every_visit') {
+      try {
+        if (sessionStorage.getItem('zoona_promo_sess_' + pid) === '1') return false;
+      } catch (e) {}
+      return true;
+    }
+
+    const state = readState();
+    const entry = state[pid];
+
+    // إعادة ضبط السياسة من لوحة الإدارة (تغيّر state_version) تُصفّر السجل
+    if (!entry || entry.state_version !== msg.state_version) return true;
+
+    const lastClosed = entry.last_closed || 0;
+    if (!lastClosed) return true;
+
+    if (msg.repeat_policy === 'once') return false;
+    const interval = REPEAT_INTERVALS[msg.repeat_policy];
+    if (interval) return (Date.now() - lastClosed) >= interval;
+    return true;
+  }
+
+  // تسجيل حالة العرض/الإغلاق
+  function markPromoShown(msg) {
+    promoShownThisSession.add(msg.public_id);
+    if (msg.repeat_policy === 'every_visit') {
+      try { sessionStorage.setItem('zoona_promo_sess_' + msg.public_id, '1'); } catch (e) {}
+    }
+  }
+  function markPromoClosed(msg) {
+    if (!msg) return;
+    if (msg.repeat_policy === 'every_visit') return; // يكفي علامة الجلسة
+    const state = readState();
+    state[msg.public_id] = {
+      last_closed: Date.now(),
+      state_version: msg.state_version || 1
+    };
+    writeState(state);
+  }
+
+  // ── جلب الرسائل (طلب واحد خفيف + كاش قصير) ──
+  async function fetchPromoMessages() {
+    try {
+      const cached = sessionStorage.getItem(PROMO_CACHE_KEY);
+      if (cached) {
+        const c = JSON.parse(cached);
+        if (c && (Date.now() - c.t) < PROMO_CACHE_TTL && Array.isArray(c.d)) {
+          return c.d;
+        }
+      }
+    } catch (e) {}
+
+    const res = await fetch(PROMO_ENDPOINT, { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) throw new Error('promo fetch failed');
+    const data = await res.json();
+    const list = Array.isArray(data) ? data : [];
+    try {
+      sessionStorage.setItem(PROMO_CACHE_KEY, JSON.stringify({ t: Date.now(), d: list }));
+    } catch (e) {}
+    return list;
+  }
+
+  // ── التحقق من عدم وجود نافذة أخرى مفتوحة ──
+  function isAnotherModalOpen() {
+    try {
+      if (document.getElementById('productModal')?.classList.contains('show')) return true;
+      if (document.getElementById('merchantModal')?.classList.contains('show')) return true;
+      if (document.getElementById('ordersPopup')?.classList.contains('show')) return true;
+      const notif = document.getElementById('notifModal');
+      if (notif && getComputedStyle(notif).display === 'flex') return true;
+    } catch (e) {}
+    return false;
+  }
+
+  // ── عرض الرسالة ──
+  function showPromoPopup(msg) {
+    const overlay = document.getElementById('promoOverlay');
+    if (!overlay) return;
+
+    document.getElementById('promoTitle').textContent = msg.title || '';
+    document.getElementById('promoText').textContent = msg.body || '';
+
+    const imgWrap = document.getElementById('promoImgWrap');
+    const imgEl = document.getElementById('promoImg');
+    if (msg.image_url) {
+      imgEl.src = msg.image_url;
+      imgEl.onerror = function () { imgWrap.style.display = 'none'; };
+      imgWrap.style.display = 'flex';
+    } else {
+      imgWrap.style.display = 'none';
+      imgEl.removeAttribute('src');
+    }
+
+    // إظهار الأيقونة فقط عند عدم وجود صورة
+    document.getElementById('promoIcon').style.display = msg.image_url ? 'none' : 'flex';
+
+    const pBtn = document.getElementById('promoPrimaryBtn');
+    if (msg.primary_text && msg.primary_url) {
+      pBtn.textContent = msg.primary_text;
+      pBtn.href = msg.primary_url;
+      pBtn.style.display = 'flex';
+    } else if (msg.primary_text) {
+      pBtn.textContent = msg.primary_text;
+      pBtn.removeAttribute('href');
+      pBtn.style.display = 'flex';
+    } else {
+      pBtn.style.display = 'none';
+    }
+
+    const sBtn = document.getElementById('promoSecondaryBtn');
+    if (msg.secondary_text && msg.secondary_url) {
+      sBtn.textContent = msg.secondary_text;
+      sBtn.href = msg.secondary_url;
+      sBtn.style.display = 'flex';
+    } else {
+      sBtn.style.display = 'none';
+    }
+
+    overlay.dataset.currentId = msg.public_id;
+    overlay.classList.add('show');
+    promoShowing = true;
+    markPromoShown(msg);
+  }
+
+  // ── إغلاق الرسالة ──
+  window.closePromoPopup = function () {
+    const overlay = document.getElementById('promoOverlay');
+    if (!overlay) return;
+    overlay.classList.remove('show');
+    promoShowing = false;
+
+    const currentId = overlay.dataset.currentId;
+    const currentMsg = promoMessages.find(m => m.public_id === currentId);
+    markPromoClosed(currentMsg);
+
+    // عرض الرسالة التالية المؤهلة (إن وجدت) بعد فترة قصيرة
+    if (promoQueue.length > 0) {
+      setTimeout(() => { if (!promoShowing && !isAnotherModalOpen()) showNextPromo(); }, 800);
+    }
+  };
+
+  function showNextPromo() {
+    while (promoQueue.length > 0) {
+      const msg = promoQueue.shift();
+      if (isPromoEligible(msg)) {
+        showPromoPopup(msg);
+        return;
+      }
+    }
+  }
+
+  // ── التهيئة ──
+  async function initPromoSystem() {
+    try {
+      const list = await fetchPromoMessages();
+      promoMessages = list;
+
+      // الرسائل المؤهلة فقط، مرتّبة (الخادم يرتّب حسب الأولوية ثم الأقدم)
+      promoQueue = list.filter(isPromoEligible);
+      if (promoQueue.length === 0) return;
+
+      const first = promoQueue.shift();
+      let delay = parseInt(first.delay_seconds, 10);
+      if (isNaN(delay) || delay < 0) delay = 10;
+      if (delay > 600) delay = 600;
+
+      // إعادة الرسالة الأولى إلى المقدمة بعد جدولة العرض
+      promoQueue.unshift(first);
+
+      promoTimer = setTimeout(() => {
+        if (!promoShowing && !isAnotherModalOpen()) {
+          showNextPromo();
+        } else {
+          // إعادة المحاولة لاحقاً إذا كانت هناك نافذة أخرى مفتوحة
+          setTimeout(() => { if (!promoShowing && !isAnotherModalOpen()) showNextPromo(); }, 5000);
+        }
+      }, delay * 1000);
+
+    } catch (err) {
+      // فشل تحميل الرسائل لا يؤثر إطلاقاً في عمل المتجر
+      console.warn('[Promo] تعذّر تحميل الرسائل:', err && err.message);
+    }
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    // تأخير بسيط لضمان اكتمال تهيئة المتجر
+    setTimeout(initPromoSystem, 300);
+  });
+})();
 </script>
 
 </body>
