@@ -20,7 +20,7 @@ const messaging = firebase.messaging();
 // =================================================================
 // 2️⃣ PWA Caching
 // =================================================================
-const CACHE_NAME = 'zoona-store-cache-v2.0.0';
+const CACHE_NAME = 'zoona-store-cache-v2.0.1';
 const API_CACHE_NAME = 'zoona-store-api-cache-v2.0.0';
 const IMAGE_CACHE_NAME = 'zoona-store-images-cache-v2.0.0';
 const OFFLINE_FALLBACK_URL = '/p/offline.html';
@@ -32,7 +32,7 @@ const urlsToCache = [
   '/manifest.json',
   '/assets/splash-logo.png',
   OFFLINE_FALLBACK_URL,
-  'https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap'
+  'https://fonts.googleapis.com/css2?family=El+Messiri:wght@600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Tajawal:wght@300;400;500;700;800;900&display=swap'
 ];
 
 // 3️⃣ Install SW

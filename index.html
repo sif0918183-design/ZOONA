@@ -79,7 +79,9 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" href="icon/icon-72x72.png">
   <link rel="apple-touch-icon" href="icon/icon-152x152.png">
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -158,28 +160,106 @@ html, body {
 .page.active { display:block; }
 
 /* ─── HOME PAGE ─── */
-/* Banner */
-.zona-banner {
-  position:relative; overflow:hidden; border-radius:12px; margin:12px;
-  padding:14px 16px; text-align:center; font-family:var(--font); color:#fff;
-  background:linear-gradient(120deg,#8b0000,#c20000,#ff3b3b); background-size:300% 300%;
-  animation:bannerGrad 8s ease infinite; box-shadow:0 4px 12px rgba(0,0,0,.2);
+/* Visually hidden (SEO-preserving) heading */
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+
+/* ─── TRACKA AD (replaces legacy .zona-banner) ─── */
+.zn-wrap { container-type: inline-size; margin: 12px; }
+.zn-ad {
+  --u: calc((100vw - 24px) / 100);                 /* fallback for browsers without container queries */
+  --red: #d8131f; --em: #10b36a; --em-d: #0b8f55; --ink: #04281f; --gold: #ffc247;
+  --title-font: 'El Messiri', 'Cairo', 'Tajawal', serif;
+  --body-font: 'IBM Plex Sans Arabic', 'Tajawal', sans-serif;
+  position: relative; width: 100%; aspect-ratio: 666 / 262;
+  border-radius: calc(var(--u) * 4.2); overflow: hidden;
+  box-shadow: 0 14px 30px -10px rgba(4,40,31,.55), 0 0 0 1px rgba(255,255,255,.35) inset;
+  font-family: var(--body-font); direction: rtl; user-select: none; -webkit-user-select: none;
+  touch-action: pan-y; background: var(--ink); isolation: isolate;
 }
-@keyframes bannerGrad { 0%{background-position:0 50%} 50%{background-position:100% 50%} 100%{background-position:0 50%} }
-.zona-banner::before {
-  content:""; position:absolute; top:0; left:-75%; width:50%; height:100%;
-  background:linear-gradient(120deg,transparent 0%,rgba(255,255,255,.35) 50%,transparent 100%);
-  transform:skewX(-20deg); animation:shine 6s linear infinite;
+@media (min-width: 768px) {
+  .zn-wrap { max-width: 620px; margin-inline: auto; }
+  .zn-ad { --u: 6.2px; }                            /* fallback width for large screens */
 }
-@keyframes shine { 0%{left:-75%} 50%{left:125%} 100%{left:125%} }
-.zona-banner h2 { font-size:17px; font-weight:800; margin-bottom:4px; position:relative; z-index:1; }
-.zona-banner .rotating-msg { font-size:13px; font-weight:500; opacity:0; transition:opacity .7s; min-height:22px; position:relative; z-index:1; margin-bottom:8px; }
-.zona-banner a {
-  display:inline-block; background:#fff; color:#a10000; padding:7px 18px; border-radius:8px;
-  text-decoration:none; font-weight:800; font-size:13px; position:relative; z-index:1;
-  transition:.25s; box-shadow:0 2px 6px rgba(255,255,255,.3);
+@supports (width: 1cqw) { .zn-ad { --u: 1cqw; } }   /* all metrics scale with the ad width */
+
+.zn-track { display: flex; height: 100%; direction: rtl; transition: transform .7s cubic-bezier(.65, 0, .25, 1); will-change: transform; }
+.zn-track.zn-drag { transition: none; }
+
+/* ---------- البطاقة ---------- */
+.zn-s {
+  --fg: #fff; --sub: rgba(255,255,255,.82); --cta-bg: #fff; --cta-fg: #06432f; --arrow-bg: var(--em); --arrow-fg: #fff;
+  flex: 0 0 100%; height: 100%; display: flex; align-items: center; gap: calc(var(--u) * 1);
+  padding: calc(var(--u) * 4.4) calc(var(--u) * 4.8) calc(var(--u) * 5.4);
+  color: var(--fg); text-decoration: none; position: relative; overflow: hidden;
+  -webkit-user-drag: none;
 }
-.zona-banner a:hover { background:#ffe5e5; }
+.zn-s::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(115deg, transparent 38%, rgba(255,255,255,.06) 38%, rgba(255,255,255,.06) 52%, transparent 52%),
+    linear-gradient(115deg, transparent 60%, rgba(255,255,255,.04) 60%, rgba(255,255,255,.04) 66%, transparent 66%); }
+.zn-s::after { content: ""; position: absolute; width: calc(var(--u) * 52); height: calc(var(--u) * 52); border-radius: 50%; left: calc(var(--u) * -8); top: 50%; transform: translateY(-50%);
+  background: radial-gradient(circle, var(--glow, rgba(16,179,106,.55)) 0%, transparent 68%); pointer-events: none; }
+
+.zn-s.c1 { background: linear-gradient(135deg, #021e18 0%, #063d31 60%, #0a5a45 100%); }
+.zn-s.c2 { background: linear-gradient(135deg, #021e18 0%, #07382d 70%, #0b4a3b 100%); --glow: rgba(255,194,71,.5); }
+.zn-s.c3 { background: linear-gradient(135deg, #064d3a 0%, #0b8f55 55%, #10b36a 100%); --glow: rgba(255,255,255,.28); }
+.zn-s.c4 { background: linear-gradient(135deg, #ffffff 0%, #f0f7f3 60%, #e1f0e9 100%); --fg: #06342d; --sub: #4c635b; --cta-bg: #06342d; --cta-fg: #fff; --arrow-bg: var(--gold); --arrow-fg: #06342d; --glow: rgba(16,179,106,.28); }
+.zn-s.c4::before { background: linear-gradient(115deg, transparent 40%, rgba(16,179,106,.07) 40%, rgba(16,179,106,.07) 54%, transparent 54%); }
+.zn-s.c5 { background: linear-gradient(135deg, #0b8f55 0%, #06402f 60%, #021e18 100%); --glow: rgba(255,194,71,.35); }
+.zn-s.c6 { background: linear-gradient(135deg, #021e18 0%, #06402f 50%, #0b8f55 100%); --glow: rgba(255,194,71,.4); }
+
+/* ---------- النصوص ---------- */
+.zn-text { flex: 1; min-width: 0; position: relative; z-index: 2; display: flex; flex-direction: column; align-items: flex-start; }
+.zn-badge { display: inline-flex; align-items: center; gap: calc(var(--u) * 1); font-size: calc(var(--u) * 2.1); font-weight: 600; padding: calc(var(--u) * .55) calc(var(--u) * 1.9) calc(var(--u) * .55) calc(var(--u) * 1.6);
+  border-radius: 999px; background: linear-gradient(135deg, #ef2a36, var(--red)); color: #fff; margin-bottom: calc(var(--u) * 1.7); line-height: 1.5; box-shadow: 0 4px 10px rgba(216,19,31,.35); }
+.zn-badge::before { content: ""; width: calc(var(--u) * .9); height: calc(var(--u) * .9); border-radius: 50%; background: #fff; }
+.zn-title { font-family: var(--title-font); font-size: calc(var(--u) * 5); font-weight: 700; line-height: 1.22; margin: 0 0 calc(var(--u) * 1.1); letter-spacing: 0; text-shadow: 0 2px 12px rgba(0,0,0,.18); }
+.zn-s.c4 .zn-title { text-shadow: none; }
+.zn-title em { font-style: normal; color: var(--gold); }
+.zn-s.c4 .zn-title em { color: var(--em-d); }
+.zn-sub { font-size: calc(var(--u) * 2.5); line-height: 1.6; color: var(--sub); margin: 0 0 calc(var(--u) * 2.3); font-weight: 400; }
+.zn-cta { display: inline-flex; align-items: center; gap: calc(var(--u) * 1.4); font-size: calc(var(--u) * 2.6); font-weight: 600; padding: calc(var(--u) * .7) calc(var(--u) * .8) calc(var(--u) * .7) calc(var(--u) * 2.8); border-radius: 999px; background: var(--cta-bg); color: var(--cta-fg); line-height: 1.4; box-shadow: 0 8px 18px -6px rgba(0,0,0,.4); }
+.zn-cta b { width: calc(var(--u) * 3.6); height: calc(var(--u) * 3.6); border-radius: 50%; background: var(--arrow-bg); color: var(--arrow-fg); display: inline-flex; align-items: center; justify-content: center; font-size: calc(var(--u) * 2.4); font-weight: 700; padding-bottom: calc(var(--u) * .3); }
+
+/* الشعار */
+.zn-brand { position: absolute; top: calc(var(--u) * 3.6); left: calc(var(--u) * 4.8); z-index: 3; display: flex; align-items: center; gap: calc(var(--u) * 1); direction: ltr;
+  font-family: var(--body-font); font-weight: 600; font-size: calc(var(--u) * 2.1); letter-spacing: .28em; color: rgba(255,255,255,.85); }
+.zn-brand i { width: calc(var(--u) * 3); height: calc(var(--u) * 3); border-radius: calc(var(--u) * .9); background: linear-gradient(135deg, #1fd584, var(--em-d)); display: inline-block; position: relative; box-shadow: 0 4px 10px rgba(16,179,106,.45); }
+.zn-brand i::after { content: ""; position: absolute; inset: calc(var(--u) * .75); border-radius: 50%; border: calc(var(--u) * .45) solid #fff; border-bottom-color: transparent; transform: rotate(-30deg); }
+.zn-ad.zn-light .zn-brand { color: #06342d; }
+
+/* الرسومات */
+.zn-art { flex: 0 0 calc(var(--u) * 31); position: relative; z-index: 2; margin-top: calc(var(--u) * 2.6); }
+.zn-art svg { width: 100%; height: auto; display: block; pointer-events: none; overflow: visible; filter: drop-shadow(0 12px 14px rgba(0,0,0,.28)); }
+.zn-run { stroke-dasharray: 9 11; animation: zn-dash 1.3s linear infinite; }
+@keyframes zn-dash { to { stroke-dashoffset: -40; } }
+@keyframes zn-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(calc(var(--u) * -1.4)); } }
+@keyframes zn-up { from { opacity: 0; transform: translateY(calc(var(--u) * 2)); } to { opacity: 1; transform: none; } }
+@keyframes zn-pulse { 0% { r: 7; opacity: .7; } 100% { r: 20; opacity: 0; } }
+.zn-s.on .zn-art svg { animation: zn-float 4.6s ease-in-out infinite; }
+.zn-s.on .zn-text > * { animation: zn-up .6s cubic-bezier(.2,.7,.2,1) both; }
+.zn-s.on .zn-text > :nth-child(2) { animation-delay: .08s; }
+.zn-s.on .zn-text > :nth-child(3) { animation-delay: .16s; }
+.zn-s.on .zn-text > :nth-child(4) { animation-delay: .24s; }
+.zn-pulse { animation: zn-pulse 1.8s ease-out infinite; fill: none; stroke: #ffc247; stroke-width: 2; }
+
+/* لمعة تعبر الإعلان */
+.zn-shine { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
+.zn-shine::before { content: ""; position: absolute; top: -20%; bottom: -20%; width: 22%; left: -40%; background: linear-gradient(100deg, transparent, rgba(255,255,255,.22), transparent); transform: skewX(-18deg); animation: zn-shine 6.5s ease-in-out infinite; }
+@keyframes zn-shine { 0%, 62% { left: -40%; } 100% { left: 140%; } }
+
+/* النقاط مع شريط تقدّم */
+.zn-dots { position: absolute; bottom: calc(var(--u) * 2); left: 50%; transform: translateX(-50%); display: flex; gap: calc(var(--u) * 1); z-index: 5; direction: ltr; padding: calc(var(--u) * .7) calc(var(--u) * 1.3); border-radius: 999px; background: rgba(0,0,0,.22); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.zn-dot { width: max(5px, calc(var(--u) * 1.1)); height: max(5px, calc(var(--u) * 1.1)); border-radius: 999px; background: rgba(255,255,255,.55); border: 0; padding: 0; cursor: pointer; position: relative; overflow: hidden; transition: width .35s; }
+.zn-dot.on { width: max(16px, calc(var(--u) * 4)); background: rgba(255,255,255,.4); }
+.zn-dot.on::after { content: ""; position: absolute; inset: 0; background: #fff; transform-origin: right; animation: zn-fill var(--zn-delay, 4.8s) linear forwards; }
+.zn-ad.zn-paused .zn-dot.on::after { animation-play-state: paused; }
+@keyframes zn-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .zn-track { transition: none; } .zn-run, .zn-shine::before, .zn-pulse { animation: none; }
+  .zn-s.on .zn-art svg, .zn-s.on .zn-text > * { animation: none; }
+}
 
 /* Category Filter */
 .cat-filter { display:flex; gap:8px; padding:4px 12px 10px; overflow-x:auto; scrollbar-width:none; }
@@ -591,11 +671,152 @@ html, body {
   <!-- ══════════════════ HOME PAGE ══════════════════ -->
   <div class="page active" id="page-home">
 
-    <!-- Banner -->
-    <div class="zona-banner" style="margin-top:10px;">
-      <h1 style="font-size:17px; font-weight:800; margin-bottom:4px; position:relative; z-index:1;">❤️ أهلاً بك في <strong>زونا للتسوق</strong>!</h1>
-      <div class="rotating-msg" id="rotatingMsg"></div>
-      <a href="#" onclick="switchTab('cats'); return false;">تسوق الآن من زونا 🛒</a>
+    <!-- SEO heading (visually hidden, replaces legacy welcome banner) -->
+    <h1 class="sr-only">أهلاً بك في زونا للتسوق</h1>
+
+    <!-- Tracka Ad (6 slides) -->
+    <div class="zn-wrap">
+      <div class="zn-ad" id="znAd" role="region" aria-roledescription="carousel" aria-label="إعلانات تراكا">
+        <div class="zn-track">
+
+          <!-- 1) تطبيق الركاب -->
+          <a class="zn-s c1" href="https://tracka.zoonasd.com" target="_blank" rel="noopener" draggable="false">
+            <div class="zn-text">
+              <span class="zn-badge">تطبيق الركاب</span>
+              <h3 class="zn-title">مشوارك بذكاء.. <em>وأمان أكثر</em></h3>
+              <p class="zn-sub">اطلب رحلتك داخل المدينة بخطوات بسيطة.</p>
+              <span class="zn-cta">اطلب الآن <b>‹</b></span>
+            </div>
+            <div class="zn-art">
+              <svg viewBox="0 0 200 200" aria-hidden="true">
+                <g transform="rotate(-8 100 100)">
+                  <rect x="56" y="14" width="92" height="172" rx="20" fill="#0a1f1b" stroke="#cfe8dd" stroke-width="3"/>
+                  <rect x="63" y="22" width="78" height="156" rx="14" fill="#e6f2ec"/>
+                  <path d="M63 70h78M63 118h78M92 22v156M120 22v100" stroke="#fff" stroke-width="5"/>
+                  <path class="zn-run" d="M84 62C108 78 86 104 116 122" fill="none" stroke="#10b36a" stroke-width="4" stroke-linecap="round"/>
+                  <circle cx="84" cy="62" r="7" fill="#10b36a" stroke="#fff" stroke-width="3"/>
+                  <circle cx="116" cy="122" r="7" fill="#ffc247" stroke="#fff" stroke-width="3"/>
+                  <rect x="63" y="136" width="78" height="42" rx="14" fill="#fff"/>
+                  <rect x="71" y="144" width="40" height="6" rx="3" fill="#c9ddd5"/>
+                  <rect x="71" y="156" width="62" height="14" rx="7" fill="#10b36a"/>
+                </g>
+                <circle cx="172" cy="40" r="6" fill="#ffc247"/><circle cx="28" cy="150" r="4" fill="#fff" opacity=".7"/>
+              </svg>
+            </div>
+          </a>
+
+          <!-- 2) تطبيق السائقين -->
+          <a class="zn-s c2" href="https://tracka.zoonasd.com" target="_blank" rel="noopener" draggable="false">
+            <div class="zn-text">
+              <span class="zn-badge">تطبيق السائقين</span>
+              <h3 class="zn-title">انضم لسائقي تراكا، <em>وابدأ بـ 10,000</em></h3>
+              <p class="zn-sub">رصيد ترحيبي مجاني، وعمولة رمزية فقط.</p>
+              <span class="zn-cta">سجّل كسائق <b>‹</b></span>
+            </div>
+            <div class="zn-art">
+              <svg viewBox="0 0 200 200" aria-hidden="true">
+                <defs>
+                  <radialGradient id="znCoin" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="#ffe29a"/><stop offset=".55" stop-color="#ffc247"/><stop offset="1" stop-color="#e08a00"/></radialGradient>
+                </defs>
+                <ellipse cx="100" cy="176" rx="62" ry="9" fill="#000" opacity=".25"/>
+                <circle cx="56" cy="138" r="26" fill="url(#znCoin)" stroke="#fff3cf" stroke-width="3"/>
+                <circle cx="56" cy="138" r="18" fill="none" stroke="#e08a00" stroke-width="2" opacity=".6"/>
+                <circle cx="148" cy="148" r="22" fill="url(#znCoin)" stroke="#fff3cf" stroke-width="3"/>
+                <circle cx="100" cy="94" r="62" fill="url(#znCoin)" stroke="#fff3cf" stroke-width="4"/>
+                <circle cx="100" cy="94" r="50" fill="none" stroke="#c97700" stroke-width="3" opacity=".55"/>
+                <text x="100" y="100" text-anchor="middle" font-size="28" font-weight="700" fill="#4a2c00" font-family="'IBM Plex Sans Arabic', sans-serif">10,000</text>
+                <text x="100" y="122" text-anchor="middle" font-size="13" font-weight="600" fill="#4a2c00" font-family="'IBM Plex Sans Arabic', sans-serif">رصيد مجاني</text>
+                <path d="M160 30v20M150 40h20" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+              </svg>
+            </div>
+          </a>
+
+          <!-- 3) منصة السفريات -->
+          <a class="zn-s c3" href="https://tracka.zoonasd.com" target="_blank" rel="noopener" draggable="false">
+            <div class="zn-text">
+              <span class="zn-badge">منصة السفريات</span>
+              <h3 class="zn-title">سافر بين المدن <em>براحة تامة</em></h3>
+              <p class="zn-sub">واجهة مخصصة لطلبات السفر بين المدن.</p>
+              <span class="zn-cta">اكتشف السفريات <b>‹</b></span>
+            </div>
+            <div class="zn-art">
+              <svg viewBox="0 0 200 200" aria-hidden="true">
+                <rect x="14" y="24" width="172" height="152" rx="26" fill="#fff" opacity=".14" stroke="#fff" stroke-opacity=".4" stroke-width="2"/>
+                <path d="M44 146C60 74 112 148 156 56" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="7" stroke-linecap="round"/>
+                <path class="zn-run" d="M44 146C60 74 112 148 156 56" fill="none" stroke="#ffc247" stroke-width="7" stroke-linecap="round"/>
+                <circle cx="44" cy="146" r="13" fill="#fff" stroke="#06402f" stroke-width="5"/>
+                <circle class="zn-pulse" cx="156" cy="56" r="7"/>
+                <circle cx="156" cy="56" r="15" fill="#ffc247" stroke="#fff" stroke-width="5"/>
+                <circle cx="156" cy="56" r="5" fill="#06402f"/>
+              </svg>
+            </div>
+          </a>
+
+          <!-- 4) مجاني وغير ربحي (بطاقة فاتحة تناسب هوية زونا) -->
+          <a class="zn-s c4" href="https://tracka.zoonasd.com" target="_blank" rel="noopener" draggable="false">
+            <div class="zn-text">
+              <span class="zn-badge">مبادرة من زونا</span>
+              <h3 class="zn-title">خدمة مجانية <em>بدون أرباح</em></h3>
+              <p class="zn-sub">للسائقين والركاب، من زونا للحلول الرقمية الذكية.</p>
+              <span class="zn-cta">تعرّف علينا <b>‹</b></span>
+            </div>
+            <div class="zn-art">
+              <svg viewBox="0 0 200 200" aria-hidden="true">
+                <defs><linearGradient id="znHeart" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1fd584"/><stop offset="1" stop-color="#0b8f55"/></linearGradient></defs>
+                <circle cx="100" cy="104" r="78" fill="#10b36a" opacity=".1"/>
+                <path d="M100 166C34 122 30 62 72 56c17-2 28 11 28 18 0-7 11-20 28-18 42 6 38 66-28 110z" fill="url(#znHeart)"/>
+                <text x="100" y="114" text-anchor="middle" font-size="30" font-weight="700" fill="#fff" font-family="'El Messiri', sans-serif">مجاني</text>
+                <circle cx="162" cy="44" r="9" fill="#d8131f"/><circle cx="38" cy="156" r="6" fill="#ffc247"/><circle cx="170" cy="150" r="4" fill="#10b36a"/>
+              </svg>
+            </div>
+          </a>
+
+          <!-- 5) الثقة والراحة -->
+          <a class="zn-s c5" href="https://tracka.zoonasd.com" target="_blank" rel="noopener" draggable="false">
+            <div class="zn-text">
+              <span class="zn-badge">للركاب</span>
+              <h3 class="zn-title">أفضل السائقين، <em>وسيارات مريحة</em></h3>
+              <p class="zn-sub">سافر وأنت مطمئن في كل مشوار.</p>
+              <span class="zn-cta">حمّل التطبيق <b>‹</b></span>
+            </div>
+            <div class="zn-art">
+              <svg viewBox="0 0 200 200" aria-hidden="true">
+                <defs><linearGradient id="znShield" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#d6efe3"/></linearGradient></defs>
+                <path d="M100 18l62 24v54c0 42-26 68-62 82-36-14-62-40-62-82V42z" fill="url(#znShield)"/>
+                <path d="M100 30l50 19v47c0 34-21 56-50 68-29-12-50-34-50-68V49z" fill="none" stroke="#10b36a" stroke-opacity=".35" stroke-width="3"/>
+                <path d="M72 100l20 20 38-42" fill="none" stroke="#0b8f55" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M172 34v18M163 43h18M26 150v14M19 157h14" stroke="#ffc247" stroke-width="4" stroke-linecap="round"/>
+              </svg>
+            </div>
+          </a>
+
+          <!-- 6) تسجيل واحد للمنصتين -->
+          <a class="zn-s c6" href="https://tracka.zoonasd.com" target="_blank" rel="noopener" draggable="false">
+            <div class="zn-text">
+              <span class="zn-badge">تسجيل واحد</span>
+              <h3 class="zn-title">حساب واحد، <em>لمنصتين</em></h3>
+              <p class="zn-sub">رحلات داخل المدينة وسفريات بين المدن.</p>
+              <span class="zn-cta">ابدأ الآن <b>‹</b></span>
+            </div>
+            <div class="zn-art">
+              <svg viewBox="0 0 200 200" aria-hidden="true">
+                <defs>
+                  <linearGradient id="znA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1fd584"/><stop offset="1" stop-color="#0b8f55"/></linearGradient>
+                  <linearGradient id="znB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd877"/><stop offset="1" stop-color="#ffb020"/></linearGradient>
+                </defs>
+                <circle cx="76" cy="100" r="52" fill="url(#znA)"/>
+                <circle cx="128" cy="100" r="52" fill="url(#znB)" opacity=".95"/>
+                <circle cx="102" cy="100" r="26" fill="#fff"/>
+                <path d="M89 101l9 9 17-20" fill="none" stroke="#0b8f55" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </a>
+
+        </div>
+        <div class="zn-brand"><i></i>TRACKA</div>
+        <div class="zn-shine"></div>
+        <div class="zn-dots"></div>
+      </div>
     </div>
 
     <!-- International Banner -->
@@ -1173,7 +1394,6 @@ window.addEventListener('DOMContentLoaded', () => {
     if (currentStoreTab === 'international') {
       switchStoreTab('international');
     }
-    initRotatingMessages();
     initPullToRefresh();
   }, 100);
 
@@ -1372,7 +1592,7 @@ function switchStoreTab(tab) {
 
   const btnLocal = document.getElementById('storeTabLocal');
   const btnInternational = document.getElementById('storeTabInternational');
-  const banner = document.querySelector('.zona-banner');
+  const banner = document.querySelector('.zn-wrap');
   const intBanner = document.getElementById('internationalBanner');
   const catFilter = document.getElementById('catFilter');
   const sectionTitle = document.getElementById('sectionTitle');
@@ -1398,6 +1618,7 @@ function switchStoreTab(tab) {
       btnInternational.style.border = '1px solid rgba(255,255,255,0.6)';
     }
     if (banner) banner.style.display = 'block';
+    if (window.znAdControl) window.znAdControl.resume();
     if (intBanner) intBanner.style.display = 'none';
     if (catFilter) catFilter.style.display = 'flex';
     if (sectionTitle) sectionTitle.textContent = currentCategory === 'الكل' ? '🔥 المنتجات المميزة' : `📦 ${currentCategory}`;
@@ -1422,6 +1643,7 @@ function switchStoreTab(tab) {
       btnLocal.style.border = '1px solid rgba(255,255,255,0.6)';
     }
     if (banner) banner.style.display = 'none';
+    if (window.znAdControl) window.znAdControl.pause();
     if (intBanner) intBanner.style.display = 'block';
     if (catFilter) catFilter.style.display = 'flex';
     if (sectionTitle) sectionTitle.textContent = currentCategory === 'الكل' ? '🌐 منتجات عالمية مختارة' : `🌐 منتجات عالمية - ${currentCategory}`;
@@ -2328,29 +2550,83 @@ function hidePage(name) {
   document.getElementById(`inlinePage-${name}`).style.display = 'none';
 }
 
-// ── Rotating Banner Messages ──
-const bannerMessages = [
-  "🔥 عروض حصرية بأسعار مخفضة وجودة عالية في السودان",
-  "💻 أحدث الموبايلات والأجهزة الإلكترونية الأصلية.",
-  "🎮 أفضل ألعاب الأطفال لكل الأعمار بجودة عالية.",
-  "💄 أدوات التجميل العصرية لأناقة حديثة ومتميزة.",
-  "🚚 توصيل سريع وآمن لكل ولايات السودان الآمنة.",
-  "🎁 عروض خاصة للمشتركين الجدد."
-];
-let msgIdx = 0;
-function initRotatingMessages() {
-  const el = document.getElementById('rotatingMsg');
-  function show() {
-    el.style.opacity = '0';
-    setTimeout(() => {
-      el.textContent = bannerMessages[msgIdx];
-      el.style.opacity = '1';
-      msgIdx = (msgIdx + 1) % bannerMessages.length;
-    }, 500);
+// ── Tracka Ad Slider ──
+(function () {
+  var root = document.getElementById('znAd');
+  if (!root) return;
+  var track = root.querySelector('.zn-track');
+  var slides = track.children;
+  var dotsBox = root.querySelector('.zn-dots');
+  var n = slides.length, i = 0, timer = null;
+  var DELAY = 4800;
+  var startX = 0, dx = 0, dragging = false, moved = false;
+  root.style.setProperty('--zn-delay', DELAY + 'ms');
+
+  var dots = [];
+  for (var k = 0; k < n; k++) {
+    var d = document.createElement('button');
+    d.className = 'zn-dot'; d.type = 'button'; d.setAttribute('aria-label', 'بطاقة ' + (k + 1));
+    (function (idx) { d.addEventListener('click', function (e) { e.stopPropagation(); go(idx); restart(); }); })(k);
+    dotsBox.appendChild(d); dots.push(d);
   }
-  show();
-  setInterval(show, 5000);
-}
+  dotsBox.style.pointerEvents = 'auto';
+
+  function progress() {
+    var el = dots[i]; el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+  }
+  function go(idx) {
+    i = (idx + n) % n;
+    track.style.transform = 'translateX(' + (i * 100) + '%)';
+    for (var j = 0; j < n; j++) {
+      slides[j].classList.toggle('on', j === i);
+      if (j !== i) dots[j].classList.remove('on');
+    }
+    root.classList.toggle('zn-light', slides[i].classList.contains('c4'));
+    progress();
+  }
+  function next() { go(i + 1); }
+  function start() { if (!timer) { timer = setInterval(next, DELAY); root.classList.remove('zn-paused'); progress(); } }
+  function stop() { clearInterval(timer); timer = null; root.classList.add('zn-paused'); }
+  function restart() { stop(); start(); }
+
+  // Pause/resume control for store-tab switching
+  window.znAdControl = { pause: stop, resume: start };
+
+  // Touch / pointer drag
+  root.addEventListener('pointerdown', function (e) {
+    if (e.target.closest('.zn-dot')) return;
+    dragging = true; moved = false; dx = 0; startX = e.clientX;
+    track.classList.add('zn-drag'); stop();
+  });
+  root.addEventListener('pointermove', function (e) {
+    if (!dragging) return;
+    dx = e.clientX - startX;
+    if (Math.abs(dx) > 8) moved = true;
+    track.style.transform = 'translateX(calc(' + (i * 100) + '% + ' + dx + 'px))';
+  });
+  function endDrag() {
+    if (!dragging) return;
+    dragging = false; track.classList.remove('zn-drag');
+    var th = root.offsetWidth * 0.15;
+    if (dx > th) go(i + 1); else if (dx < -th) go(i - 1); else go(i);
+    start();
+  }
+  root.addEventListener('pointerup', endDrag);
+  root.addEventListener('pointercancel', endDrag);
+  root.addEventListener('pointerleave', function () { if (dragging) endDrag(); });
+
+  root.addEventListener('click', function (e) {
+    if (moved) { e.preventDefault(); e.stopPropagation(); moved = false; }
+  }, true);
+  root.addEventListener('dragstart', function (e) { e.preventDefault(); });
+
+  document.addEventListener('visibilitychange', function () { document.hidden ? stop() : start(); });
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (en) { en[0].isIntersecting ? start() : stop(); }, { threshold: 0.4 }).observe(root);
+  }
+
+  go(0); start();
+})();
 
 // ── Toast ──
 let toastTimer;
